@@ -54,7 +54,7 @@ const vecDouble& ProcessOutflowSnowHolding::GetRates() {
     // where content is updated as content + rate * timeStep). Dividing the excess by the timestep
     // therefore drains exactly the excess over one step, regardless of the timestep length.
     // The 1.0 fallback covers the case where no time machine is wired up (e.g. unit tests).
-    double timeStep = (_timeMachine != nullptr) ? *_timeMachine->GetTimeStepPointer() : 1.0;
+    double timeStep = GetTimeStepInDays();
 
     return StoreRates({excess / timeStep});
 }

@@ -26,6 +26,13 @@ class ProcessPercolationGR4J : public ProcessOutflow {
      */
     static void RegisterProcessSettings(SettingsModel* modelSettings);
 
+    /**
+     * @copydoc Process::RequiresDailyTimeStep()
+     */
+    [[nodiscard]] bool RequiresDailyTimeStep() const override {
+        return true;
+    }
+
   protected:
     /**
      * @copydoc Process::GetRates()

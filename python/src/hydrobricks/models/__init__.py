@@ -6,6 +6,7 @@ from hydrobricks.models.hbv import HBV
 from hydrobricks.models.hbv_96 import HBV96
 from hydrobricks.models.model import Model
 from hydrobricks.models.model_settings import ModelSettings
+from hydrobricks.models.prevah_unibe import PrevahUniBE
 from hydrobricks.models.socont import Socont
 
 init()
@@ -17,5 +18,6 @@ __all__ = (
     "CustomModel",
     "Model",
     "ModelSettings",
+    "PrevahUniBE",
     "Socont",
 )

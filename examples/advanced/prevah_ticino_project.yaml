@@ -1,0 +1,129 @@
+# hydrobricks project file: PREVAH-UniBE on the Ticino at Bellinzona.
+#
+# A cross-implementation reproduction: every option follows a method switch of the
+# original PREVAH control file (cal_2020pest.inp) and every parameter is the value
+# calibrated there. Nothing is calibrated in hydrobricks.
+#
+# The PREVAH land-use tables cannot be expressed here, so this file is loaded by
+# prevah_ticino.py, which adds them and runs the model. Relative paths are resolved
+# from this file's directory.
+
+model:
+  name: prevah_unibe
+  options:
+    land_cover_names: [open, forest, wetland]
+    land_cover_types: [open, forest, wetland]
+    # PREVAH intercepts on every vegetated cover and evaporates the canopy at
+    # et_pot * veg_cov, so the covers all carry a canopy with the PREVAH canopy ET.
+    interception_covers: [open, forest, wetland]
+    canopy_et_process: "et:open_water_prevah"
+    # Radiation-corrected melt: (CSNOMF + CASNO * R_pot) * (T - T0). The refreezing
+    # then needs its own seasonal factor, the melt process no longer carrying one.
+    snow_melt_process: "melt:temperature_index"
+    snow_refreezing_process: "refreeze:degree_day_seasonal"
+    # PREVAH reduces the potential rate by the surface albedo, (1 - albedo)/0.8, on
+    # the soil, the canopy and the snow alike; the snow albedo ages between snowfalls.
+    soil_et_process: "et:prevah"
+    snow_sublimation_process: "sublimation:prevah"
+    # Snow water release of the ablation branch, with the CEXLIQ graded partition.
+    snow_water_retention_process: "outflow:snow_holding_prevah"
+    # Wet-surface evaporation drawn from the groundwater store (PREVAH's EWET).
+    wet_et_from_groundwater: true
+    record_all: true
+
+hydro_units:
+  # 570 hydrotopes: elevation and per-cover area, plus the columns read further on.
+  file: ../../tests/files/catchments/ch_ticino_bellinzona/hydro_units.csv
+  columns:
+    elevation: elevation
+    land_use: land_use      # the PREVAH land use of the hydrotope
+    awc: awc                # available water content of the soil [Vol-%]
+    soil_depth: soil_depth  # soil depth [m]
+    mez: mez                # meteo zone, an elevation band of this catchment
+  columns_areas:
+    open: area_open
+    forest: area_forest
+    wetland: area_wetland
+
+forcing:
+  # The precipitation and the temperature are given per meteo zone, so each hydrotope
+  # reads the series of the zone its 'mez' column points at. The potential radiation
+  # is a climatology instead: one row per day of the year, one column per hydrotope.
+  spatialized:
+    precipitation:
+      file: ../../tests/files/catchments/ch_ticino_bellinzona/precipitation.csv
+      time: {column: date, format: "%Y-%m-%d"}
+      columns_are: mez
+    temperature:
+      file: ../../tests/files/catchments/ch_ticino_bellinzona/temperature.csv
+      time: {column: date, format: "%Y-%m-%d"}
+      columns_are: mez
+    solar_radiation:
+      file: ../../tests/files/catchments/ch_ticino_bellinzona/potential_radiation.csv
+      day_of_year: day_of_year
+  pet:
+    # The vapour-density Hamon used by PREVAH; the default 'Hamon' of pyet is an
+    # exponential variant that runs markedly hotter.
+    method: Hamon_vapor_density
+    lat: 46.4
+
+observations:
+  # The *Fortran PREVAH* simulated total runoff for this case, not a gauge series:
+  # the reference this reproduction is scored against.
+  file: ../../tests/files/catchments/ch_ticino_bellinzona/discharge_prevah.csv
+  time: {column: date, format: "%Y-%m-%d"}
+  column: discharge (mm/d)
+
+periods:
+  calibration: [1985-01-01, 1994-12-31]
+  validation: [1995-01-01, 2000-12-31]
+  spinup: 1y
+
+output: output
+
+parameters:
+  # Calibrated PREVAH parameters (cal_2020pest.inp), under the hydrobricks aliases.
+  # PREVAH storage times are in hours; hydrobricks uses response factors k = 24 / K_h.
+
+  # Precipitation and snow correction factors.
+  rfcf: 0.77637
+  sfcf: 1.33502
+  # Snow/rain linear transition (all snow below t_start, all rain above t_end).
+  prec_t_start: -0.75
+  prec_t_end: 0.75
+  # Radiation-corrected snow melt (CSNOMF, CASNO). PREVAH melts from -1 degC, below
+  # the default range of the melt threshold, so this one carries its own.
+  melt_factor: 1.0038092221
+  r_snow: 5.5527817e-5
+  melt_t_snow: {value: -1.0, min: -3.0, max: 5.0}
+  # Refreezing: CRFR times the seasonal factor between TMFMIN and TMFMAX.
+  cwh: 0.1
+  cfr: 0.1
+  cfr_ddf_min: 1.0
+  cfr_ddf_max: 2.0
+  cfr_melt_t: -1.0
+  # Snow water release: the retention collapses above the melt threshold, and CEXLIQ
+  # grades how much of the fresh melt passes straight through.
+  holding_melt_t: -1.0
+  cexliq: 0.5
+  # Soil moisture and ET. The control file selects the Hamon evapotranspiration
+  # method, whose branch in PREVAH evaporates the soil at the potential rate with no
+  # soil-moisture limitation, which a CU limit of ~0 reproduces.
+  fc: 13.7  # global fallback; the per-hydrotope monthly capacity overrides it
+  cu: {value: 1.0e-6, min: 0.0, max: 1.0}
+  beta_open: 0.5
+  beta_forest: 0.5
+  beta_wetland: 0.5
+  wet_fraction: 0.7  # PREVAH wetland wet-surface fraction
+  # Upper zone (surface runoff Q0 threshold, interflow Q1).
+  k0: 0.823440  # 24 / 29.146
+  sgrluz: 74.655
+  k1: 0.16  # 24 / 150
+  # Soil-moisture-gated percolation (mm/h -> mm/d).
+  cperc: 5.65824  # 0.23576 * 24
+  cu_perc: 0.7
+  # SLOWCOMP three-store groundwater.
+  slz1max: 112.903
+  k_gw1: 0.024  # 24 / 1000
+  k_gw2: 0.0079741  # 24 / 3009.72
+  k_gw3: 0.0026667  # 24 / 9000

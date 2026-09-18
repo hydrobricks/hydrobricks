@@ -8,6 +8,7 @@
 #include "Solver.h"
 
 class ModelHydro;
+class Splitter;
 
 class Processor {
   public:
@@ -146,13 +147,94 @@ class Processor {
         return _directConnectionCount;
     }
 
+    /**
+     * Flat view of one solvable process: its rate slice in the global rates vector.
+     */
+    struct SolvableProcess {
+        Process* process;     // non-owning
+        int connectionCount;  // number of rates this process contributes
+        int rateOffset;       // index of its first rate in the global rates vector
+    };
+
+    /**
+     * Flat view of one solvable brick: the range of processes it owns.
+     */
+    struct SolvableBrickEntry {
+        Brick* brick;      // non-owning
+        int processStart;  // first index in _solvableProcesses
+        int processEnd;    // one past the last index in _solvableProcesses
+    };
+
+    /**
+     * Flat view of one process of a brick computed directly, with its slice of the
+     * direct change-rate buffer.
+     */
+    struct DirectProcess {
+        Process* process;           // non-owning
+        WaterContainer* container;  // non-owning: the container the process draws from
+        int outputFluxCount;        // number of output fluxes to link
+        int connectionCount;        // number of rates the process produces
+        int rateOffset;             // index of its first rate in _changeRatesNoSolver
+    };
+
+    /**
+     * Flat view of one brick computed directly: the range of processes it owns.
+     */
+    struct DirectBrickEntry {
+        Brick* brick;      // non-owning
+        int processStart;  // first index in _directProcesses
+        int processEnd;    // one past the last index in _directProcesses
+    };
+
+    /**
+     * Flat view of one hydro unit for the direct pass: its splitters, then its bricks
+     * computed directly, in declaration order.
+     */
+    struct DirectUnitEntry {
+        int splitterStart;  // first index in _directSplitters
+        int splitterEnd;    // one past the last index in _directSplitters
+        int brickStart;     // first index in _directBricks
+        int brickEnd;       // one past the last index in _directBricks
+    };
+
+    /**
+     * Get the flattened solvable processes, in processing order, with their rate slices.
+     *
+     * @return the solvable processes.
+     */
+    const vector<SolvableProcess>& GetSolvableProcesses() const {
+        return _solvableProcesses;
+    }
+
+    /**
+     * Get the flattened solvable bricks, in processing order, each with the range of
+     * processes it owns in GetSolvableProcesses().
+     *
+     * @return the solvable brick entries.
+     */
+    const vector<SolvableBrickEntry>& GetSolvableBrickEntries() const {
+        return _solvableBrickEntries;
+    }
+
   protected:
     std::unique_ptr<Solver> _solver;  // owning
     ModelHydro* _model;               // non-owning reference
     int _solvableConnectionCount;
     int _directConnectionCount;
+    int _directRateCount;  // size of the direct change-rate buffer (fixed slices)
     vecDoublePt _stateVariableChanges;
     vector<Brick*> _iterableBricks;  // non-owning views into HydroUnits/SubBasin
+    // Flattened traversal of the solvable bricks and processes, built once at
+    // initialization: the model structure is fixed after the build, so the
+    // brick -> process -> connection hierarchy needs no virtual walk on every solver
+    // stage of every time step.
+    vector<SolvableProcess> _solvableProcesses;
+    vector<SolvableBrickEntry> _solvableBrickEntries;
+    // Same flattening for the direct (pre-solver) pass over the hydro units.
+    vector<Splitter*> _directSplitters;  // non-owning, grouped by hydro unit
+    vector<DirectProcess> _directProcesses;
+    vector<DirectBrickEntry> _directBricks;
+    vector<DirectUnitEntry> _directUnits;
     axd _changeRatesNoSolver;
     axd _ratesBeforeSweep;  // scratch buffer for the constraint fixpoint iteration
 
@@ -173,13 +255,18 @@ class Processor {
     void StoreStateVariableChanges(std::span<double*> values);
 
     /**
+     * Flatten the solvable bricks and their processes into the traversal tables used by
+     * the per-time-step routines (EvaluateRates, ConstrainRates, ApplyRates).
+     */
+    void BuildTraversalTables();
+
+    /**
      * Apply direct changes to the brick.
      *
-     * @param brick the brick to apply changes to.
-     * @param ptIndex the index of the point in the state variable vector.
+     * @param brickEntry the brick to apply changes to, with its process range.
      * @param timeStepInDays the time step in days.
      */
-    void ApplyDirectChanges(Brick* brick, int& ptIndex, double timeStepInDays);
+    void ApplyDirectChanges(const DirectBrickEntry& brickEntry, double timeStepInDays);
 };
 
 #endif  // HYDROBRICKS_PROCESSOR_H

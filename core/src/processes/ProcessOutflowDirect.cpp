@@ -40,5 +40,6 @@ bool ProcessOutflowDirect::IsValid() const {
 }
 
 const vecDouble& ProcessOutflowDirect::GetRates() {
-    return StoreRates({std::max(_container->GetContentWithChanges(), 0.0)});
+    // The whole content leaves within the step: the rate that empties it over one step.
+    return StoreRates({std::max(_container->GetContentWithChanges(), 0.0) / GetTimeStepInDays()});
 }

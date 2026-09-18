@@ -113,7 +113,7 @@ void ProcessLateralSnowRedistributionFrey::Finalize() {
 
     // Advance the tracked snow density exactly once per time step, using the committed SWE.
     double swe = _container->GetContentWithoutChanges();  // [mm]
-    double dt = (_timeMachine != nullptr) ? *_timeMachine->GetTimeStepPointer() : 1.0;
+    double dt = GetTimeStepInDays();
 
     // Settle the existing snow toward the maximum density (simplified Eq. 10).
     double rhoMax = static_cast<double>(*_rhoMax);

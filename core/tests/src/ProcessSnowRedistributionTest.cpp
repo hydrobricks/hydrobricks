@@ -287,3 +287,71 @@ TEST_F(SnowRedistributionModel, SnowRedistributionComplex) {
 
     EXPECT_NEAR(totSnowInput, totSwe, 0.01);
 }
+
+/**
+ * The snow above the holding depth slides within the time step it appears in, so the
+ * same snowfall must leave the same snow on each unit whatever the computation step.
+ * The transfer is a rate, so the excess is divided by the step length; without that a
+ * six-hourly run moved a quarter of the excess per step and took about a day to reach
+ * the holding depth, leaving more snow high up than a daily run did.
+ */
+TEST_F(SnowRedistributionModel, SlidesTheWholeExcessWhateverTheTimeStep) {
+    auto finalSwe = [this](int stepInHours) {
+        SettingsBasin basinSettings;
+        basinSettings.AddHydroUnit(1, 100, 2400);
+        basinSettings.AddHydroUnitPropertyDouble("slope", 80, "degree");
+        basinSettings.AddLandCover("ground", "", 0.5);
+        basinSettings.AddLandCover("glacier", "", 0.5);
+        basinSettings.AddHydroUnit(2, 100, 2300);
+        basinSettings.AddHydroUnitPropertyDouble("slope", 60, "degree");
+        basinSettings.AddLandCover("ground", "", 0.5);
+        basinSettings.AddLandCover("glacier", "", 0.5);
+        basinSettings.AddLateralConnection(1, 2, 1.0);
+
+        SubBasin subBasin;
+        EXPECT_TRUE(subBasin.Initialize(basinSettings));
+
+        _model.SetTimer("2020-01-01", "2020-01-10", stepInHours, "hour");
+
+        // The same snowfall, shared between the steps of each day.
+        int stepsPerDay = 24 / stepInHours;
+        int nSteps = 9 * stepsPerDay + 1;
+        double perStep = 100.0 / stepsPerDay;
+        vecDouble precipValues(nSteps, perStep);
+        vecDouble tempValues(nSteps, -10.0);
+        for (int i = 0; i < stepsPerDay; ++i) {  // dry first and last day, as in the fixture
+            precipValues[i] = 0.0;
+        }
+        precipValues[nSteps - 1] = 0.0;
+
+        auto precip = std::make_unique<TimeSeriesDataRegular>(GetMJD(2020, 1, 1), GetMJD(2020, 1, 10), stepInHours,
+                                                              TimeUnit::Hour);
+        precip->SetValues(precipValues);
+        auto tsPrecip = std::make_unique<TimeSeriesUniform>(VariableType::Precipitation);
+        tsPrecip->SetData(std::move(precip));
+
+        auto temperature = std::make_unique<TimeSeriesDataRegular>(GetMJD(2020, 1, 1), GetMJD(2020, 1, 10), stepInHours,
+                                                                   TimeUnit::Hour);
+        temperature->SetValues(tempValues);
+        auto tsTemp = std::make_unique<TimeSeriesUniform>(VariableType::Temperature);
+        tsTemp->SetData(std::move(temperature));
+
+        ModelHydro model(&subBasin);
+        EXPECT_TRUE(model.Initialize(_model, basinSettings, false));
+        EXPECT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(tsPrecip))));
+        EXPECT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(tsTemp))));
+        EXPECT_TRUE(model.AttachTimeSeriesToHydroUnits());
+        EXPECT_TRUE(model.Run());
+
+        vecAxxd unitContent = model.GetLogger()->GetHydroUnitValues();
+        axxd swe = unitContent[6].col(0);  // ground snowpack of the steepest unit
+
+        return swe(swe.size() - 1);
+    };
+
+    double daily = finalSwe(24);
+    double sixHourly = finalSwe(6);
+
+    EXPECT_GT(daily, 0.0);  // the holding depth keeps some snow on the slope
+    EXPECT_NEAR(sixHourly, daily, 0.01);
+}

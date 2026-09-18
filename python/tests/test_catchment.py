@@ -50,6 +50,73 @@ def test_dem_extraction():
     assert catchment.extract_dem(SITTER_DEM)
 
 
+def test_dem_is_cropped_around_the_catchment():
+    """Only the outline plus a margin is read, on a round coordinate grid."""
+    if not has_required_packages():
+        return
+    catchment = hb.Catchment(RHONE_OUTLINE)
+    catchment.extract_dem(RHONE_DEM, margin=1000, snap=1000)
+
+    outline = catchment.outline[0].bounds
+    bounds = catchment.dem.bounds
+    # The window covers the outline with at least the margin (unless the raster
+    # itself stops earlier), and its bounds are multiples of the snapping step.
+    assert bounds.left <= outline[0] - 1000 or bounds.left == 2669000
+    assert bounds.right >= outline[2] + 1000
+    assert bounds.right % 1000 == 0
+    assert catchment.dem_path == RHONE_DEM
+    assert catchment.dem.shape == catchment.dem_data.shape
+
+
+def test_dem_cropping_can_be_disabled():
+    """Without cropping, the whole raster is read (the historical behaviour)."""
+    if not has_required_packages():
+        return
+    cropped = hb.Catchment(RHONE_OUTLINE)
+    cropped.extract_dem(RHONE_DEM, margin=0, snap=0)
+    whole = hb.Catchment(RHONE_OUTLINE)
+    whole.extract_dem(RHONE_DEM, crop=False)
+
+    assert cropped.dem.shape[0] < whole.dem.shape[0]
+    assert cropped.dem.shape[1] < whole.dem.shape[1]
+    # The catchment itself is untouched: same area, same mean elevation.
+    assert math.isclose(
+        np.nansum(cropped.dem_data), np.nansum(whole.dem_data), rel_tol=1e-9
+    )
+
+
+def test_elevation_bands_are_the_same_on_a_cropped_dem():
+    """Cropping the DEM does not change the delineated hydro units."""
+    if not has_required_packages():
+        return
+    cropped = hb.Catchment(RHONE_OUTLINE)
+    cropped.extract_dem(RHONE_DEM, margin=0, snap=0)
+    cropped.create_elevation_bands(method="equal_intervals", distance=100)
+
+    whole = hb.Catchment(RHONE_OUTLINE)
+    whole.extract_dem(RHONE_DEM, crop=False)
+    whole.create_elevation_bands(method="equal_intervals", distance=100)
+
+    for column in ("area", "elevation", "slope"):
+        assert np.allclose(
+            cropped.hydro_units.hydro_units[column].to_numpy(),
+            whole.hydro_units.hydro_units[column].to_numpy(),
+        )
+
+
+def test_hydro_units_always_carry_the_slope():
+    """The slope of every unit is available even when it is not a criterion."""
+    if not has_required_packages():
+        return
+    catchment = hb.Catchment(RHONE_OUTLINE)
+    catchment.extract_dem(RHONE_DEM)
+    catchment.create_elevation_bands(method="equal_intervals", distance=100)
+
+    slopes = catchment.hydro_units.hydro_units["slope"].to_numpy().squeeze()
+    assert len(slopes) == catchment.hydro_units.get_hydro_unit_count()
+    assert np.all((slopes >= 0) & (slopes <= 90))
+
+
 def test_elevation_bands_equal_intervalss():
     if not has_required_packages():
         return

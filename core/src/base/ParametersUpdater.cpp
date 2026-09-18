@@ -30,6 +30,24 @@ void ParametersUpdater::AddParameter(Parameter* parameter) {
     }
 }
 
+void ParametersUpdater::AddUnitMonthlyOverride(float* target, const vecFloat* values) {
+    if (!target || !values || values->size() != 12) {
+        return;
+    }
+
+    _unitMonthlyOverrides.emplace_back(target, values);
+    _active = true;
+}
+
+void ParametersUpdater::Reset() {
+    _parametersYearly.clear();
+    _parametersMonthly.clear();
+    _parametersDates.clear();
+    _unitMonthlyOverrides.clear();
+    _active = false;
+    _previousDate = 0;
+}
+
 void ParametersUpdater::DateUpdate(double date) {
     if (!_active) {
         return;
@@ -61,6 +79,13 @@ void ParametersUpdater::ChangingYear(double date) {
 void ParametersUpdater::ChangingMonth(double date) {
     for (auto& parameter : _parametersMonthly) {
         parameter->UpdateFromModifier(date);
+    }
+
+    if (!_unitMonthlyOverrides.empty()) {
+        int month = GetTimeStructFromMJD(date).month;
+        for (auto& [target, values] : _unitMonthlyOverrides) {
+            *target = (*values)[month - 1];
+        }
     }
 }
 

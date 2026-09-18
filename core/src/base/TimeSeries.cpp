@@ -164,8 +164,17 @@ void TimeSeries::ExtractTimeStep(double timeStepData, int& timeStep, TimeUnit& t
     } else if (timeStepData > 1.0) {
         timeStep = static_cast<int>(round(timeStepData));
     } else if (timeStepData < 1.0) {
-        timeUnit = TimeUnit::Hour;
-        timeStep = static_cast<int>(round(timeStepData * 24));
+        // Sub-daily: hours when the spacing is a whole number of them, minutes otherwise
+        // (a rounded hour count would be 0 for anything under half an hour).
+        double hours = timeStepData * 24;
+        double roundedHours = round(hours);
+        if (roundedHours >= 1 && std::abs(hours - roundedHours) < 1e-6) {
+            timeUnit = TimeUnit::Hour;
+            timeStep = static_cast<int>(roundedHours);
+        } else {
+            timeUnit = TimeUnit::Minute;
+            timeStep = static_cast<int>(round(timeStepData * 1440));
+        }
     } else {
         throw ShouldNotHappen(std::format("TimeSeries::ExtractTimeStep - Invalid time step value: {}", timeStepData));
     }

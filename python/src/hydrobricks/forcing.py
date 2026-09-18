@@ -9,6 +9,7 @@ import numpy as np
 import pandas as pd
 from cftime import num2date
 
+from hydrobricks import caching
 from hydrobricks._constants import TO_RAD
 from hydrobricks._exceptions import (
     ConfigurationError,
@@ -42,6 +43,11 @@ _PET_METHOD_MAP: dict[str, str] = {
     "blaney_criddle": "blaney_criddle",
     "Hamon": "hamon",
     "hamon": "hamon",
+    # Vapour-density Hamon (Schulla & Jasper 2000; used by PREVAH). Routes to pyet's
+    # hamon with method=2 (see _HAMON_VAPOR_DENSITY / _compute_pet). The default
+    # 'Hamon' uses pyet's method=0, a different (exponential) variant.
+    "Hamon_vapor_density": "hamon",
+    "hamon_vapor_density": "hamon",
     "Romanenko": "romanenko",
     "romanenko": "romanenko",
     "Linacre": "linacre",
@@ -65,6 +71,11 @@ _PET_METHOD_MAP: dict[str, str] = {
     "Oudin": "oudin",
     "oudin": "oudin",
 }
+
+# PET method names that select pyet's vapour-density Hamon variant (method=2).
+_HAMON_VAPOR_DENSITY: frozenset[str] = frozenset(
+    {"Hamon_vapor_density", "hamon_vapor_density"}
+)
 
 # Accepted method names for each forcing operation, validated eagerly at call time so
 # a typo raises at the call site rather than later inside apply_operations().
@@ -308,6 +319,8 @@ class Forcing:
         column_time: str,
         time_format: str,
         content: dict[str, str] | None = None,
+        start_date: str | pd.Timestamp | None = None,
+        end_date: str | pd.Timestamp | None = None,
     ) -> None:
         """
         Read 1D time series data from CSV file for a single station.
@@ -324,6 +337,9 @@ class Forcing:
             Dictionary mapping variable names/aliases to CSV column names.
             Example: {'precipitation': 'Precipitation (mm)', 'temperature': 'Temp (C)'}
             Default: None
+        start_date, end_date
+            Modelling period the data is restricted to; either bound can be given
+            on its own. Default: None = the whole file is kept.
 
         Raises
         ------
@@ -346,7 +362,172 @@ class Forcing:
             enum_val = self.get_variable_enum(key)
             content[enum_val] = content.pop(key)
 
-        self.data1D.load_from_csv(path, column_time, time_format, content)
+        self.data1D.load_from_csv(
+            path,
+            column_time,
+            time_format,
+            content,
+            start_date=start_date,
+            end_date=end_date,
+        )
+
+    def load_spatialized_data_from_csv(
+        self,
+        path: str | Path,
+        variable: str,
+        column_time: str | None = None,
+        time_format: str = "%Y-%m-%d",
+        column_day_of_year: str | None = None,
+        columns_are: str = "id",
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> None:
+        """
+        Load forcing that is already spatialized, one column per unit or per group.
+
+        Use this when the data do not come from a station to be interpolated but are
+        already resolved in space: a distributed product, or a series computed per
+        elevation band. No gradient or correction is applied, the values are taken as
+        they are, so this replaces the
+        ``load_station_data_from_csv`` / ``spatialize_from_station_data`` pair rather
+        than feeding it.
+
+        The file holds one time column and one data column per hydro unit
+        (``columns_are='id'``) or per group of units (``columns_are`` naming a
+        hydro-unit property, e.g. an elevation-band or meteorological-zone number).
+        Grouped columns are shared: every unit whose property matches a header reads
+        that column.
+
+        Parameters
+        ----------
+        path
+            Path to the CSV file.
+        variable
+            Name of the variable the file holds (e.g. ``'precipitation'``); see
+            :meth:`get_variable_enum` for the accepted aliases.
+        column_time
+            Name of the column holding the dates. Mutually exclusive with
+            ``column_day_of_year``.
+        time_format
+            Format of the dates, when ``column_time`` is used.
+        column_day_of_year
+            Name of the column holding the day of the year (1-366), for a climatology
+            that repeats every year. The values are expanded onto the dates already
+            loaded, so load a dated variable first.
+        columns_are
+            What the column headers mean: ``'id'`` for hydro unit ids, or the name of
+            a hydro-unit property whose value selects the column.
+        start_date
+            Keep only the records from this date on (dated series only).
+        end_date
+            Keep only the records up to this date (dated series only).
+
+        Raises
+        ------
+        ForcingError
+            If the time specification is ambiguous, if a hydro unit has no matching
+            column, or if a climatology is loaded before any dated variable.
+
+        Examples
+        --------
+        >>> # One column per hydro unit
+        >>> forcing.load_spatialized_data_from_csv(
+        ...     'precipitation.csv', variable='precipitation',
+        ...     column_time='date', time_format='%Y-%m-%d',
+        ... )
+        >>> # One column per elevation band, units assigned by their 'mez' property
+        >>> forcing.load_spatialized_data_from_csv(
+        ...     'temperature.csv', variable='temperature',
+        ...     column_time='date', time_format='%Y-%m-%d', columns_are='mez',
+        ... )
+        """
+        if (column_time is None) == (column_day_of_year is None):
+            raise ForcingError(
+                "Provide either column_time (a dated series) or column_day_of_year "
+                "(a climatology repeating every year), not both and not neither.",
+                variable=variable,
+            )
+
+        var = self.get_variable_enum(variable)
+        time_column = column_time if column_time is not None else column_day_of_year
+        content = pd.read_csv(path)
+        if time_column not in content.columns:
+            raise ForcingError(
+                f'The column "{time_column}" was not found in {Path(path).name}.',
+                variable=variable,
+            )
+
+        if column_time is not None and (start_date is not None or end_date is not None):
+            dates = pd.to_datetime(content[time_column], format=time_format)
+            keep = pd.Series(True, index=content.index)
+            if start_date is not None:
+                keep &= dates >= pd.Timestamp(start_date)
+            if end_date is not None:
+                keep &= dates <= pd.Timestamp(end_date)
+            content = content[keep.to_numpy()].reset_index(drop=True)
+
+        values = content.drop(columns=[time_column])
+        columns = {str(name).strip(): i for i, name in enumerate(values.columns)}
+        data = values.to_numpy(dtype=float)
+
+        # Map every hydro unit to the column it reads.
+        keys = self._spatialized_column_keys(columns_are, variable)
+        try:
+            indices = np.array([columns[key] for key in keys])
+        except KeyError as exc:
+            raise ForcingError(
+                f"No column {exc} in {Path(path).name} for the hydro units. The "
+                f"columns available are: {', '.join(sorted(columns))}.",
+                variable=variable,
+            ) from exc
+
+        if column_day_of_year is not None:
+            if self.data2D.time is None or len(self.data2D.time) == 0:
+                raise ForcingError(
+                    "A climatology is expanded onto the dates of the other forcing, "
+                    "so load a dated variable before this one.",
+                    variable=variable,
+                )
+            days = pd.DatetimeIndex(self.data2D.time).dayofyear.to_numpy()
+            unit_values = data[days - 1, :][:, indices]
+        else:
+            time = pd.to_datetime(content[time_column], format=time_format)
+            unit_values = data[:, indices]
+            if self.data2D.time is None or len(self.data2D.time) == 0:
+                self.data2D.time = pd.DatetimeIndex(time)
+
+        if var in self.data2D.data_name:
+            self.data2D.data[self.data2D.data_name.index(var)] = unit_values
+        else:
+            self.data2D.data_name.append(var)
+            self.data2D.data.append(unit_values)
+
+    def _spatialized_column_keys(self, columns_are: str, variable: str) -> list[str]:
+        """
+        The column header each hydro unit reads, in hydro-unit order.
+
+        Parameters
+        ----------
+        columns_are
+            ``'id'`` for hydro unit ids, or the name of a hydro-unit property.
+        variable
+            Variable being loaded, for the error message.
+
+        Returns
+        -------
+        One header per hydro unit.
+        """
+        if columns_are not in self.hydro_units.columns.get_level_values(0):
+            raise ForcingError(
+                f'The hydro units carry no "{columns_are}" column to match the file '
+                f"columns against.",
+                variable=variable,
+            )
+
+        keys = self.hydro_units[columns_are].to_numpy().flatten()
+
+        # Headers are text; an integer-valued property must not become "28.0".
+        return [str(int(key)) if float(key).is_integer() else str(key) for key in keys]
 
     def correct_station_data(
         self,
@@ -505,6 +686,8 @@ class Forcing:
         raster_hydro_units: str | Path | None = None,
         apply_data_gradient: bool | None = None,
         gradient_type: str | None = None,
+        start_date: str | pd.Timestamp | None = None,
+        end_date: str | pd.Timestamp | None = None,
     ) -> None:
         """
         Define a spatialization operation from gridded data to all hydro units.
@@ -544,6 +727,10 @@ class Forcing:
             single DEM.
         gradient_type
             'additive' or 'multiplicative'. If None, a per-variable default is used.
+        start_date, end_date
+            Modelling period the data is restricted to: the steps outside it are
+            dropped before the regridding, so they are neither computed nor kept in
+            memory. The data must cover the period. Default: None = no trimming.
 
         Raises
         ------
@@ -577,6 +764,8 @@ class Forcing:
             ("raster_hydro_units", raster_hydro_units),
             ("apply_data_gradient", apply_data_gradient),
             ("gradient_type", gradient_type),
+            ("start_date", start_date),
+            ("end_date", end_date),
         ):
             if value is not None:
                 operation[key] = value
@@ -602,7 +791,10 @@ class Forcing:
         method
             Name of the method to use. Possible values are those provided in the table
             from the pyet documentation: https://pypi.org/project/pyet/. The method
-            name or the pyet function name can be used.
+            name or the pyet function name can be used. In addition to pyet's default
+            'Hamon' (an exponential variant), 'Hamon_vapor_density' selects the
+            vapour-density Hamon (Schulla & Jasper 2000; used by PREVAH), computed with
+            temperature and latitude only.
         use
             List of the meteorological variables to use to compute the PET. Only the
             variables listed here will be used. The variables must be named according
@@ -616,6 +808,13 @@ class Forcing:
         **kwargs
             Additional function-specific options passed through to the pyet function
             (see the pyet documentation).
+
+        Notes
+        -----
+        The pyet methods are daily formulations, and the model reads the PET as the
+        amount demanded during one time step. The computed daily demand is therefore
+        shared between the steps of its day when the forcing is sub-daily; on a daily
+        forcing nothing is scaled.
 
         Raises
         ------
@@ -1190,6 +1389,7 @@ class Forcing:
             - raster_hydro_units: Path to hydro unit IDs raster
             - apply_data_gradient: Whether to apply elevation gradients
             - gradient_type: 'additive' or 'multiplicative'
+            - start_date, end_date: Modelling period the data is trimmed to
 
         Raises
         ------
@@ -1211,6 +1411,8 @@ class Forcing:
             dim_x = kwargs.get("dim_x", "x")
             dim_y = kwargs.get("dim_y", "y")
             raster_hydro_units = kwargs.get("raster_hydro_units", "")
+            start_date = kwargs.get("start_date", None)
+            end_date = kwargs.get("end_date", None)
             if variable in {self.Variable.P, self.Variable.T}:
                 apply_data_gradient = kwargs.get("apply_data_gradient", True)
                 if variable == self.Variable.P:
@@ -1224,6 +1426,7 @@ class Forcing:
                 gradient_type = kwargs.get("gradient_type", "additive")
 
             dem_path = None
+            dem_signature = None
             if apply_data_gradient:
                 if self.catchment is None:
                     raise DataError(
@@ -1255,6 +1458,16 @@ class Forcing:
                     )
                 dem_path = dem_path[0]
 
+                # A cropped DEM (Catchment.extract_dem) is served from memory under
+                # a per-run name: the cache key must use the source file and the
+                # window instead, or it would never hit again.
+                if self.catchment.dem_path is not None:
+                    dem_signature = [
+                        caching.source_signature([self.catchment.dem_path]),
+                        tuple(self.catchment.dem.bounds),
+                        self.catchment.dem.shape,
+                    ]
+
             self.data2D.regrid_from_netcdf(
                 path,
                 file_pattern=file_pattern,
@@ -1268,6 +1481,9 @@ class Forcing:
                 apply_data_gradient=apply_data_gradient,
                 gradient_type=gradient_type,
                 dem_path=dem_path,
+                dem_signature=dem_signature,
+                start_date=start_date,
+                end_date=end_date,
                 cache_dir=self.cache_dir,
             )
             self.data2D.data_name.append(variable)
@@ -1334,6 +1550,12 @@ class Forcing:
             pyet_args = self._set_pyet_variables_data(pyet_args, use, i_unit)
             pet[:, i_unit] = self._compute_pet(method, pyet_args)
 
+        # The pyet methods are daily formulations: each timestamp gets the evaporative
+        # demand of a whole day. The model reads the PET as the amount demanded during
+        # one time step, so a sub-daily series is shared between the steps of its day.
+        # The factor is 1 on a daily series, which leaves those untouched.
+        pet = pet * self._forcing_step_in_days()
+
         # Store outputs
         if self.Variable.PET not in self.data2D.data_name:
             self.data2D.data.append(pet)
@@ -1341,6 +1563,23 @@ class Forcing:
         else:
             idx = self.data2D.data_name.index(self.Variable.PET)
             self.data2D.data[idx] = pet
+
+    def _forcing_step_in_days(self) -> float:
+        """
+        Spacing of the forcing records, in days.
+
+        Returns
+        -------
+        The spacing in days, or 1 when the series is too short to tell.
+        """
+        time = getattr(self.data2D, "time", None)
+        if time is None or len(time) < 2:
+            return 1.0
+
+        spacing = pd.Timestamp(time[1]) - pd.Timestamp(time[0])
+        step = spacing.total_seconds() / 86400.0
+
+        return step if step > 0 else 1.0
 
     @staticmethod
     def _compute_pet(method: str, pyet_args: dict) -> np.ndarray:
@@ -1372,6 +1611,10 @@ class Forcing:
             raise ForcingError(
                 f"Unknown PET method: {method}", variable="PET", method=method
             )
+        # pyet's hamon has several variants; select the vapour-density one (method=2)
+        # for those method names (the default 'Hamon' keeps pyet's method=0).
+        if method in _HAMON_VAPOR_DENSITY:
+            pyet_args = {**pyet_args, "method": 2}
         return getattr(pyet, pyet_func_name)(**pyet_args)
 
     def _set_pyet_variables_data(

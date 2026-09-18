@@ -27,6 +27,13 @@ class ProcessInterceptionGR4J : public ProcessET {
     static void RegisterProcessSettings(SettingsModel* modelSettings);
 
     /**
+     * @copydoc Process::RequiresDailyTimeStep()
+     */
+    [[nodiscard]] bool RequiresDailyTimeStep() const override {
+        return true;
+    }
+
+    /**
      * @copydoc Process::IsValid()
      */
     [[nodiscard]] bool IsValid() const override;

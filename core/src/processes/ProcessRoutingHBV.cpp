@@ -4,12 +4,14 @@
 #include <numeric>
 
 #include "Brick.h"
+#include "TimeMachine.h"
 #include "WaterContainer.h"
 
 ProcessRoutingHBV::ProcessRoutingHBV(WaterContainer* container)
     : ProcessOutflow(container),
       _maxbas(nullptr),
       _lastMaxbas(0.0),
+      _lastTimeStep(0.0),
       _previousContent(0.0),
       _processStorage(0.0) {}
 
@@ -62,8 +64,10 @@ const vecDouble& ProcessRoutingHBV::GetRates() {
         return StoreRates({0});
     }
 
-    // Recompute UH ordinates if maxbas changed (calibration loop)
-    if (*_maxbas != _lastMaxbas) {
+    // Recompute the UH ordinates if maxbas changed (calibration loop) or if the time
+    // step is not the one they were built for (the structure is built before the timer
+    // is initialized, so the first computation assumes a daily step).
+    if (*_maxbas != _lastMaxbas || GetTimeStepInDays() != _lastTimeStep) {
         _recomputeUH();
     }
 
@@ -71,7 +75,8 @@ const vecDouble& ProcessRoutingHBV::GetRates() {
     // previous under-deliveries) plus the same-step share of this timestep's inflow.
     double in = _container->SumIncomingFluxes();
 
-    return StoreRates({std::max(0.0, _stuh[0]) + _uhOrd[0] * in});
+    // The delivery is an amount due this step; the solver takes rates.
+    return StoreRates({(std::max(0.0, _stuh[0]) + _uhOrd[0] * in) / GetTimeStepInDays()});
 }
 
 void ProcessRoutingHBV::Finalize() {
@@ -110,17 +115,22 @@ void ProcessRoutingHBV::_recomputeUH() {
         return;
     }
 
-    double maxbas = *_maxbas;
-    if (maxbas < 1.0) {
-        maxbas = 1.0;  // shorter than the timestep: pass-through
+    // The schedule is a grid of time steps while maxbas is a duration in days, so the
+    // base of the triangle is converted to a number of steps: a 3-day maxbas spans 3
+    // slots on a daily step and 72 on an hourly one, and the routed shape is the same.
+    double timeStepInDays = GetTimeStepInDays();
+    _lastTimeStep = timeStepInDays;
+    double maxbasInSteps = static_cast<double>(*_maxbas) / timeStepInDays;
+    if (maxbasInSteps < 1.0) {
+        maxbasInSteps = 1.0;  // shorter than the time step: pass-through
     }
     _lastMaxbas = *_maxbas;
 
-    int n = static_cast<int>(std::ceil(maxbas));
+    int n = static_cast<int>(std::ceil(maxbasInSteps));
     _uhOrd.resize(n);
     for (int j = 1; j <= n; ++j) {
-        _uhOrd[j - 1] = _cumulativeWeight(static_cast<double>(j), maxbas) -
-                        _cumulativeWeight(static_cast<double>(j - 1), maxbas);
+        _uhOrd[j - 1] = _cumulativeWeight(static_cast<double>(j), maxbasInSteps) -
+                        _cumulativeWeight(static_cast<double>(j - 1), maxbasInSteps);
     }
 
     // Resize the delivery schedule, preserving existing state

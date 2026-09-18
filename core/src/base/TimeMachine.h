@@ -136,14 +136,26 @@ class TimeMachine {
     double _end;
     int _timeStep;
     TimeUnit _timeStepUnit;
+    // The calendar is advanced on an exact integer count of minutes rather than by
+    // accumulating the fractional day: 1/24 is not representable in binary. The rates
+    // stay per day (_timeStepInDays), which is the unit of the model parameters.
+    long long _stepIndex;
+    int _timeStepInMinutes;
     double _timeStepInDays;
     ParametersUpdater* _parametersUpdater;  // non-owning reference
     ActionsManager* _actionsManager;        // non-owning reference
 
     /**
-     * Update the time step in days.
+     * Update the time step length (in minutes, and the derived value in days).
      */
     void UpdateTimeStepInDays();
+
+    /**
+     * Compute the date of the current step index, from the exact minute offset.
+     *
+     * @return the date as a MJD.
+     */
+    [[nodiscard]] double DateAtStepIndex() const;
 };
 
 #endif  // HYDROBRICKS_TIME_MACHINE_H

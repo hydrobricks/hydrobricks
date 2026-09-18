@@ -113,6 +113,13 @@ ModelResult SubBasin::AssignFractions(SettingsBasin& basinSettings) {
         for (int iUnit = 0; iUnit < hydroUnitCount; ++iUnit) {
             basinSettings.SelectUnit(iUnit);
 
+            // The settings list every unit of the catchment; only those of this sub basin are handled here.
+            int unitId = basinSettings.GetHydroUnitSettings(iUnit).id;
+            if (!HasHydroUnit(unitId)) {
+                continue;
+            }
+            HydroUnit* unit = GetHydroUnitById(unitId);
+
             // Per-unit counts: units may carry different land covers (structure variants).
             int landCoverCount = basinSettings.GetLandCoverCount();
             int surfaceComponentCount = basinSettings.GetSurfaceComponentCount();
@@ -122,7 +129,7 @@ ModelResult SubBasin::AssignFractions(SettingsBasin& basinSettings) {
 
                 // The unit's structure variant may not include this land cover (e.g. a
                 // non-glacier unit on a glacier-free structure); skip it then.
-                auto* genericBrick = _hydroUnits[iUnit]->TryGetBrick(elementSettings.name);
+                auto* genericBrick = unit->TryGetBrick(elementSettings.name);
                 if (genericBrick == nullptr) {
                     continue;
                 }
@@ -136,7 +143,7 @@ ModelResult SubBasin::AssignFractions(SettingsBasin& basinSettings) {
             for (int iElement = 0; iElement < surfaceComponentCount; ++iElement) {
                 SurfaceComponentSettings elementSettings = basinSettings.GetSurfaceComponentSettings(iElement);
 
-                auto* genericBrick = _hydroUnits[iUnit]->TryGetBrick(elementSettings.name);
+                auto* genericBrick = unit->TryGetBrick(elementSettings.name);
                 if (genericBrick == nullptr) {
                     continue;
                 }
@@ -162,6 +169,10 @@ void SubBasin::Reset() {
     for (auto flux : _outletFluxes) {
         flux->Reset();
     }
+    _outletTotal = 0;
+    _inflowVolume = 0;
+    _outletVolume = 0;
+    _outletDischarge = 0;
 }
 
 void SubBasin::SaveAsInitialState() {
@@ -364,7 +375,7 @@ void SubBasin::AttachOutletFlux(Flux* flux) {
 
 double* SubBasin::GetValuePointer(std::string_view name) {
     if (name == "outlet") {
-        return &_outletTotal;
+        return &_outletDischarge;
     }
     LogError("Element '{}' not found", name);
 
@@ -372,10 +383,18 @@ double* SubBasin::GetValuePointer(std::string_view name) {
 }
 
 bool SubBasin::ComputeOutletDischarge() {
+    // Own runoff, in mm over the local area (the outlet fluxes are pre-weighted by unit area / local area).
     _outletTotal = 0;
     for (auto flux : _outletFluxes) {
         _outletTotal += flux->GetAmount();
     }
+
+    // At the outlet, the own runoff joins the volume routed from upstream (set by the river network before
+    // this sub basin is processed). The discharge reported at the outlet is expressed over the drained area,
+    // which is what a gauge normalized by its catchment area shows. Without upstream inflow it is the local
+    // total itself (assigned, not recomputed, so single-sub basin runs stay bit-identical).
+    _outletVolume = _outletTotal * _area + _inflowVolume;
+    _outletDischarge = _hasUpstream ? _outletVolume / _drainedArea : _outletTotal;
 
     return true;
 }

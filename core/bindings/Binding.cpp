@@ -409,7 +409,18 @@ PYBIND11_MODULE(_hydrobricks, m) {
             py::call_guard<py::gil_scoped_release>(), "Run the model.")
         .def("reset", &ModelHydro::Reset, "Reset the model before another run.")
         .def("save_as_initial_state", &ModelHydro::SaveAsInitialState, "Save the model state as initial conditions.")
-        .def("get_outlet_discharge", &ModelHydro::GetOutletDischarge, "Get the outlet discharge.")
+        .def("get_outlet_discharge", &ModelHydro::GetOutletDischarge,
+             "Get the outlet discharge (mm over the catchment area).")
+        .def("get_subbasin_discharge", &ModelHydro::GetSubbasinDischarge,
+             "Get the discharge at a subbasin outlet (mm over its drained area).", "subbasin_id"_a)
+        .def("get_subbasin_count", &ModelHydro::GetSubbasinCount, "Get the number of subbasins.")
+        .def("get_subbasin_ids", &ModelHydro::GetSubbasinIds, "Get the subbasin ids (processing order, outlet last).")
+        .def("get_subbasin_downstream_ids", &ModelHydro::GetSubbasinDownstreamIds,
+             "Get the downstream subbasin ids (0: catchment outlet).")
+        .def("get_subbasin_local_areas", &ModelHydro::GetSubbasinLocalAreas,
+             "Get the area of each subbasin's own hydro units [m2].")
+        .def("get_subbasin_drained_areas", &ModelHydro::GetSubbasinDrainedAreas,
+             "Get the area drained at each subbasin outlet [m2].")
         .def("get_total_outlet_discharge", &ModelHydro::GetTotalOutletDischarge, "Get the outlet discharge total.")
         .def("get_total_et", &ModelHydro::GetTotalET, "Get the total amount of water lost by evapotranspiration.")
         .def("get_total_water_storage_changes", &ModelHydro::GetTotalWaterStorageChanges,

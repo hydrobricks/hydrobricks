@@ -99,6 +99,39 @@ class ModelHydro {
     axd GetOutletDischarge() const;
 
     /**
+     * Get the discharge at the outlet of a sub basin [mm over its drained area].
+     *
+     * @param subbasinId The ID of the sub basin.
+     * @return the discharge time series.
+     */
+    [[nodiscard]] axd GetSubbasinDischarge(int subbasinId) const;
+
+    [[nodiscard]] int GetSubbasinCount() const;
+
+    [[nodiscard]] vecInt GetSubbasinIds() const;
+
+    [[nodiscard]] vecInt GetSubbasinDownstreamIds() const;
+
+    [[nodiscard]] axd GetSubbasinLocalAreas() const;
+
+    [[nodiscard]] axd GetSubbasinDrainedAreas() const;
+
+    /**
+     * Get a hydro unit by ID, in any sub basin.
+     *
+     * @param id The ID of the hydro unit.
+     * @return the hydro unit, or nullptr if the ID is unknown.
+     */
+    [[nodiscard]] HydroUnit* GetHydroUnitById(int id) const;
+
+    /**
+     * Get every hydro unit of the model, sub basin after sub basin in processing order.
+     *
+     * @return the hydro units.
+     */
+    [[nodiscard]] std::vector<HydroUnit*> GetHydroUnits() const;
+
+    /**
      * Get the total outlet discharge.
      *
      * @return total outlet discharge.
@@ -228,8 +261,13 @@ class ModelHydro {
      *
      * @return pointer to the processor.
      */
+    /**
+     * Get the processor of the outlet sub basin (the only one for a single sub basin).
+     *
+     * @return the processor, or nullptr before initialization.
+     */
     Processor* GetProcessor() {
-        return &_processor;
+        return _processors.empty() ? nullptr : _processors.back().get();
     }
 
     /**
@@ -298,9 +336,10 @@ class ModelHydro {
     [[nodiscard]] axd GetHydroUnitAreas() const;
 
   protected:
-    Processor _processor;
+    std::vector<std::unique_ptr<Processor>> _processors;  // owning: one per sub basin, in processing order
     std::unique_ptr<RiverNetwork> _network;  // owning: set only when ModelHydro builds the network from settings
     SubBasin* _subBasin;                     // non-owning view (the network outlet or an external SubBasin)
+    std::vector<SubBasin*> _subbasins;       // non-owning: the sub basins to process, upstream first
     TimeMachine _timer;
     Logger _logger;
     ActionsManager _actionsManager;
@@ -309,6 +348,18 @@ class ModelHydro {
     int _spinupSteps = 0;                                  // time steps replayed as spin-up at the start of each run
 
   private:
+    /**
+     * Get the sub basins to process, upstream first: the network's order, or the single external sub basin.
+     */
+    [[nodiscard]] std::vector<SubBasin*> CollectSubbasins() const;
+
+    /**
+     * Process one time step: every sub basin in order, each receiving the volume routed from upstream first.
+     *
+     * @return true on success.
+     */
+    bool ProcessTimeStep();
+
     /**
      * Reject a time step that a discrete daily process cannot honour.
      *

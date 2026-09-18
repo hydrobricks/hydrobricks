@@ -80,6 +80,13 @@ class ActionsManager {
     [[nodiscard]] HydroUnit* GetHydroUnitById(int id) const;
 
     /**
+     * Get every hydro unit of the model, in every sub basin.
+     *
+     * @return the hydro units.
+     */
+    [[nodiscard]] std::vector<HydroUnit*> GetHydroUnits() const;
+
+    /**
      * Get the list of sporadic action dates (i.e., actions that are not recursive).
      *
      * @return vector of sporadic action dates.

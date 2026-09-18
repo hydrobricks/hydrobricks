@@ -7,7 +7,7 @@
 #include "Includes.h"
 #include "Solver.h"
 
-class ModelHydro;
+class SubBasin;
 class Splitter;
 
 class Processor {
@@ -28,7 +28,7 @@ class Processor {
      *
      * @param model model to set.
      */
-    void SetModel(ModelHydro* model);
+    void SetSubBasin(SubBasin* subBasin);
 
     /**
      * Connect the processor to the elements to solve.
@@ -218,7 +218,7 @@ class Processor {
 
   protected:
     std::unique_ptr<Solver> _solver;  // owning
-    ModelHydro* _model;               // non-owning reference
+    SubBasin* _subBasin;              // non-owning reference: the sub basin this processor integrates
     int _solvableConnectionCount;
     int _directConnectionCount;
     int _directRateCount;  // size of the direct change-rate buffer (fixed slices)

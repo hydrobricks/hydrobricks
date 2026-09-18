@@ -18,7 +18,14 @@ struct SplitterSettings;
 
 class ModelBuilder {
   public:
-    ModelBuilder(SubBasin* subBasin, TimeMachine* timer, Logger* logger);
+    /**
+     * @param subBasin The sub basin to build.
+     * @param timer The model timer.
+     * @param logger The model logger.
+     * @param subbasinIndex The index of the sub basin in the logger (processing order).
+     * @param unitOffset The index of the sub basin's first hydro unit in the logger.
+     */
+    ModelBuilder(SubBasin* subBasin, TimeMachine* timer, Logger* logger, int subbasinIndex = 0, int unitOffset = 0);
 
     /**
      * Assign each hydro unit the structure variant whose land-cover set matches the
@@ -68,6 +75,8 @@ class ModelBuilder {
     SubBasin* _subBasin;
     TimeMachine* _timer;
     Logger* _logger;
+    int _subbasinIndex;  // index of the sub basin in the logger
+    int _unitOffset;     // index of the sub basin's first hydro unit in the logger
 
     void CreateSubBasinComponents(SettingsModel& modelSettings);
     void CreateHydroUnitsComponents(SettingsModel& modelSettings);

@@ -11,6 +11,7 @@ ModelResult RiverNetwork::Initialize(SettingsBasin& basinSettings) {
         Build(basinSettings);
         BuildProcessingOrder();
         ComputeDrainedAreas();
+        BuildReaches();
     } catch (const std::exception& e) {
         return std::unexpected(std::format("River network initialization failed: {}", e.what()));
     }
@@ -24,6 +25,8 @@ void RiverNetwork::Build(SettingsBasin& basinSettings) {
     _hydroUnitMap.clear();
     _order.clear();
     _outlet = nullptr;
+    _reaches.clear();
+    _upstream.clear();
 
     if (basinSettings.GetSubbasinCount() == 0) {
         // No declared network: one implicit sub basin (ID 1) holding every unit, built exactly as before.
@@ -79,6 +82,63 @@ void RiverNetwork::Build(SettingsBasin& basinSettings) {
             _outlet = subbasin.get();
         }
     }
+
+    // Upstream neighbours of every sub basin, looked up on every time step.
+    for (const auto& subbasin : _subbasins) {
+        _upstream[subbasin.get()] = {};
+    }
+    for (const auto& subbasin : _subbasins) {
+        if (!subbasin->IsTerminal()) {
+            _upstream[_subbasinMap.at(subbasin->GetDownstreamId())].push_back(subbasin.get());
+        }
+    }
+    for (const auto& subbasin : _subbasins) {
+        subbasin->SetHasUpstream(!_upstream.at(subbasin.get()).empty());
+    }
+}
+
+void RiverNetwork::BuildReaches() {
+    _reaches.reserve(_subbasins.size());
+    for (const auto& subbasin : _subbasins) {
+        auto reach = std::make_unique<Reach>(subbasin.get());
+        reach->Initialize();
+        subbasin->SetReach(reach.get());
+        _reaches.push_back(std::move(reach));
+    }
+}
+
+void RiverNetwork::TransferInflow(SubBasin* subbasin, double timeStepInDays) {
+    double inflowVolume = 0;
+    for (const SubBasin* upstream : _upstream.at(subbasin)) {
+        inflowVolume += upstream->GetOutletVolume();
+    }
+    subbasin->SetInflowVolume(subbasin->GetReach()->Route(inflowVolume, timeStepInDays));
+}
+
+ModelResult RiverNetwork::AssignFractions(SettingsBasin& basinSettings) {
+    for (const auto& subbasin : _subbasins) {
+        if (auto r = subbasin->AssignFractions(basinSettings); !r) {
+            return r;
+        }
+    }
+    return {};
+}
+
+void RiverNetwork::Reset() {
+    for (const auto& reach : _reaches) {
+        reach->Reset();
+    }
+}
+
+void RiverNetwork::SaveAsInitialState() {
+    for (const auto& reach : _reaches) {
+        reach->SaveAsInitialState();
+    }
+}
+
+Reach* RiverNetwork::GetReach(size_t index) const {
+    assert(index < _reaches.size());
+    return _reaches[index].get();
 }
 
 void RiverNetwork::BuildProcessingOrder() {
@@ -133,14 +193,8 @@ SubBasin* RiverNetwork::GetSubbasinById(int id) const {
     return nullptr;
 }
 
-std::vector<SubBasin*> RiverNetwork::GetUpstreamSubbasins(const SubBasin* subbasin) const {
-    std::vector<SubBasin*> upstream;
-    for (const auto& candidate : _subbasins) {
-        if (!candidate->IsTerminal() && candidate->GetDownstreamId() == subbasin->GetId()) {
-            upstream.push_back(candidate.get());
-        }
-    }
-    return upstream;
+const std::vector<SubBasin*>& RiverNetwork::GetUpstreamSubbasins(const SubBasin* subbasin) const {
+    return _upstream.at(subbasin);
 }
 
 HydroUnit* RiverNetwork::GetHydroUnitById(int id) const {

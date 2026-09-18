@@ -24,10 +24,12 @@
 #include "SurfaceComponent.h"
 #include "TimeMachine.h"
 
-ModelBuilder::ModelBuilder(SubBasin* subBasin, TimeMachine* timer, Logger* logger)
+ModelBuilder::ModelBuilder(SubBasin* subBasin, TimeMachine* timer, Logger* logger, int subbasinIndex, int unitOffset)
     : _subBasin(subBasin),
       _timer(timer),
-      _logger(logger) {
+      _logger(logger),
+      _subbasinIndex(subbasinIndex),
+      _unitOffset(unitOffset) {
     assert(subBasin);
     assert(timer);
     assert(logger);
@@ -47,8 +49,13 @@ void ModelBuilder::AssignHydroUnitStructures(SettingsModel& modelSettings, Setti
         structureCovers[id] = std::set<string>(covers.begin(), covers.end());
     }
 
-    for (int iUnit = 0; iUnit < _subBasin->GetHydroUnitCount(); ++iUnit) {
+    // The settings list every unit of the catchment; only those of this sub basin are assigned here.
+    for (int iUnit = 0; iUnit < basinSettings.GetHydroUnitCount(); ++iUnit) {
         basinSettings.SelectUnit(iUnit);
+        int unitId = basinSettings.GetHydroUnitSettings(iUnit).id;
+        if (!_subBasin->HasHydroUnit(unitId)) {
+            continue;
+        }
 
         // Land covers actually present in this unit (non-zero fraction).
         std::set<string> present;
@@ -92,7 +99,7 @@ void ModelBuilder::AssignHydroUnitStructures(SettingsModel& modelSettings, Setti
             matchedId = (smallestSuperset >= 0) ? smallestSuperset : largest;
         }
 
-        _subBasin->GetHydroUnit(iUnit)->SetStructureId(matchedId);
+        _subBasin->GetHydroUnitById(unitId)->SetStructureId(matchedId);
     }
 }
 
@@ -817,7 +824,7 @@ void ModelBuilder::ConnectLoggerToValues(SettingsModel& modelSettings) {
                     std::format("ModelBuilder::ConnectLoggerToValues - Log item '{}' not found in sub-basin brick {}",
                                 logItem, iBrickType));
             }
-            _logger->SetSubBasinValuePointer(iLabel, valPt);
+            _logger->SetSubBasinValuePointer(_subbasinIndex, iLabel, valPt);
             iLabel++;
         }
 
@@ -834,7 +841,7 @@ void ModelBuilder::ConnectLoggerToValues(SettingsModel& modelSettings) {
                                     "process {} of brick {}",
                                     logItem, iProcess, iBrickType));
                 }
-                _logger->SetSubBasinValuePointer(iLabel, valPt);
+                _logger->SetSubBasinValuePointer(_subbasinIndex, iLabel, valPt);
                 if (logItem == "output" && process->ToAtmosphere()) {
                     _logger->AddSubBasinEtIndex(iLabel);
                 }
@@ -855,7 +862,7 @@ void ModelBuilder::ConnectLoggerToValues(SettingsModel& modelSettings) {
                                 "splitter {}",
                                 logItem, iSplitter));
             }
-            _logger->SetSubBasinValuePointer(iLabel, valPt);
+            _logger->SetSubBasinValuePointer(_subbasinIndex, iLabel, valPt);
             iLabel++;
         }
     }
@@ -868,7 +875,7 @@ void ModelBuilder::ConnectLoggerToValues(SettingsModel& modelSettings) {
                 std::format("ModelBuilder::ConnectLoggerToValues - Generic log label '{}' not found in sub-basin",
                             genericLogLabel));
         }
-        _logger->SetSubBasinValuePointer(iLabel, valPt);
+        _logger->SetSubBasinValuePointer(_subbasinIndex, iLabel, valPt);
         iLabel++;
     }
 
@@ -902,7 +909,8 @@ void ModelBuilder::ConnectLoggerToValues(SettingsModel& modelSettings) {
                                     "{} brick {}",
                                     logItem, iUnit, brickSettings.name));
                 }
-                _logger->SetHydroUnitValuePointer(iUnit, labelIndex.at(brickSettings.name + ":" + logItem), valPt);
+                _logger->SetHydroUnitValuePointer(_unitOffset + iUnit,
+                                                  labelIndex.at(brickSettings.name + ":" + logItem), valPt);
             }
 
             for (int iProcess = 0; iProcess < modelSettings.GetProcessCount(); ++iProcess) {
@@ -919,7 +927,7 @@ void ModelBuilder::ConnectLoggerToValues(SettingsModel& modelSettings) {
                                         logItem, iUnit, processSettings.name, brickSettings.name));
                     }
                     int idx = labelIndex.at(brickSettings.name + ":" + processSettings.name + ":" + logItem);
-                    _logger->SetHydroUnitValuePointer(iUnit, idx, valPt);
+                    _logger->SetHydroUnitValuePointer(_unitOffset + iUnit, idx, valPt);
                     if (logItem == "output" && process->ToAtmosphere() && etIndicesSeen.insert(idx).second) {
                         _logger->AddHydroUnitEtIndex(idx);
                     }
@@ -939,7 +947,8 @@ void ModelBuilder::ConnectLoggerToValues(SettingsModel& modelSettings) {
                                     "{} splitter {}",
                                     logItem, iUnit, splitterSettings.name));
                 }
-                _logger->SetHydroUnitValuePointer(iUnit, labelIndex.at(splitterSettings.name + ":" + logItem), valPt);
+                _logger->SetHydroUnitValuePointer(_unitOffset + iUnit,
+                                                  labelIndex.at(splitterSettings.name + ":" + logItem), valPt);
             }
         }
     }
@@ -967,7 +976,7 @@ void ModelBuilder::ConnectLoggerToValues(SettingsModel& modelSettings) {
                                 "cover brick '{}' in unit {}",
                                 brickSettings.name, iUnit));
             }
-            _logger->SetHydroUnitFractionPointer(iUnit, fractionIndex.at(brickSettings.name), valPt);
+            _logger->SetHydroUnitFractionPointer(_unitOffset + iUnit, fractionIndex.at(brickSettings.name), valPt);
         }
     }
 }

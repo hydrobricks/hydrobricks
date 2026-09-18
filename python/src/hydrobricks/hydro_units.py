@@ -862,9 +862,11 @@ class HydroUnits:
 
         Notes
         -----
-        Running a model on more than one subbasin is not supported yet: the network
-        can be declared, saved and inspected, but a multi-subbasin model is refused at
-        setup. Single-subbasin models are unaffected.
+        The model then runs the subbasins upstream first; the water leaving a subbasin
+        enters the reach of its downstream subbasin and reaches its outlet within the
+        same time step (instantaneous routing, the only scheme for now). The discharge
+        at each subbasin outlet is available with
+        :meth:`hydrobricks.Model.get_subbasin_discharge`.
         """
         if isinstance(subbasins, (str, Path)):
             subbasins = pd.read_csv(subbasins)

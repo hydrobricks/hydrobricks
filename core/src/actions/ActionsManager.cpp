@@ -108,7 +108,11 @@ SubBasin* ActionsManager::GetSubBasin() const {
 }
 
 HydroUnit* ActionsManager::GetHydroUnitById(int id) const {
-    return _model->GetSubBasin()->GetHydroUnitById(id);
+    return _model->GetHydroUnitById(id);
+}
+
+std::vector<HydroUnit*> ActionsManager::GetHydroUnits() const {
+    return _model->GetHydroUnits();
 }
 
 bool ActionsManager::IsValid() const {

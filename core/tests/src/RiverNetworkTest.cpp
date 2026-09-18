@@ -176,16 +176,6 @@ TEST(RiverNetwork, InvalidNetworkIsRefused) {
     EXPECT_NE(result.error().find("undeclared subbasin 8"), string::npos);
 }
 
-TEST(ModelHydro, MultiSubbasinRunIsRefusedForNow) {
-    SettingsModel modelSettings;
-    SettingsBasin basinSettings = BuildTreeSettings();
-
-    ModelHydro model;
-    auto result = model.InitializeWithBasin(modelSettings, basinSettings);
-    ASSERT_FALSE(result);
-    EXPECT_NE(result.error().find("4 subbasins"), string::npos);
-}
-
 TEST(ModelHydro, DeclaredSingleSubbasinBuildsAsBefore) {
     SettingsModel modelSettings;
     modelSettings.SetSolver("heun_explicit");

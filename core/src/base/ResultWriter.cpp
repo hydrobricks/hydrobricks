@@ -5,9 +5,11 @@
 
 #include "FileNetcdf.h"
 
-bool ResultWriter::WriteNetCDF(const string& path, const axd& time, const vecInt& hydroUnitIds,
+bool ResultWriter::WriteNetCDF(const string& path, const axd& time, const vecInt& subbasinIds,
+                               const vecInt& subbasinDownstreamIds, const axd& subbasinLocalAreas,
+                               const axd& subbasinDrainedAreas, const vecInt& hydroUnitIds,
                                const vecInt& hydroUnitStructureIds, const axd& hydroUnitAreas,
-                               const vecStr& subBasinLabels, const vecAxd& subBasinValues,
+                               const vecStr& subBasinLabels, const vecAxxd& subBasinValues,
                                const vecStr& hydroUnitLabels, const vecAxxd& hydroUnitValues,
                                const vecStr& hydroUnitFractionLabels, const vecAxxd& hydroUnitFractions) {
     if (!std::filesystem::is_directory(path)) {
@@ -28,6 +30,7 @@ bool ResultWriter::WriteNetCDF(const string& path, const axd& time, const vecInt
 
         // Create dimensions
         int dimIdTime = file.DefDim("time", (int)time.size());
+        int dimIdSubbasin = file.DefDim("subbasins", (int)subbasinIds.size());
         int dimIdUnit = file.DefDim("hydro_units", (int)hydroUnitIds.size());
         int dimIdItemsAgg = file.DefDim("aggregated_values", (int)subBasinLabels.size());
         int dimIdItemsDist = file.DefDim("distributed_values", (int)hydroUnitLabels.size());
@@ -43,6 +46,24 @@ bool ResultWriter::WriteNetCDF(const string& path, const axd& time, const vecInt
         file.PutAttText("long_name", "time", varId);
         file.PutAttText("units", "days since 1858-11-17 00:00:00.0", varId);
 
+        varId = file.DefVarInt("subbasin_ids", {dimIdSubbasin});
+        file.PutVar(varId, subbasinIds);
+        file.PutAttText("long_name", "subbasin ids (processing order, outlet last)", varId);
+
+        varId = file.DefVarInt("subbasin_downstream_ids", {dimIdSubbasin});
+        file.PutVar(varId, subbasinDownstreamIds);
+        file.PutAttText("long_name", "downstream subbasin id (0: catchment outlet)", varId);
+
+        varId = file.DefVarDouble("subbasin_local_areas", {dimIdSubbasin});
+        file.PutVar(varId, subbasinLocalAreas);
+        file.PutAttText("long_name", "area of the subbasin's own hydro units", varId);
+        file.PutAttText("units", "m2", varId);
+
+        varId = file.DefVarDouble("subbasin_drained_areas", {dimIdSubbasin});
+        file.PutVar(varId, subbasinDrainedAreas);
+        file.PutAttText("long_name", "area drained at the subbasin outlet (own plus upstream)", varId);
+        file.PutAttText("units", "m2", varId);
+
         varId = file.DefVarInt("hydro_units_ids", {dimIdUnit});
         file.PutVar(varId, hydroUnitIds);
         file.PutAttText("long_name", "hydrological units ids", varId);
@@ -55,9 +76,11 @@ bool ResultWriter::WriteNetCDF(const string& path, const axd& time, const vecInt
         file.PutVar(varId, hydroUnitAreas);
         file.PutAttText("long_name", "hydrological units areas", varId);
 
-        varId = file.DefVarDouble("subbasin_values", {dimIdItemsAgg, dimIdTime}, 2, true);
+        varId = file.DefVarDouble("subbasin_values", {dimIdItemsAgg, dimIdSubbasin, dimIdTime}, 3, true);
         file.PutVar(varId, subBasinValues);
-        file.PutAttText("long_name", "aggregated values over the subbasin", varId);
+        file.PutAttText("long_name",
+                        "aggregated values per subbasin (mm over its local area; the outlet over its drained area)",
+                        varId);
         file.PutAttText("units", "mm", varId);
 
         varId = file.DefVarDouble("hydro_units_values", {dimIdItemsDist, dimIdUnit, dimIdTime}, 3, true);
@@ -73,6 +96,7 @@ bool ResultWriter::WriteNetCDF(const string& path, const axd& time, const vecInt
         }
 
         // Global attributes
+        file.PutAttText("format_version", "2");
         file.PutAttString("labels_aggregated", subBasinLabels);
         file.PutAttString("labels_distributed", hydroUnitLabels);
         if (recordFractions) {

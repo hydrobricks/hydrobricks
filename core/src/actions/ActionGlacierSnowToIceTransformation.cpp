@@ -24,8 +24,7 @@ bool ActionGlacierSnowToIceTransformation::Init() {
         return false;
     }
 
-    for (int i = 0; i < _manager->GetSubBasin()->GetHydroUnitCount(); ++i) {
-        auto unit = _manager->GetSubBasin()->GetHydroUnit(i);
+    for (HydroUnit* unit : _manager->GetHydroUnits()) {
         if (unit->TryGetLandCover(_landCoverName) != nullptr) {
             _hydroUnitIds.push_back(unit->GetId());
         }
@@ -39,11 +38,9 @@ void ActionGlacierSnowToIceTransformation::Reset() {
 }
 
 bool ActionGlacierSnowToIceTransformation::Apply(double) {
-    auto subBasin = _manager->GetSubBasin();
-
     // Transform snow to ice for each hydro unit.
     for (int id : _hydroUnitIds) {
-        HydroUnit* unit = subBasin->GetHydroUnitById(id);
+        HydroUnit* unit = _manager->GetHydroUnitById(id);
 
         // Get the glacier brick.
         LandCover* glacierLandCover = unit->TryGetLandCover(_landCoverName);

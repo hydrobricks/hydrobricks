@@ -73,9 +73,6 @@ void ActionGlacierEvolutionAreaScaling::Reset() {
 }
 
 bool ActionGlacierEvolutionAreaScaling::Apply(double) {
-    // Get the list of hydro units.
-    auto subBasin = _manager->GetModel()->GetSubBasin();
-
     // Get the percentage of glacier retreat for each row of the table.
     int nRows = static_cast<int>(_tableArea.rows());
     double rowPcIncrement = 1.0 / (nRows - 1);
@@ -83,7 +80,7 @@ bool ActionGlacierEvolutionAreaScaling::Apply(double) {
     // Change the glacier area for each hydro unit based on the lookup table.
     for (int i = 0; i < _hydroUnitIds.size(); ++i) {
         int id = _hydroUnitIds[i];
-        HydroUnit* unit = subBasin->GetHydroUnitById(id);
+        HydroUnit* unit = _manager->GetHydroUnitById(id);
         LandCover* brick = unit->TryGetLandCover(_landCoverName);
         if (brick == nullptr || NearlyZero(brick->GetAreaFraction(), PRECISION)) {
             continue;

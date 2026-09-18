@@ -512,9 +512,59 @@ class Model(ABC):
 
     def get_outlet_discharge(self) -> np.ndarray:
         """
-        Get the computed outlet discharge.
+        Get the computed outlet discharge (mm per time step over the catchment area).
         """
         return self.model.get_outlet_discharge()
+
+    def get_subbasin_discharge(self, subbasin_id: int) -> np.ndarray:
+        """
+        Get the computed discharge at the outlet of a subbasin.
+
+        Parameters
+        ----------
+        subbasin_id
+            The ID of the subbasin (see :meth:`get_subbasin_ids`).
+
+        Returns
+        -------
+        The discharge time series, in mm per time step over the area drained at the
+        subbasin outlet (its own hydro units plus every upstream subbasin). For the
+        terminal subbasin this is :meth:`get_outlet_discharge`.
+        """
+        return self.model.get_subbasin_discharge(int(subbasin_id))
+
+    def get_subbasin_ids(self) -> list[int]:
+        """
+        Get the IDs of the subbasins, in processing order (upstream first, the
+        catchment outlet last). A catchment without a declared network has one
+        subbasin with the ID 1.
+        """
+        return list(self.model.get_subbasin_ids())
+
+    def get_subbasin_downstream_ids(self) -> list[int]:
+        """
+        Get the downstream subbasin ID of every subbasin (0 for the catchment outlet),
+        in the order of :meth:`get_subbasin_ids`.
+        """
+        return list(self.model.get_subbasin_downstream_ids())
+
+    def get_subbasin_areas(self) -> pd.DataFrame:
+        """
+        Get the areas of the subbasins.
+
+        Returns
+        -------
+        A DataFrame indexed by subbasin ID with the columns ``local`` (the area of the
+        subbasin's own hydro units) and ``drained`` (the area drained at its outlet),
+        in m2.
+        """
+        return pd.DataFrame(
+            {
+                "local": np.asarray(self.model.get_subbasin_local_areas()),
+                "drained": np.asarray(self.model.get_subbasin_drained_areas()),
+            },
+            index=pd.Index(self.get_subbasin_ids(), name="subbasin"),
+        )
 
     def get_total_outlet_discharge(self) -> float:
         """

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from hydrobricks._exceptions import DependencyError
+from hydrobricks._exceptions import DataError, DependencyError
 from hydrobricks._optional import HAS_XARRAY, xr
 
 
@@ -47,6 +47,13 @@ class Results:
             "labels_land_covers"
         )
         self.hydro_units_ids: np.ndarray = self.results.hydro_units_ids.to_numpy()
+        #: The subbasin IDs (processing order, the catchment outlet last); ``[1]`` for
+        #: files written before the river network existed.
+        self.subbasin_ids: np.ndarray = (
+            self.results.subbasin_ids.to_numpy()
+            if "subbasin_ids" in self.results
+            else np.array([1])
+        )
 
     def close(self) -> None:
         """Close the netCDF dataset and release the file handle."""
@@ -103,6 +110,88 @@ class Results:
 
     # Former spelling, kept for one release.
     list_sub_basin_components = list_subbasin_components
+
+    def get_subbasin_values(
+        self,
+        component: str,
+        subbasin_id: int | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> np.ndarray:
+        """
+        Get the time series of an aggregated (subbasin level) component.
+
+        Parameters
+        ----------
+        component
+            The component label, e.g. ``'outlet'`` (see
+            :meth:`list_subbasin_components`).
+        subbasin_id
+            The subbasin to read. None (default) reads the catchment outlet (the
+            terminal subbasin).
+        start_date
+            Start of the period to extract (``YYYY-MM-DD``), optional.
+        end_date
+            End of the period to extract (``YYYY-MM-DD``), optional.
+
+        Returns
+        -------
+        The values over time, in mm per time step (the ``outlet`` of a subbasin is
+        expressed over the area drained at its outlet, the other components over the
+        subbasin's own area).
+
+        Raises
+        ------
+        DataError
+            If the component or the subbasin does not exist in the file.
+        """
+        labels = self.labels_aggregated
+        if isinstance(labels, str):
+            labels = [labels]
+        if labels is None or component not in labels:
+            raise DataError(
+                f"The component '{component}' is not in the aggregated values.",
+                data_type="results",
+                reason="Unknown component",
+            )
+        i_label = list(labels).index(component)
+
+        if "subbasin_values" in self.results:
+            values = self.results["subbasin_values"]
+        elif "sub_basin_values" in self.results:
+            values = self.results["sub_basin_values"]  # files written before v0.10
+        else:
+            raise DataError(
+                "The results file has no aggregated values.",
+                data_type="results",
+                reason="Missing variable",
+            )
+
+        if values.ndim == 2:
+            # Before the river network: one series per label, a single subbasin.
+            if subbasin_id not in (None, 1):
+                raise DataError(
+                    f"The results file has a single subbasin; subbasin {subbasin_id} "
+                    "does not exist.",
+                    data_type="results",
+                    reason="Unknown subbasin",
+                )
+            data = values[i_label, :]
+        else:
+            ids = list(self.subbasin_ids)
+            if subbasin_id is None:
+                i_subbasin = len(ids) - 1  # the terminal subbasin is the last one
+            elif int(subbasin_id) in ids:
+                i_subbasin = ids.index(int(subbasin_id))
+            else:
+                raise DataError(
+                    f"Subbasin {subbasin_id} is not in the results file (ids: {ids}).",
+                    data_type="results",
+                    reason="Unknown subbasin",
+                )
+            data = values[i_label, i_subbasin, :]
+
+        return self._select_time(data, start_date, end_date)
 
     def get_land_cover_areas(
         self,

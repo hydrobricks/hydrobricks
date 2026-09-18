@@ -255,24 +255,6 @@ def test_subbasin_column_without_table_is_refused_at_setup(
         hydro_units_csv.settings.validate_network()
 
 
-def test_multi_subbasin_model_setup_is_refused_for_now(
-    hydro_units_csv: hb.HydroUnits, tmp_path: Path
-):
-    _assign_two_subbasins(hydro_units_csv)
-    hydro_units_csv.set_subbasins(_subbasin_table())
-    model = hb.models.Socont(
-        land_cover_types=["ground", "glacier", "glacier"],
-        land_cover_names=["ground", "glacier_ice", "glacier_debris"],
-    )
-    with pytest.raises(hb.ConfigurationError, match="multi-subbasin"):
-        model.setup(
-            spatial_structure=hydro_units_csv,
-            output_path=tmp_path,
-            start_date="2020-01-01",
-            end_date="2020-01-10",
-        )
-
-
 def test_declared_single_subbasin_model_sets_up(tmp_path: Path):
     hydro_units = hb.HydroUnits()
     hydro_units.load_from_csv(

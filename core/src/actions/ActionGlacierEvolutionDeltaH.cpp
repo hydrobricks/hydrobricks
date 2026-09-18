@@ -77,14 +77,11 @@ void ActionGlacierEvolutionDeltaH::Reset() {
 }
 
 bool ActionGlacierEvolutionDeltaH::Apply(double) {
-    // Get the list of hydro units.
-    auto subBasin = _manager->GetSubBasin();
-
     // Compute the total glacier (_landCoverName) water equivalent (w.e.).
     double glacierWE = 0.0;
     for (int i = 0; i < _hydroUnitIds.size(); ++i) {
         int id = _hydroUnitIds[i];
-        HydroUnit* unit = subBasin->GetHydroUnitById(id);
+        HydroUnit* unit = _manager->GetHydroUnitById(id);
         LandCover* brick = unit->TryGetLandCover(_landCoverName);
         if (brick == nullptr || NearlyZero(brick->GetAreaFraction(), PRECISION)) {
             continue;
@@ -110,7 +107,7 @@ bool ActionGlacierEvolutionDeltaH::Apply(double) {
     if (row != _lastRow) {
         for (int i = 0; i < _hydroUnitIds.size(); ++i) {
             int id = _hydroUnitIds[i];
-            HydroUnit* unit = subBasin->GetHydroUnitById(id);
+            HydroUnit* unit = _manager->GetHydroUnitById(id);
             double fraction = _tableArea(row, i) / unit->GetArea();
             fraction = CheckLandCoverAreaFraction(_landCoverName, id, fraction, unit->GetArea(), _tableArea(row, i));
             assert(fraction >= 0 && fraction <= 1);
@@ -125,7 +122,7 @@ bool ActionGlacierEvolutionDeltaH::Apply(double) {
     double rowVolumeSum = _tableVolume.row(row).sum();
     for (int i = 0; i < static_cast<int>(_hydroUnitIds.size()); ++i) {
         int id = _hydroUnitIds[i];
-        HydroUnit* unit = subBasin->GetHydroUnitById(id);
+        HydroUnit* unit = _manager->GetHydroUnitById(id);
         LandCover* brick = unit->GetLandCover(_landCoverName);
         double areaGlacier = _tableArea(row, i);
         if (NearlyZero(areaGlacier, PRECISION)) {

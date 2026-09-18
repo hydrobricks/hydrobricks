@@ -12,6 +12,8 @@
 #include "SettingsBasin.h"
 #include "TimeMachine.h"
 
+class Reach;
+
 class SubBasin {
   public:
     SubBasin();
@@ -95,6 +97,78 @@ class SubBasin {
      */
     [[nodiscard]] double GetDrainedArea() const {
         return _drainedArea;
+    }
+
+    /**
+     * Declare whether other sub basins drain into this one (set by the river network). With an upstream
+     * inflow, the outlet discharge is expressed over the drained area instead of the local one.
+     */
+    void SetHasUpstream(bool value) {
+        _hasUpstream = value;
+    }
+
+    [[nodiscard]] bool HasUpstream() const {
+        return _hasUpstream;
+    }
+
+    void SetReach(Reach* reach) {
+        _reach = reach;
+    }
+
+    [[nodiscard]] Reach* GetReach() const {
+        return _reach;
+    }
+
+    /**
+     * Set the volume routed from the upstream sub basins for the current time step [m3].
+     *
+     * @param volume The routed inflow volume.
+     */
+    void SetInflowVolume(double volume) {
+        _inflowVolume = volume;
+    }
+
+    [[nodiscard]] double GetInflowVolume() const {
+        return _inflowVolume;
+    }
+
+    /**
+     * Get the sub basin's own runoff of the current time step [mm over the local area].
+     *
+     * @return the local outlet total.
+     */
+    [[nodiscard]] double GetLocalOutlet() const {
+        return _outletTotal;
+    }
+
+    /**
+     * Get the volume leaving the sub basin outlet in the current time step [m3]: the local runoff plus the
+     * routed upstream inflow.
+     *
+     * @return the outlet volume.
+     */
+    [[nodiscard]] double GetOutletVolume() const {
+        return _outletVolume;
+    }
+
+    /**
+     * Get the outlet discharge of the current time step [mm over the drained area]. Equals the local outlet
+     * total for a sub basin without upstream inflow.
+     *
+     * @return the outlet discharge.
+     */
+    [[nodiscard]] double GetOutletDischarge() const {
+        return _outletDischarge;
+    }
+
+    /**
+     * Check if a hydro unit with the given ID belongs to this sub basin.
+     *
+     * @param id The hydro unit ID.
+     * @return true if the unit is in this sub basin.
+     */
+    [[nodiscard]] bool HasHydroUnit(int id) const {
+        return _hydroUnitMap.contains(id);
     }
 
     /**
@@ -426,9 +500,14 @@ class SubBasin {
     int _id = 1;
     int _downstreamId = 0;  // 0: terminal outlet of the network
     string _name;
-    double _area;             // m2, own hydro units
-    double _drainedArea = 0;  // m2, own + upstream (set by the network)
-    double _outletTotal;
+    double _area;                                                 // m2, own hydro units
+    double _drainedArea = 0;                                      // m2, own + upstream (set by the network)
+    bool _hasUpstream = false;                                    // other sub basins drain into this one
+    Reach* _reach = nullptr;                                      // non-owning: owned by the river network
+    double _outletTotal;                                          // mm over the local area, own runoff
+    double _inflowVolume = 0;                                     // m3 per step, routed from upstream
+    double _outletVolume = 0;                                     // m3 per step, at the outlet
+    double _outletDischarge = 0;                                  // mm over the drained area, at the outlet
     std::vector<std::unique_ptr<HydroUnitProperty>> _properties;  // owning
     std::vector<std::unique_ptr<Brick>> _bricks;                  // owning: SubBasin-level bricks
     std::unordered_map<string, Brick*> _brickMap;                 // non-owning views into _bricks

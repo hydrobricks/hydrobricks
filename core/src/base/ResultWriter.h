@@ -32,9 +32,11 @@ class ResultWriter {
      * @param hydroUnitFractions Vector of 2D fraction arrays (optional).
      * @return true if successful, false otherwise.
      */
-    bool WriteNetCDF(const string& path, const axd& time, const vecInt& hydroUnitIds,
-                     const vecInt& hydroUnitStructureIds, const axd& hydroUnitAreas, const vecStr& subBasinLabels,
-                     const vecAxd& subBasinValues, const vecStr& hydroUnitLabels, const vecAxxd& hydroUnitValues,
+    bool WriteNetCDF(const string& path, const axd& time, const vecInt& subbasinIds,
+                     const vecInt& subbasinDownstreamIds, const axd& subbasinLocalAreas,
+                     const axd& subbasinDrainedAreas, const vecInt& hydroUnitIds, const vecInt& hydroUnitStructureIds,
+                     const axd& hydroUnitAreas, const vecStr& subBasinLabels, const vecAxxd& subBasinValues,
+                     const vecStr& hydroUnitLabels, const vecAxxd& hydroUnitValues,
                      const vecStr& hydroUnitFractionLabels = vecStr(), const vecAxxd& hydroUnitFractions = vecAxxd());
 
     /**

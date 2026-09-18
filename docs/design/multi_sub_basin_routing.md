@@ -2,7 +2,7 @@
 
 Design for running a catchment as a tree of subbasins connected by river reaches,
 with channel routing between them and discharge available at every subbasin outlet.
-Status: agreed 2026-09-18, PR 1 in progress.
+Status: agreed 2026-09-18. PR 1 and PR 2 implemented (uncommitted); PR 3 (routing schemes) next.
 
 Companion documents: `solver_analysis.md` (the solver contract) and the gap review of
 2026-09-18 (this is Tier 1, item 1).
@@ -26,8 +26,9 @@ Companion documents: `solver_analysis.md` (the solver contract) and the gap revi
   (the Raven convention). Routing through the reach applies to the upstream inflow
   only. See D6 for the reasoning; an option to route local runoff too can come later.
 - Subbasins may use different structure variants (e.g. a glacier sub-model only where
-  glaciers exist). Per-unit variants already exist; PR 2 extends the mechanism to
-  subbasin-level bricks.
+  glaciers exist). Per-unit variants already exist; extending the mechanism to
+  subbasin-level bricks is deferred to a later PR (PR 2 builds structure 1 in every
+  subbasin).
 - The network lives in the same `hydro_units.nc` file as the hydro units.
 
 ---
@@ -307,7 +308,7 @@ geometry and parameters.
 | PR | Content | Acceptance |
 | --- | --- | --- |
 | 1 | `subbasin` naming (user-facing, old spellings accepted), `SubbasinSettings` and `subbasin_id` on hydro units, `ValidateNetwork`, `hydro_units.nc` round trip, `RiverNetwork` owning the (single) `SubBasin` with topological order and drained areas, `HydroUnits.set_subbasins` and the `subbasin` column. A model with more than one subbasin is refused at initialization with a clear message. | All C++ and Python tests pass unchanged; new tests build a 4-subbasin tree from settings and check order, drained areas, cycle and root errors, cross-subbasin hydro-unit lookup, and the file round trip. |
-| 2 | `Reach` with the `none` scheme, per-subbasin `Processor`, run loop over the network, volume transfer, logger and result file subbasin dimension, `Results` reader, `get_subbasin_discharge`, subbasin-level structure variants. | Sitter St. Gallen split into Appenzell + remainder with `none` routing reproduces the single-basin run's outlet series to 1e-10 (mass conservation); `subbasin_values` round-trips through `Results`. |
+| 2 | DONE. `Reach` with the `none` scheme, per-subbasin `Processor`, run loop over the network, volume transfer, logger and result file subbasin dimension, `Results` reader, `get_subbasin_discharge`. Subbasin-level structure variants were deferred to a later PR (every subbasin builds structure 1; hydro-unit variants work as before). | Sitter St. Gallen split into Appenzell + remainder with `none` routing reproduces the single-basin run's outlet series to 1e-10 (mass conservation); `subbasin_values` round-trips through `Results`. |
 | 3 | `lag` and `muskingum` schemes, `routing` parameters in `SettingsModel` and `ParameterSet`, stability checks. | Unit test against the analytical Muskingum response to a pulse; daily vs hourly convergence test like `test_time_step.py`. |
 | 4 | Gauge-aware `DischargeObservations` (incl. m³/s), `evaluate`, `evaluate_periods`, `SpotpySetup`; project YAML `subbasins` and observation lists; CLI validation; docs. | Calibration example with two gauges on the Sitter runs; docs build clean. |
 | 5 | `Catchment.delineate_subbasins` with river-network shapefile support, reach length and slope extraction, preprocessing example. | Example produces the Sitter tree from the two outlet points; reach lengths match the shapefile within 1 %. |

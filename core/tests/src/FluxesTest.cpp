@@ -221,7 +221,7 @@ TEST_F(FluxWeightedModel, TwoUnitsWithTwoLandCoverBricks) {
     basinProp.AddHydroUnit(1, 150);
     basinProp.AddLandCover("item_1", "", 0.5);
     basinProp.AddLandCover("item_2", "", 0.5);
-    basinProp.AddHydroUnit(1, 50);
+    basinProp.AddHydroUnit(2, 50);
     basinProp.AddLandCover("item_1", "", 0.5);
     basinProp.AddLandCover("item_2", "", 0.5);
 
@@ -288,7 +288,7 @@ TEST_F(FluxWeightedModel, TwoUnitsWithTwoLandCoverBricksDifferentArea) {
     basinProp.AddHydroUnit(1, 150);
     basinProp.AddLandCover("item_1", "", 2.0 / 3.0);
     basinProp.AddLandCover("item_2", "", 1.0 / 3.0);
-    basinProp.AddHydroUnit(1, 50);
+    basinProp.AddHydroUnit(2, 50);
     basinProp.AddLandCover("item_1", "", 4.0 / 5.0);
     basinProp.AddLandCover("item_2", "", 1.0 / 5.0);
 

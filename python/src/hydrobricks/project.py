@@ -186,6 +186,7 @@ logger = logging.getLogger(__name__)
 _TOP_LEVEL_KEYS = {
     "model",
     "hydro_units",
+    "subbasins",
     "forcing",
     "observations",
     "periods",
@@ -233,8 +234,13 @@ class Project:
         values from the project file applied. If the file does not value every
         parameter, set the remaining ones before running.
     observations
-        The loaded observed discharge, or ``None`` when the project file has no
+        The loaded observed discharge (the primary gauge: the first entry of the
+        ``observations`` section), or ``None`` when the project file has no
         ``observations`` section.
+    gauges
+        The additional gauges declared in the ``observations`` section (a list,
+        empty without a river network); passed as extra signals to
+        :meth:`calibrate`.
     periods
         The :class:`~hydrobricks.periods.Periods` (calibration / validation /
         simulation and spin-up policy) declared in the project file.
@@ -270,6 +276,7 @@ class Project:
     calibration: dict | None = field(default=None, repr=False)
     base_dir: Path | None = None
     actions: list = field(default_factory=list, repr=False)
+    gauges: list = field(default_factory=list, repr=False)
 
     def setup(self, period: Period | tuple | str | None = None) -> None:
         """Set the model up, over the full simulation span or a given period.
@@ -468,6 +475,7 @@ class Project:
             obj_func=objective,
             transform=transform,
             periods=calib.periods,
+            extra_observations=calib.gauges or None,
         )
         database = defaults.get("database")
         if dbformat is None:
@@ -1450,31 +1458,103 @@ def _validate_forcing(config: dict, base: Path, errors: list[str]) -> dict:
     return out
 
 
-def _validate_observations(config: dict, base: Path, errors: list[str]) -> dict | None:
-    section = _get_mapping(config, "observations", errors, required=False)
+def _validate_subbasins(config: dict, base: Path, errors: list[str]) -> dict | None:
+    """The river network: the subbasin table and the hydro units column naming them."""
+    section = _get_mapping(config, "subbasins", errors, required=False)
     if section is None:
         return None
-    _check_keys(section, {"file", "time", "column"}, "observations", errors)
+    _check_keys(section, {"file", "hydro_units_column"}, "subbasins", errors)
 
-    out: dict[str, Any] = {}
-    file = _resolve_file(section, base, "observations", errors)
-    out["file"] = file
-    out["time_column"], out["time_format"] = _validate_time_section(
-        section, "observations", errors
-    )
-    column = _get_str(section, "column", "observations", errors)
-    if column is None and "column" not in section:
-        errors.append("observations.column: the discharge column name is required.")
-    out["column"] = column
+    out: dict[str, Any] = {"ids": [], "names": {}}
+    out["file"] = _resolve_file(section, base, "subbasins", errors)
+    column = section.get("hydro_units_column", "subbasin")
+    if not isinstance(column, str) or not column:
+        errors.append("subbasins.hydro_units_column: expected a column name.")
+        column = "subbasin"
+    out["hydro_units_column"] = column
 
-    if file is not None and column is not None:
-        available = _csv_columns(file, "observations", errors)
-        needed = {
-            "observations.time.column": out["time_column"],
-            "observations.column": column,
-        }
-        _check_columns(needed, available, file, errors)
+    if out["file"] is not None:
+        try:
+            table = pd.read_csv(out["file"])
+        except Exception as err:  # noqa: BLE001 - reported as a validation error
+            errors.append(f"subbasins.file: cannot read {out['file']}: {err}")
+            return out
+        for required in ("id", "downstream"):
+            if required not in table.columns:
+                errors.append(
+                    f"subbasins.file: the column '{required}' is required (with "
+                    "one row per subbasin)."
+                )
+        if "id" in table.columns:
+            out["ids"] = [int(i) for i in table["id"]]
+            if "name" in table.columns:
+                out["names"] = {
+                    str(name): int(i)
+                    for name, i in zip(table["name"], table["id"])
+                    if isinstance(name, str) and name
+                }
     return out
+
+
+def _validate_observations(
+    config: dict, base: Path, errors: list[str]
+) -> list[dict] | None:
+    """The gauges: a single mapping (the outlet) or a list, the first being primary."""
+    raw = config.get("observations")
+    if raw is None:
+        return None
+    entries = raw if isinstance(raw, list) else [raw]
+    if not entries:
+        errors.append("observations: expected a mapping or a non-empty list.")
+        return None
+
+    out: list[dict] = []
+    for index, section in enumerate(entries):
+        where = (
+            "observations" if not isinstance(raw, list) else f"observations[{index}]"
+        )
+        if not isinstance(section, dict):
+            errors.append(f"{where}: expected a mapping.")
+            continue
+        _check_keys(
+            section,
+            {"file", "time", "column", "subbasin", "units", "metric", "weight"},
+            where,
+            errors,
+        )
+        entry: dict[str, Any] = {}
+        file = _resolve_file(section, base, where, errors)
+        entry["file"] = file
+        entry["time_column"], entry["time_format"] = _validate_time_section(
+            section, where, errors
+        )
+        column = _get_str(section, "column", where, errors)
+        if column is None and "column" not in section:
+            errors.append(f"{where}.column: the discharge column name is required.")
+        entry["column"] = column
+        entry["subbasin"] = section.get("subbasin")  # resolved against the network
+        units = section.get("units", "mm")
+        if not isinstance(units, str):
+            errors.append(f"{where}.units: expected 'mm' or 'm3/s'.")
+            units = "mm"
+        entry["units"] = units
+        entry["metric"] = section.get("metric")
+        if entry["metric"] is not None and not isinstance(entry["metric"], str):
+            errors.append(f"{where}.metric: expected a metric name.")
+        weight = section.get("weight")
+        if weight is not None and not isinstance(weight, (int, float)):
+            errors.append(f"{where}.weight: expected a number.")
+        entry["weight"] = weight
+
+        if file is not None and column is not None:
+            available = _csv_columns(file, where, errors)
+            needed = {
+                f"{where}.time.column": entry["time_column"],
+                f"{where}.column": column,
+            }
+            _check_columns(needed, available, file, errors)
+        out.append(entry)
+    return out or None
 
 
 def _validate_periods(config: dict, errors: list[str]) -> Periods | None:
@@ -1994,6 +2074,7 @@ def _validate_config(config: dict, base: Path, errors: list[str]) -> dict:
     cfg = {
         "model": _validate_model(config, base, errors),
         "hydro_units": _validate_hydro_units(config, base, errors),
+        "subbasins": _validate_subbasins(config, base, errors),
         "forcing": _validate_forcing(config, base, errors),
         "observations": _validate_observations(config, base, errors),
         "periods": _validate_periods(config, errors),
@@ -2005,6 +2086,7 @@ def _validate_config(config: dict, base: Path, errors: list[str]) -> dict:
     }
     cfg["parameters"], cfg["parameter_ranges"] = _validate_parameters(config, errors)
     _validate_cross_checks(cfg, errors)
+    _validate_network_checks(cfg, errors)
 
     if cfg["calibration"] is not None:
         if cfg["observations"] is None:
@@ -2039,6 +2121,60 @@ def _validate_config(config: dict, base: Path, errors: list[str]) -> dict:
 
 
 # --- Build ------------------------------------------------------------------
+
+
+def _validate_network_checks(cfg: dict, errors: list[str]) -> None:
+    """Tie the subbasins, the hydro units column and the gauges together."""
+    network = cfg["subbasins"]
+    hu = cfg["hydro_units"]
+    if network is not None:
+        column = network["hydro_units_column"]
+        if hu.get("discretization") is not None:
+            errors.append(
+                "subbasins: the subbasin of each hydro unit must come from the "
+                "hydro units 'file' (a column naming it); it cannot be derived "
+                "from the DEM discretization yet."
+            )
+        elif hu.get("file") is not None:
+            available = _csv_columns(hu["file"], "hydro_units", errors) or []
+            if column not in available:
+                errors.append(
+                    f"subbasins.hydro_units_column: the column '{column}' is not "
+                    f"in {hu['file']}."
+                )
+            else:
+                other = dict(hu.get("other_columns") or {})
+                other.setdefault("subbasin", column)
+                hu["other_columns"] = other
+
+    observations = cfg["observations"] or []
+    for index, entry in enumerate(observations):
+        where = "observations" if len(observations) == 1 else f"observations[{index}]"
+        subbasin = entry["subbasin"]
+        if subbasin is None:
+            continue
+        if network is None:
+            errors.append(
+                f"{where}.subbasin: a gauge on a subbasin needs a 'subbasins' "
+                "section declaring the river network."
+            )
+            continue
+        if isinstance(subbasin, bool) or not isinstance(subbasin, (int, str)):
+            errors.append(f"{where}.subbasin: expected a subbasin ID or name.")
+            continue
+        if isinstance(subbasin, str):
+            if subbasin not in network["names"]:
+                errors.append(
+                    f"{where}.subbasin: unknown subbasin name '{subbasin}' (declared: "
+                    f"{sorted(network['names']) or 'none'})."
+                )
+                continue
+            entry["subbasin"] = network["names"][subbasin]
+        elif network["ids"] and subbasin not in network["ids"]:
+            errors.append(
+                f"{where}.subbasin: unknown subbasin ID {subbasin} (declared: "
+                f"{network['ids']})."
+            )
 
 
 def _parameter_label(row: pd.Series) -> str:
@@ -2256,6 +2392,11 @@ def _build_project(
             catchment.load_unit_ids_from_raster(str(unit_ids_raster))
             _initialize_land_covers(catchment, hu_cfg["land_covers"], model)
 
+    # The river network: the subbasin table (the units carry their subbasin in the
+    # column declared by the section, loaded as the 'subbasin' property above).
+    if cfg["subbasins"] is not None:
+        hydro_units.set_subbasins(cfg["subbasins"]["file"])
+
     # Lateral connectivity between the hydro units (needed by the lateral
     # processes, e.g. the snow redistribution). Set last: re-populating the basin
     # settings clears the connections.
@@ -2436,17 +2577,40 @@ def _build_project(
             spinup=periods.spinup,
         )
 
-    # Optional observed discharge, over the full simulation span.
+    # Optional observed discharge, over the full simulation span: the first entry
+    # is the primary gauge, the others additional gauges of the river network.
     observations = None
-    obs_cfg = cfg["observations"]
-    if obs_cfg is not None:
-        observations = DischargeObservations(start_date, end_date)
-        observations.load_from_csv(
-            obs_cfg["file"],
-            column_time=obs_cfg["time_column"],
-            time_format=obs_cfg["time_format"],
-            content={"discharge": obs_cfg["column"]},
-        )
+    gauges: list[DischargeObservations] = []
+    if cfg["observations"] is not None:
+        areas = None
+        for index, obs_cfg in enumerate(cfg["observations"]):
+            drained_area = None
+            if obs_cfg["units"] != "mm":
+                if areas is None:
+                    areas = hydro_units.get_subbasin_areas()
+                subbasin_id = obs_cfg["subbasin"]
+                if subbasin_id is None:
+                    subbasin_id = int(areas["drained"].idxmax())
+                drained_area = float(areas.loc[int(subbasin_id), "drained"])
+            gauge = DischargeObservations(
+                start_date,
+                end_date,
+                subbasin=obs_cfg["subbasin"],
+                units=obs_cfg["units"],
+                drained_area=drained_area,
+                metric=obs_cfg["metric"],
+                weight=obs_cfg["weight"],
+            )
+            gauge.load_from_csv(
+                obs_cfg["file"],
+                column_time=obs_cfg["time_column"],
+                time_format=obs_cfg["time_format"],
+                content={"discharge": obs_cfg["column"]},
+            )
+            if index == 0:
+                observations = gauge
+            else:
+                gauges.append(gauge)
 
     actions = _build_actions(cfg["actions"], model, errors)
     _raise_if_errors(errors, path)
@@ -2468,6 +2632,7 @@ def _build_project(
         calibration=calibration,
         base_dir=cfg["base_dir"],
         actions=actions,
+        gauges=gauges,
     )
 
 

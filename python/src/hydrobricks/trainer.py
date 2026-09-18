@@ -139,7 +139,8 @@ class SpotpySetup:
             Leave as None when using ``setup_factory``.
         discharge
             The primary signal: a DischargeObservations instance (or list, one per
-            model). Leave as None when using ``setup_factory``.
+            model). A gauge on a subbasin (``subbasin`` set) is scored against that
+            subbasin's outlet discharge. Leave as None when using ``setup_factory``.
         setup_factory
             Optional picklable callable taking no arguments and returning a
             ``(model, forcing, discharge)`` tuple (each a single instance or a list).
@@ -180,7 +181,9 @@ class SpotpySetup:
         extra_observations
             Optional list of auxiliary signals
             (:class:`~hydrobricks.evaluation.base.AuxiliaryObservation`, e.g.
-            ``GlacierMassBalanceObservations``)
+            ``GlacierMassBalanceObservations``, or further
+            :class:`~hydrobricks.evaluation.discharge.DischargeObservations` gauges
+            on the subbasins of a river network)
             to evaluate alongside discharge. Each carries its own ``metric``,
             ``weight``, ``mode`` (``'objective'`` or ``'constraint'``) and
             ``tolerance``. Signals that need recorded series require the model to be
@@ -286,6 +289,7 @@ class SpotpySetup:
         self.model = None
         self.forcing = None
         self.obs = None
+        self._obs_subbasins: list[int | None] = []
         self._built = False
         if setup_factory is None:
             self._build_from_objects(model, forcing, discharge)
@@ -561,6 +565,23 @@ class SpotpySetup:
         for obs in self.extra_observations:
             if eval_start is not None:
                 obs.restrict_to_period(eval_start, model.end_date)
+            if hasattr(obs, "simulated_series") and len(obs) > 0:
+                # A gauge must line up with the simulation at its dates; check it
+                # once here rather than reject every run with the same error.
+                expected = pd.date_range(
+                    pd.Timestamp(pd.Series(obs.time).min()),
+                    pd.Timestamp(pd.Series(obs.time).max()),
+                    freq="D",
+                )
+                if len(expected) != len(obs):
+                    raise DataError(
+                        f"The additional gauge '{obs.name}' has {len(obs)} values "
+                        f"over {expected[0].date()}..{expected[-1].date()} "
+                        f"({len(expected)} days): the observations must be "
+                        "continuous over their range.",
+                        data_type="discharge observations",
+                        reason="Gauge observations with gaps",
+                    )
         self._extra_lengths = [len(o) for o in self.extra_observations]
         if self._has_extra_obs and sum(self._extra_lengths) == 0:
             raise DataError(
@@ -643,7 +664,7 @@ class SpotpySetup:
         # Reuse objects already built by an earlier task in this worker process.
         cached = _BUILT_CACHE.get(self._build_token)
         if cached is not None:
-            self.model, self.forcing, self.obs = cached
+            self.model, self.forcing, self.obs, self._obs_subbasins = cached
             self._built = True
             return
 
@@ -667,7 +688,12 @@ class SpotpySetup:
         # current calibration is kept (a worker processes one run at a time), so
         # the cache cannot grow or hand back another run's stale objects.
         _BUILT_CACHE.clear()
-        _BUILT_CACHE[self._build_token] = (self.model, self.forcing, self.obs)
+        _BUILT_CACHE[self._build_token] = (
+            self.model,
+            self.forcing,
+            self.obs,
+            self._obs_subbasins,
+        )
 
     def __getstate__(self) -> dict:
         """Return picklable state, dropping the C++-backed objects for workers."""
@@ -812,6 +838,8 @@ class SpotpySetup:
                     reason="Empty observation dataset",
                 )
             observations.append(o.data[0])
+        # The subbasin each primary gauge observes (None: the catchment outlet).
+        self._obs_subbasins = [getattr(o, "subbasin", None) for o in obs_list]
         return observations
 
     def _validate_ensemble_sizes(self) -> None:
@@ -1059,7 +1087,15 @@ class SpotpySetup:
                     model.run(parameters=params, forcing=forcing)
                 else:
                     model.run(parameters=params)
-                sim = model.get_outlet_discharge()
+                subbasin = (
+                    self._obs_subbasins[model_idx]
+                    if model_idx < len(self._obs_subbasins)
+                    else None
+                )
+                if subbasin is None:
+                    sim = model.get_outlet_discharge()
+                else:
+                    sim = model.get_subbasin_discharge(subbasin)
             except Exception as e:
                 # One bad parameter set must not abort the whole calibration.
                 logger.warning(

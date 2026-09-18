@@ -1349,3 +1349,143 @@ def test_parameter_range_needs_both_bounds(tmp_path):
     with pytest.raises(hb.ConfigurationError) as excinfo:
         hb.load_project(config, base_dir=SITTER_DIR)
     assert "both 'min' and 'max'" in str(excinfo.value)
+
+
+# ---- River network: subbasins and gauges ---------------------------------------
+
+
+STGALLEN_DIR = TEST_FILES_DIR / "ch_sitter_stgallen"
+
+
+def _network_files(tmp_path):
+    """The St. Gallen bands split in two subbasins, plus the subbasin table and a
+    synthetic gauge on the upper subbasin (units in m3/s)."""
+    bands = pd.read_csv(STGALLEN_DIR / "elevation_bands.csv", header=[0, 1])
+    ids = bands[("id", "-")].to_numpy()
+    bands[("subbasin", "-")] = np.where(ids >= 21, 2, 1)
+    bands.to_csv(tmp_path / "hydro_units.csv", index=False)
+    pd.DataFrame(
+        {
+            "id": [1, 2],
+            "downstream": [0, 1],
+            "name": ["St. Gallen", "upper Sitter"],
+            "length": [12000.0, 3000.0],
+        }
+    ).to_csv(tmp_path / "subbasins.csv", index=False)
+    # A gauge record for the upper subbasin, in m3/s (any plausible series will do).
+    discharge = pd.read_csv(STGALLEN_DIR / "discharge.csv")
+    discharge.iloc[:, 1] = discharge.iloc[:, 1] * 0.5
+    discharge.to_csv(tmp_path / "q_upper.csv", index=False)
+    return discharge.columns[0], discharge.columns[1]
+
+
+def _network_config(tmp_path, gauges=True):
+    date_col, q_col = _network_files(tmp_path)
+    config = {
+        "model": {
+            "name": "socont",
+            "options": {
+                "soil_storage_nb": 2,
+                "surface_runoff": "linear_storage",
+                "channel_routing": "lag",
+            },
+        },
+        "hydro_units": {"file": str(tmp_path / "hydro_units.csv")},
+        "subbasins": {"file": str(tmp_path / "subbasins.csv")},
+        "forcing": {
+            "file": str(STGALLEN_DIR / "meteo.csv"),
+            "time": {"column": "date", "format": "%d/%m/%Y"},
+            "columns": {
+                "precipitation": "precip(mm/day)",
+                "temperature": "temp(C)",
+                "pet": "pet_sim(mm/day)",
+            },
+            "ref_elevation": 1045,
+        },
+        "periods": {
+            "calibration": ["1981-01-01", "1981-12-31"],
+            "validation": ["1982-01-01", "1982-12-31"],
+        },
+        "output": str(tmp_path / "output"),
+        "parameters": {**PARAMETERS, "channel_celerity": 1.0},
+    }
+    if gauges:
+        config["observations"] = [
+            {
+                "file": str(STGALLEN_DIR / "discharge.csv"),
+                "time": {"column": date_col, "format": "%d/%m/%Y"},
+                "column": q_col,
+            },
+            {
+                "file": str(tmp_path / "q_upper.csv"),
+                "time": {"column": date_col, "format": "%d/%m/%Y"},
+                "column": q_col,
+                "subbasin": "upper Sitter",
+                "units": "m3/s",
+                "metric": "nse",
+                "weight": 0.5,
+            },
+        ]
+    return config
+
+
+def test_project_with_subbasins_and_gauges(tmp_path):
+    project = hb.load_project(_network_config(tmp_path), base_dir=tmp_path)
+
+    assert project.hydro_units.get_subbasin_ids() == [1, 2]
+    assert project.model.channel_routing == "lag"
+    assert project.parameters.has("channel_celerity")
+    assert project.observations is not None
+    assert project.observations.subbasin is None
+    assert len(project.gauges) == 1
+    gauge = project.gauges[0]
+    assert gauge.subbasin == 2
+    assert gauge.metric == "nse"
+    assert gauge.weight == 0.5
+    # m3/s converted to mm per day with the drained area of the upper subbasin.
+    areas = project.hydro_units.get_subbasin_areas()
+    raw = pd.read_csv(tmp_path / "q_upper.csv").iloc[:, 1].to_numpy()
+    expected = raw * 86400.0 / areas.loc[2, "drained"] * 1000.0
+    np.testing.assert_allclose(gauge.observed()[:10], expected[:10], rtol=1e-9)
+
+    project.run()
+    assert project.model.get_subbasin_ids() == [2, 1]
+    table = hb.evaluate_periods(project.model, gauge, project.periods, metrics=("nse",))
+    assert np.isfinite(table["nse"]).all()
+
+
+def test_project_network_validation(tmp_path):
+    # An unknown gauge name, a gauge without a network, a missing column.
+    config = _network_config(tmp_path)
+    config["observations"][1]["subbasin"] = "nowhere"
+    with pytest.raises(hb.ConfigurationError, match="unknown subbasin name"):
+        hb.load_project(config, base_dir=tmp_path, setup=False)
+
+    config = _network_config(tmp_path)
+    del config["subbasins"]
+    with pytest.raises(hb.ConfigurationError, match="needs a 'subbasins' section"):
+        hb.load_project(config, base_dir=tmp_path, setup=False)
+
+    config = _network_config(tmp_path)
+    config["subbasins"]["hydro_units_column"] = "basin_id"
+    with pytest.raises(hb.ConfigurationError, match="basin_id"):
+        hb.load_project(config, base_dir=tmp_path, setup=False)
+
+    config = _network_config(tmp_path)
+    config["observations"][1]["units"] = "gallons"
+    with pytest.raises(hb.DataError):
+        hb.load_project(config, base_dir=tmp_path, setup=False)
+
+
+def test_project_calibrate_with_gauges_smoke(tmp_path):
+    pytest.importorskip("spotpy")
+    config = _network_config(tmp_path)
+    config["calibration"] = {
+        "algorithm": "mc",
+        "repetitions": 2,
+        "objective": "nse",
+        "parameters": ["a_snow", "k_quick"],
+    }
+    project = hb.load_project(config, base_dir=tmp_path)
+    result = project.calibrate()
+    assert np.isfinite(result["score"])

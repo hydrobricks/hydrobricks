@@ -864,8 +864,8 @@ class HydroUnits:
         -----
         The model then runs the subbasins upstream first; the water leaving a subbasin
         enters the reach of its downstream subbasin and reaches its outlet within the
-        same time step (instantaneous routing, the only scheme for now). The discharge
-        at each subbasin outlet is available with
+        same time step (or later, with the ``channel_routing`` model option). The
+        discharge at each subbasin outlet is available with
         :meth:`hydrobricks.Model.get_subbasin_discharge`.
         """
         if isinstance(subbasins, (str, Path)):
@@ -898,6 +898,47 @@ class HydroUnits:
         self.subbasins = table.reset_index(drop=True)
         if self._basin_populated:
             self.populate_bounded_instance()
+
+    def get_subbasin_areas(self) -> pd.DataFrame:
+        """
+        Get the areas of the subbasins, from the hydro units and the network.
+
+        Returns
+        -------
+        A DataFrame indexed by subbasin ID with the columns ``local`` (the area of
+        the subbasin's own hydro units) and ``drained`` (the area drained at its
+        outlet: its own units plus every upstream subbasin), in m². Without a
+        declared network, the single subbasin 1 covers the catchment.
+        """
+        areas = self.hydro_units["area"].iloc[:, 0].astype(float).to_numpy()
+        if self.has(self.SUBBASIN_COLUMN):
+            column = self.hydro_units[self.SUBBASIN_COLUMN].iloc[:, 0]
+            units_subbasin = column.astype(int).to_numpy()
+        else:
+            units_subbasin = np.ones(len(areas), dtype=int)
+        local = pd.Series(areas).groupby(units_subbasin).sum()
+
+        ids = self.get_subbasin_ids()
+        table = pd.DataFrame(
+            {"local": [float(local.get(i, 0.0)) for i in ids]},
+            index=pd.Index(ids, name="subbasin"),
+        )
+        downstream = (
+            dict(zip(self.subbasins["id"].astype(int), self.subbasins["downstream"]))
+            if self.subbasins is not None
+            else {i: 0 for i in ids}
+        )
+        drained = dict(table["local"])
+        # Every subbasin passes its local area down the tree to all its downstream ones.
+        for subbasin_id in ids:
+            current = downstream.get(subbasin_id, 0)
+            guard = 0
+            while current and current in drained and guard < len(ids):
+                drained[current] += table.at[subbasin_id, "local"]
+                current = downstream.get(current, 0)
+                guard += 1
+        table["drained"] = [drained[i] for i in ids]
+        return table
 
     def get_subbasin_ids(self) -> list[int]:
         """

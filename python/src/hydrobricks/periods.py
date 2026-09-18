@@ -319,7 +319,8 @@ def evaluate_periods(
         A model that has been ``setup()`` and ``run()``.
     observations
         The observed discharge: a :class:`DischargeObservations` (sliced by its
-        own dates) or an array aligned with the simulated series.
+        own dates; a gauge on a subbasin is scored against that subbasin's outlet)
+        or an array aligned with the simulated series.
     periods
         The periods to evaluate on.
     metrics
@@ -357,10 +358,10 @@ def evaluate_periods(
             reason="Duplicate transforms",
         )
 
-    sim = model.get_outlet_discharge()
     time = model.get_recorded_time()
 
     if isinstance(observations, np.ndarray):
+        sim = model.get_outlet_discharge()
         if len(observations) != len(sim):
             raise DataError(
                 f"The observations array ({len(observations)} values) does not "
@@ -372,6 +373,7 @@ def evaluate_periods(
         obs_time = time
         obs_values = observations
     else:
+        sim = observations.simulated_series(model)
         obs_time = pd.DatetimeIndex(observations.time)
         obs_values = observations.data[0]
 

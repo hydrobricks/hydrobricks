@@ -244,8 +244,17 @@ double Reach::RouteMuskingum(double inflowVolume, double timeStepInDays) {
 void Reach::Reset() {
     _inflow = 0;
     _outflow = 0;
-    _storage = _initialStorage;
     _schedule = _initialSchedule;
+    // The schedule must stay aligned with the ordinates: no state may have been saved (empty initial schedule),
+    // or the travel time may have changed since. Fold any excess into the last slot, pad with zeros otherwise.
+    if (!_ordinates.empty() && _schedule.size() > _ordinates.size()) {
+        double dropped = std::accumulate(_schedule.begin() + static_cast<long>(_ordinates.size()), _schedule.end(),
+                                         0.0);
+        _schedule.resize(_ordinates.size());
+        _schedule.back() += dropped;
+    }
+    _schedule.resize(_ordinates.size(), 0.0);
+    _storage = _scheme == Scheme::Lag ? std::accumulate(_schedule.begin(), _schedule.end(), 0.0) : _initialStorage;
     _previousInflow = 0;
     _previousOutflow = 0;
 }

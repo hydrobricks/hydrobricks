@@ -232,3 +232,27 @@ TEST(SettingsModel, ChannelRoutingParametersAreSettable) {
     ASSERT_EQ(routing.parameters.size(), 2);
     EXPECT_FLOAT_EQ(routing.parameters[0].GetValue(), 2.0f);
 }
+
+TEST(Reach, ResetWithoutSavedStateKeepsTheScheduleAligned) {
+    // A reset before any state was saved (the calibration loop: run, reset, run) must leave the delivery
+    // schedule sized like the ordinates, not empty: the next routing wrote past its end otherwise.
+    Fixture f("lag", 2.0 * kSecondsPerDay, 1.0f);
+    vecDouble first = f.Pulse(100.0, 4);
+    EXPECT_DOUBLE_EQ(first[2], 100.0);
+
+    f.reach->Reset();
+    EXPECT_DOUBLE_EQ(f.reach->GetStorage(), 0.0);
+    vecDouble second = f.Pulse(100.0, 4);
+    EXPECT_DOUBLE_EQ(second[0], 0.0);
+    EXPECT_DOUBLE_EQ(second[2], 100.0);
+    EXPECT_NEAR(Sum(second), 100.0, 1e-12);
+
+    // The same for the Muskingum scheme.
+    Fixture m("muskingum", 2.0 * kSecondsPerDay, 1.0f, 0.2f);
+    vecDouble a = m.Pulse(100.0, 5);
+    m.reach->Reset();
+    vecDouble b = m.Pulse(100.0, 5);
+    for (int t = 0; t < 5; ++t) {
+        EXPECT_NEAR(b[t], a[t], 1e-12) << "t=" << t;
+    }
+}

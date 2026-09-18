@@ -59,11 +59,10 @@ class HBV(Model):
     share_soil : bool
         Share a single soil moisture storage across all land covers (default:
         False, i.e. each land cover has its own soil moisture store, as in the
-        original HBV land-use formulation). With several land covers and per-class
-        soils, the soil/recharge parameters (fc, lp, beta) become cover-specific
-        and are exposed with a per-cover suffix (e.g. ``fc_forest``); with a single
-        land cover (or when sharing) the bare aliases (``fc``, ``lp``, ``beta``)
-        are kept.
+        original HBV). With several land covers and per-cover soils, the
+        soil/recharge parameters (fc, lp, beta) become cover-specific and are exposed
+        with a per-cover suffix (e.g. ``fc_forest``); with a single land cover (or
+        when sharing) the bare aliases (``fc``, ``lp``, ``beta``) are kept.
     forest_interception : bool
         Add a canopy interception store on each ``forest`` land cover (default:
         False). When enabled, the canopy intercepts rain (capacity ``ic``),
@@ -81,11 +80,12 @@ class HBV(Model):
         GSM-SOCONT: two linear reservoirs for the glacierized-area rain + snowmelt
         and ice melt).
 
-    Land-use classes
-    ----------------
-    Besides the default soil-bearing ``open`` cover, HBV supports the HBV land-use
-    classes as land covers: ``forest`` (an optional canopy interception on the rain
-    path, enabled with ``forest_interception=True``), ``water`` (exclusive open-water
+    Land covers
+    -----------
+    Besides the default soil-bearing ``open`` cover, HBV supports the land cover
+    types of the original HBV (its land-use classes): ``forest`` (an optional canopy
+    interception on the rain path, enabled with ``forest_interception=True``),
+    ``water`` (exclusive open-water
     cover: all precipitation direct, open-water evaporation, linear outflow — its own
     no-snow structure variant) and ``glacier`` (Socont-style: glacier-area rain +
     snowmelt and ice melt feed two linear sub-basin reservoirs draining to the outlet,
@@ -137,8 +137,8 @@ class HBV(Model):
         - Response routine: defined by the subclass (``_define_response_structure``).
           Its bricks must route their outflows to the 'routing' brick.
         - Soil moisture storage (capacity FC): evapotranspiration limited by LP;
-          overflow safety to the routing brick. One per land cover (original HBV
-          land-use formulation), or a single shared store when ``share_soil`` is
+          overflow safety to the routing brick. One per land cover (as in the
+          original HBV), or a single shared store when ``share_soil`` is
           set.
         - Routing: triangular unit hydrograph (MAXBAS) to the outlet.
 
@@ -287,7 +287,7 @@ class HBV(Model):
     def _define_structure_variants(
         self,
     ) -> list[tuple]:
-        """Build the structure variants for the land-use classes.
+        """Build the structure variants for the land cover types.
 
         The primary (structure 1) is the glacier- and water-free **base**: the soil
         covers (open, forest) with the soil/response/routing routine, plus the

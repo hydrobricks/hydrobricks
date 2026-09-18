@@ -18,13 +18,13 @@ import pytest
 
 import hydrobricks as hb
 import hydrobricks.models as models
-from hydrobricks.models.prevah_unibe import (
-    LAND_USE_ALBEDO,
-    LAND_USE_COVER_TYPES,
-    LAND_USE_LAI,
-    LAND_USE_ROOT_DEPTH,
-    LAND_USE_SI_MAX,
-    LAND_USE_VEG_COV,
+from hydrobricks.land_covers import (
+    PREVAH_LAND_USE_ALBEDO,
+    PREVAH_LAND_USE_COVER_TYPES,
+    PREVAH_LAND_USE_LAI,
+    PREVAH_LAND_USE_ROOT_DEPTH,
+    PREVAH_LAND_USE_SI_MAX,
+    PREVAH_LAND_USE_VEG_COV,
 )
 
 # ---------------------------------------------------------------------------
@@ -1317,24 +1317,24 @@ def test_prevah_per_cover_soil_capacities_change_the_result(tmp_path):
 
 
 _TABLES = (
-    LAND_USE_SI_MAX,
-    LAND_USE_VEG_COV,
-    LAND_USE_ROOT_DEPTH,
-    LAND_USE_ALBEDO,
-    LAND_USE_LAI,
+    PREVAH_LAND_USE_SI_MAX,
+    PREVAH_LAND_USE_VEG_COV,
+    PREVAH_LAND_USE_ROOT_DEPTH,
+    PREVAH_LAND_USE_ALBEDO,
+    PREVAH_LAND_USE_LAI,
 )
 
 
 def test_every_land_use_has_twelve_monthly_values():
     for table in _TABLES:
-        assert sorted(table) == sorted(LAND_USE_COVER_TYPES)
+        assert sorted(table) == sorted(PREVAH_LAND_USE_COVER_TYPES)
         assert all(len(values) == 12 for values in table.values())
 
 
 def test_land_uses_map_onto_the_hydrobricks_cover_types():
     # PREVAH names 22 land uses; only six carry distinct physics and those are the
     # hydrobricks cover types of the same name.
-    assert len(LAND_USE_COVER_TYPES) == 22
+    assert len(PREVAH_LAND_USE_COVER_TYPES) == 22
     distinct = {
         "water": "water",
         "urban": "urban",
@@ -1344,15 +1344,15 @@ def test_land_uses_map_onto_the_hydrobricks_cover_types():
         "wetland": "wetland",
     }
     for land_use, cover_type in distinct.items():
-        assert LAND_USE_COVER_TYPES[land_use] == cover_type
+        assert PREVAH_LAND_USE_COVER_TYPES[land_use] == cover_type
     # Every other land use is an ordinary soil-bearing cover.
-    others = set(LAND_USE_COVER_TYPES) - set(distinct)
-    assert {LAND_USE_COVER_TYPES[c] for c in others} == {"open", "forest"}
+    others = set(PREVAH_LAND_USE_COVER_TYPES) - set(distinct)
+    assert {PREVAH_LAND_USE_COVER_TYPES[c] for c in others} == {"open", "forest"}
 
 
 def test_reference_values():
     # Spot checks against mxp_model_parameter.f90.
-    assert LAND_USE_SI_MAX["coniferous_forest"] == [
+    assert PREVAH_LAND_USE_SI_MAX["coniferous_forest"] == [
         2.5,
         2.8,
         2.8,
@@ -1366,14 +1366,14 @@ def test_reference_values():
         3.0,
         2.5,
     ]
-    assert LAND_USE_VEG_COV["water"] == [0.0] * 12
-    assert LAND_USE_ROOT_DEPTH["coniferous_forest"] == [1.5] * 12
+    assert PREVAH_LAND_USE_VEG_COV["water"] == [0.0] * 12
+    assert PREVAH_LAND_USE_ROOT_DEPTH["coniferous_forest"] == [1.5] * 12
     # The albedo falls back to the land use's own value when the LAI exceeds 4.
-    assert LAND_USE_LAI["coniferous_forest"][6] == 8.0
-    assert LAND_USE_ALBEDO["coniferous_forest"][6] == pytest.approx(0.12)
+    assert PREVAH_LAND_USE_LAI["coniferous_forest"][6] == 8.0
+    assert PREVAH_LAND_USE_ALBEDO["coniferous_forest"][6] == pytest.approx(0.12)
     # ... and is interpolated with the bare-soil albedo otherwise.
-    assert LAND_USE_LAI["pasture"][0] == 0.5
-    assert LAND_USE_ALBEDO["pasture"][0] == pytest.approx(
+    assert PREVAH_LAND_USE_LAI["pasture"][0] == 0.5
+    assert PREVAH_LAND_USE_ALBEDO["pasture"][0] == pytest.approx(
         0.1 + 0.25 * (0.25 - 0.1) * 0.5
     )
 
@@ -1381,7 +1381,10 @@ def test_reference_values():
 def test_interception_capacity_is_si_max_times_veg_cov():
     values = models.PrevahUniBE.land_use_interception_capacity("pasture")
     expected = [
-        s * v for s, v in zip(LAND_USE_SI_MAX["pasture"], LAND_USE_VEG_COV["pasture"])
+        s * v
+        for s, v in zip(
+            PREVAH_LAND_USE_SI_MAX["pasture"], PREVAH_LAND_USE_VEG_COV["pasture"]
+        )
     ]
     assert values == pytest.approx(expected)
 
@@ -1434,7 +1437,7 @@ def test_unknown_land_use_is_rejected():
 def _model_with_land_uses(land_uses, **options):
     return models.PrevahUniBE(
         land_cover_names=land_uses,
-        land_cover_types=[LAND_USE_COVER_TYPES[c] for c in land_uses],
+        land_cover_types=[PREVAH_LAND_USE_COVER_TYPES[c] for c in land_uses],
         interception_covers=land_uses,
         **options,
     )
@@ -1456,7 +1459,7 @@ def test_apply_land_use_sets_the_monthly_parameters():
         model.land_use_interception_capacity("pasture")
     )
     assert monthly[("pasture_canopy", "et_factor")] == pytest.approx(
-        LAND_USE_VEG_COV["pasture"]
+        PREVAH_LAND_USE_VEG_COV["pasture"]
     )
     assert monthly[("coniferous_forest_canopy", "capacity")] == pytest.approx(
         model.land_use_interception_capacity("coniferous_forest")
@@ -1487,7 +1490,7 @@ def test_generate_parameters_applies_the_tables_of_named_land_uses():
     land_uses = ["coniferous_forest", "pasture"]
     model = models.PrevahUniBE(
         land_cover_names=land_uses,
-        land_cover_types=[LAND_USE_COVER_TYPES[c] for c in land_uses],
+        land_cover_types=[PREVAH_LAND_USE_COVER_TYPES[c] for c in land_uses],
     )
     parameters = model.generate_parameters()
     monthly = {
@@ -1499,7 +1502,7 @@ def test_generate_parameters_applies_the_tables_of_named_land_uses():
             model.land_use_interception_capacity(land_use)
         )
         assert monthly[(f"{land_use}_canopy", "et_factor")] == pytest.approx(
-            LAND_USE_VEG_COV[land_use]
+            PREVAH_LAND_USE_VEG_COV[land_use]
         )
 
 

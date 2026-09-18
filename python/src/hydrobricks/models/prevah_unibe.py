@@ -6,232 +6,19 @@ from typing import Any
 import numpy as np
 
 from hydrobricks._exceptions import ConfigurationError, ModelError
+from hydrobricks.land_covers import (
+    PREVAH_LAND_USE_COVER_TYPES,
+    PREVAH_LAND_USE_FIELD_CAPACITY_FIXED,
+    PREVAH_LAND_USE_FIELD_CAPACITY_MIN,
+    PREVAH_LAND_USE_FIELD_CAPACITY_MIN_DEF,
+    PREVAH_LAND_USE_ROOT_DEPTH,
+    PREVAH_LAND_USE_SI_MAX,
+    PREVAH_LAND_USE_VEG_COV,
+)
 from hydrobricks.models.model import Model
 from hydrobricks.modules.glacier import GlacierModule
 
 logger = logging.getLogger(__name__)
-
-
-# ---------------------------------------------------------------------------
-# PREVAH's built-in land-use parameterization
-#
-# The original PREVAH ships a fixed table of land uses. Only six of them carry
-# distinct physics -- water, built-up, firn, bare ice, rock and wetlands -- and
-# those are the hydrobricks land cover types of the same name. Every other land use
-# runs the same snow, soil and runoff routines and differs only through the monthly
-# vegetation tables below, so it is an ordinary land cover carrying its own monthly
-# parameters. PREVAH's class numbers are not kept: the land uses are named, following
-# the hydrobricks conventions where a matching concept exists.
-#
-# Transcribed from the reference XPREVAH implementation.
-# ---------------------------------------------------------------------------
-
-# fmt: off
-#: The land covers of PREVAH's built-in land-use parameterization, and the
-#: hydrobricks land cover type each one behaves as. Only water, urban, glacier,
-#: rock and wetland carry distinct physics in PREVAH; every other land use is an
-#: ordinary soil-bearing cover that differs only through the monthly tables below,
-#: so it needs no dedicated cover type.
-LAND_USE_COVER_TYPES: dict[str, str] = {
-    "water": "water",
-    "urban": "urban",
-    "coniferous_forest": "forest",
-    "deciduous_forest": "forest",
-    "mixed_forest": "forest",
-    "cereals": "open",
-    "pasture": "open",
-    "bush": "open",
-    "glacier_firn": "glacier",
-    "glacier_ice": "glacier",
-    "rock": "rock",
-    "fruits": "open",
-    "vegetables": "open",
-    "wheat": "open",
-    "alpine_vegetation": "open",
-    "wetland": "wetland",
-    "rough_pasture": "open",
-    "subalpine_meadow": "open",
-    "alpine_meadow": "open",
-    "bare_soil_vegetation": "open",
-    "corn": "open",
-    "grapes": "open",
-}
-
-#: Maximal interception storage [mm] of each land use, per month (January
-#: first).
-LAND_USE_SI_MAX: dict[str, list[float]] = {
-    "water": [0] * 12,
-    "urban": [5] * 12,
-    "coniferous_forest": [2.5, 2.8, 2.8, 2.5, 3.5, 4.3, 4.5, 4.3, 4.1, 3.9, 3, 2.5],
-    "deciduous_forest": [1.5, 1.5, 1.5, 2, 3, 3.5, 3.5, 3.3, 3.2, 2.7, 2, 1.5],
-    "mixed_forest": [2, 2.2, 2.2, 2.3, 3.3, 3.9, 4, 3.8, 3.6, 3.2, 2.5, 2],
-    "cereals": [0.5, 0.5, 0.5, 1.5, 2.5, 3, 3, 2.5, 2, 1.5, 1, 0.5],
-    "pasture": [1.5, 1.5, 1.8, 2.3, 3, 3.5, 3.5, 3.2, 2.8, 2, 1.5, 1.5],
-    "bush": [1.5, 1.5, 1.5, 2, 2.8, 3, 3, 2.8, 2.4, 2, 1.7, 1.5],
-    "glacier_firn": [0.5] * 12,
-    "glacier_ice": [0.5] * 12,
-    "rock": [4] * 12,
-    "fruits": [0.5, 0.5, 0.5, 1.5, 2.5, 3, 3, 2.5, 2, 1.5, 1, 0.5],
-    "vegetables": [1.5, 1.5, 1.6, 2.1, 3, 3.5, 3.5, 3.2, 3, 2.4, 1.7, 1.5],
-    "wheat": [0.5, 0.5, 0.5, 1, 1.5, 2, 2, 1.5, 0, 0.2, 0.3, 0.5],
-    "alpine_vegetation": [0.5, 0.5, 0.5, 0.8, 0.8, 1.4, 1.5, 1.5, 1.4, 0.5, 0.5, 0.5],
-    "wetland": [1, 1, 1.3, 1.8, 2.5, 2.8, 3, 2.8, 2, 1.3, 1, 1],
-    "rough_pasture": [1, 1, 1.3, 1.8, 2.5, 2.8, 3, 2.8, 2, 1.3, 1, 1],
-    "subalpine_meadow": [0.5, 0.5, 0.5, 0.8, 0.8, 1.2, 1.2, 1.2, 1.2, 0.5, 0.5, 0.5],
-    "alpine_meadow": [0.5, 0.5, 0.5, 0.6, 0.8, 1.2, 1.2, 1.2, 1.2, 0.5, 0.5, 0.5],
-    "bare_soil_vegetation": [0.1, 0.1, 0.1, 0.1, 0.2, 0.4,
-                             0.4, 0.4, 0.3, 0.1, 0.1, 0.1],
-    "corn": [0.1, 0.1, 0.1, 0.5, 1.5, 2, 2.2, 2.5, 2.5, 2, 0.1, 0.1],
-    "grapes": [0.5, 0.5, 0.6, 1, 2, 2.5, 2.5, 2.2, 2, 0.9, 0.7, 0.5],
-}
-
-#: Fraction of the surface covered by vegetation [-], per land use and month.
-LAND_USE_VEG_COV: dict[str, list[float]] = {
-    "water": [0] * 12,
-    "urban": [0.2] * 12,
-    "coniferous_forest": [0.92, 0.92, 0.93, 0.94, 0.95, 0.97,
-                          1, 1, 1, 0.98, 0.97, 0.96],
-    "deciduous_forest": [0.6, 0.6, 0.6, 0.7, 0.85, 0.98, 1, 1, 0.95, 0.9, 0.75, 0.6],
-    "mixed_forest": [0.76, 0.76, 0.78, 0.8, 0.87, 0.98, 1, 1, 0.97, 0.94, 0.82, 0.8],
-    "cereals": [0.4, 0.4, 0.5, 0.6, 0.8, 1, 1, 1, 0.5, 0.3, 0.3, 0.4],
-    "pasture": [0.9, 0.9, 0.92, 0.94, 0.96, 0.98, 0.98, 0.98, 0.95, 0.92, 0.9, 0.9],
-    "bush": [0.9, 0.9, 0.92, 0.95, 0.99, 0.99, 0.99, 0.99, 0.96, 0.93, 0.9, 0.9],
-    "glacier_firn": [0.1] * 12,
-    "glacier_ice": [0] * 12,
-    "rock": [0.1] * 12,
-    "fruits": [0.4, 0.4, 0.5, 0.6, 0.8, 1, 1, 1, 0.5, 0.3, 0.3, 0.4],
-    "vegetables": [0.7, 0.7, 0.75, 0.8, 0.9, 0.95, 0.95, 0.95, 0.95, 0.9, 0.8, 0.75],
-    "wheat": [0.4, 0.4, 0.5, 0.6, 0.8, 1, 1, 1, 0, 0.2, 0.3, 0.4],
-    "alpine_vegetation": [0.8, 0.8, 0.8, 0.8, 0.8, 0.9, 0.9, 0.9, 0.85, 0.8, 0.8, 0.8],
-    "wetland": [0.8, 0.8, 0.8, 0.8, 0.8, 0.9, 0.9, 0.9, 0.85, 0.8, 0.8, 0.8],
-    "rough_pasture": [0.7, 0.7, 0.7, 0.7, 0.7, 0.8, 0.8, 0.8, 0.75, 0.7, 0.7, 0.7],
-    "subalpine_meadow": [0.6, 0.6, 0.6, 0.6, 0.6, 0.7, 0.7, 0.7, 0.65, 0.6, 0.6, 0.6],
-    "alpine_meadow": [0.5, 0.5, 0.5, 0.5, 0.5, 0.6, 0.6, 0.6, 0.55, 0.5, 0.5, 0.5],
-    "bare_soil_vegetation": [0.3, 0.3, 0.3, 0.3, 0.3, 0.4,
-                             0.4, 0.4, 0.35, 0.3, 0.3, 0.3],
-    "corn": [0.05, 0.05, 0.05, 0.5, 0.7, 0.8, 0.8, 0.9, 0.9, 0.8, 0.05, 0.05],
-    "grapes": [0.5, 0.5, 0.55, 0.7, 0.9, 0.9, 0.9, 0.9, 0.9, 0.8, 0.6, 0.5],
-}
-
-#: Rooting depth [m], per land use and month. Drives the soil moisture capacity
-#: (see :meth:`PrevahUniBE.land_use_field_capacity`).
-LAND_USE_ROOT_DEPTH: dict[str, list[float]] = {
-    "water": [0] * 12,
-    "urban": [0.1] * 12,
-    "coniferous_forest": [1.5] * 12,
-    "deciduous_forest": [1.5] * 12,
-    "mixed_forest": [1.5] * 12,
-    "cereals": [0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.8, 0.8, 0.8, 0.2, 0.2, 0.2],
-    "pasture": [0.6] * 12,
-    "bush": [0.8] * 12,
-    "glacier_firn": [0.2] * 12,
-    "glacier_ice": [0.1] * 12,
-    "rock": [0.1] * 12,
-    "fruits": [0.2, 0.2, 0.2, 0.2, 0.5, 0.7, 0.8, 0.8, 0.5, 0.2, 0.2, 0.2],
-    "vegetables": [0.8] * 12,
-    "wheat": [0.2, 0.2, 0.2, 0.2, 0.4, 0.6, 0.8, 0.8, 0.8, 0.2, 0.2, 0.2],
-    "alpine_vegetation": [0.5] * 12,
-    "wetland": [0.3] * 12,
-    "rough_pasture": [0.3] * 12,
-    "subalpine_meadow": [0.3] * 12,
-    "alpine_meadow": [0.3] * 12,
-    "bare_soil_vegetation": [0.15] * 12,
-    "corn": [0.6] * 12,
-    "grapes": [0.8] * 12,
-}
-
-#: Soil moisture capacity [mm] PREVAH forces on the land covers that carry no real
-#: soil, whatever the soil map says (see :meth:`PrevahUniBE.land_use_field_capacity`).
-LAND_USE_FIELD_CAPACITY_FIXED: dict[str, float] = {
-    "urban": 5.0,
-    "rock": 3.0,
-    "glacier": 0.1,
-}
-
-#: Minimum soil moisture capacity [mm] per land cover, applied to the capacity derived
-#: from the soil map. Open water holds a deep store; the vegetated covers use the
-#: default below.
-LAND_USE_FIELD_CAPACITY_MIN: dict[str, float] = {
-    "water": 2500.0,
-}
-
-#: Minimum soil moisture capacity [mm] of the vegetated land covers.
-LAND_USE_FIELD_CAPACITY_MIN_DEF: float = 10.0
-
-#: Surface albedo [-], per land use and month. PREVAH derives it from the leaf
-#: area index: ``albedo_bare(month) + 0.25 (albedo_veg - albedo_bare(month)) LAI``
-#: when ``0 < LAI <= 4``, and the land use's own value otherwise.
-LAND_USE_ALBEDO: dict[str, list[float]] = {
-    "water": [0.05] * 12,
-    "urban": [0.1, 0.1, 0.1, 0.1, 0.175, 0.175, 0.175, 0.175, 0.1, 0.1, 0.1, 0.1],
-    "coniferous_forest": [0.12] * 12,
-    "deciduous_forest": [0.10875, 0.10875, 0.10875, 0.17, 0.17, 0.17,
-                         0.17, 0.17, 0.17, 0.17, 0.10875, 0.10875],
-    "mixed_forest": [0.125, 0.125, 0.125, 0.14375, 0.15, 0.15,
-                     0.15, 0.15, 0.15, 0.15, 0.125, 0.125],
-    "cereals": [0.11875, 0.11875, 0.11875, 0.15625, 0.225, 0.25,
-                0.25, 0.21875, 0.11875, 0.11875, 0.11875, 0.11875],
-    "pasture": [0.11875, 0.11875, 0.1375, 0.2125, 0.25, 0.25,
-                0.25, 0.25, 0.2125, 0.175, 0.11875, 0.11875],
-    "bush": [0.10375, 0.10375, 0.10375, 0.1375, 0.25, 0.25,
-             0.25, 0.25, 0.2125, 0.1375, 0.10375, 0.10375],
-    "glacier_firn": [0.1, 0.1, 0.1, 0.1, 0.175, 0.1625,
-                     0.15, 0.1625, 0.1, 0.1, 0.1, 0.1],
-    "glacier_ice": [0.4] * 12,
-    "rock": [0.12] * 12,
-    "fruits": [0.11875, 0.11875, 0.11875, 0.15625, 0.225, 0.25,
-               0.25, 0.21875, 0.11875, 0.11875, 0.11875, 0.11875],
-    "vegetables": [0.105, 0.105, 0.105, 0.125, 0.2, 0.2,
-                   0.2, 0.2, 0.2, 0.1625, 0.10625, 0.10625],
-    "wheat": [0.11875, 0.11875, 0.11875, 0.15625, 0.225, 0.25,
-              0.25, 0.21875, 0.11875, 0.11875, 0.11875, 0.11875],
-    "alpine_vegetation": [0.1025, 0.1025, 0.1025, 0.1025, 0.2, 0.2,
-                          0.2, 0.2, 0.175, 0.125, 0.1025, 0.1025],
-    "wetland": [0.1025, 0.1025, 0.1025, 0.1025, 0.2, 0.2,
-                0.2, 0.2, 0.175, 0.125, 0.1025, 0.1025],
-    "rough_pasture": [0.10325, 0.10325, 0.10325, 0.10325, 0.21125, 0.2225,
-                      0.23, 0.22625, 0.18125, 0.1325, 0.10325, 0.10325],
-    "subalpine_meadow": [0.10325, 0.10325, 0.10325, 0.10325, 0.21125, 0.215,
-                         0.21875, 0.2225, 0.1975, 0.1325, 0.10325, 0.10325],
-    "alpine_meadow": [0.10375, 0.10375, 0.10375, 0.10375, 0.20625, 0.21875,
-                      0.225, 0.225, 0.175, 0.1375, 0.10375, 0.10375],
-    "bare_soil_vegetation": [0.1025, 0.1025, 0.1025, 0.1025, 0.2, 0.2,
-                             0.2, 0.2, 0.1375, 0.1125, 0.1025, 0.1025],
-    "corn": [0.1025, 0.1025, 0.1025, 0.1025, 0.2, 0.2,
-             0.2, 0.2, 0.2, 0.2, 0.1025, 0.1025],
-    "grapes": [0.105, 0.105, 0.105, 0.125, 0.2, 0.2,
-               0.2, 0.2, 0.2, 0.1625, 0.10625, 0.10625],
-}
-
-#: Leaf area index [-], per land use and month. Provided for reference: it feeds
-#: the albedo above and the Penman-Monteith resistances, which hydrobricks does
-#: not implement (the PET is computed in preprocessing).
-LAND_USE_LAI: dict[str, list[float]] = {
-    "water": [0] * 12,
-    "urban": [1] * 12,
-    "coniferous_forest": [6, 6, 6, 6, 7, 8, 8, 8, 8, 7, 6, 6],
-    "deciduous_forest": [0.5, 0.5, 0.5, 5, 6, 7, 7, 7, 6, 5, 0.5, 0.5],
-    "mixed_forest": [2, 2, 2, 3.5, 6, 6, 6, 6, 6, 5.5, 2, 2],
-    "cereals": [0.5, 0.5, 0.5, 1.5, 2, 4, 5, 1.5, 0.5, 0.5, 0.5, 0.5],
-    "pasture": [0.5, 0.5, 1, 3, 5, 5, 5, 4, 3, 2, 0.5, 0.5],
-    "bush": [0.1, 0.1, 0.1, 1, 4, 5, 5, 5, 3, 1, 0.1, 0.1],
-    "glacier_firn": [0.2, 0.3, 0.4, 0.5, 1, 1.5, 2, 1.5, 1, 0.5, 0.3, 0.2],
-    "glacier_ice": [0] * 12,
-    "rock": [0] * 12,
-    "fruits": [0.5, 0.5, 0.5, 1.5, 2, 4, 5, 1.5, 0.5, 0.5, 0.5, 0.5],
-    "vegetables": [0.2, 0.2, 0.2, 1, 5, 5, 5, 5, 4, 2.5, 0.25, 0.25],
-    "wheat": [0.5, 0.5, 0.5, 1.5, 2, 4, 5, 1.5, 0.5, 0.5, 0.5, 0.5],
-    "alpine_vegetation": [0.1, 0.1, 0.1, 0.1, 1.5, 3, 4, 4, 3, 1, 0.1, 0.1],
-    "wetland": [0.1, 0.1, 0.1, 0.1, 1.5, 3, 4, 4, 3, 1, 0.1, 0.1],
-    "rough_pasture": [0.1, 0.1, 0.1, 0.1, 1.5, 3, 4, 3.5, 2.5, 1, 0.1, 0.1],
-    "subalpine_meadow": [0.1, 0.1, 0.1, 0.1, 1.5, 2, 2.5, 3, 3, 1, 0.1, 0.1],
-    "alpine_meadow": [0.1, 0.1, 0.1, 0.1, 0.5, 1.5, 2, 2, 2, 1, 0.1, 0.1],
-    "bare_soil_vegetation": [0.1, 0.1, 0.1, 0.1, 0.5, 1, 1.5, 1.5, 1.5, 0.5, 0.1, 0.1],
-    "corn": [0.1, 0.1, 0.1, 0.1, 0.1, 1, 3, 5, 5, 5, 0.1, 0.1],
-    "grapes": [0.2, 0.2, 0.2, 1, 5, 5, 5, 5, 4, 2.5, 0.25, 0.25],
-}
-
-# fmt: on
 
 
 class PrevahUniBE(Model):
@@ -457,12 +244,12 @@ class PrevahUniBE(Model):
 
     .. code-block:: python
 
-        from hydrobricks.models.prevah_unibe import LAND_USE_COVER_TYPES
+        from hydrobricks.land_covers import PREVAH_LAND_USE_COVER_TYPES
 
         covers = ["coniferous_forest", "pasture", "wetland"]
         model = PrevahUniBE(
             land_cover_names=covers,
-            land_cover_types=[LAND_USE_COVER_TYPES[c] for c in covers],
+            land_cover_types=[PREVAH_LAND_USE_COVER_TYPES[c] for c in covers],
             interception_covers=covers,
             canopy_et_process="et:open_water_prevah",
         )
@@ -472,8 +259,7 @@ class PrevahUniBE(Model):
             model.apply_land_use(parameters, cover)
 
     :meth:`apply_land_use` sets the monthly canopy parameters of a cover from
-    PREVAH's tables (:data:`LAND_USE_SI_MAX`, :data:`LAND_USE_VEG_COV`,
-    :data:`LAND_USE_ROOT_DEPTH`, :data:`LAND_USE_ALBEDO`, :data:`LAND_USE_LAI`);
+    PREVAH's land-use tables (``PREVAH_LAND_USE_*`` in :mod:`hydrobricks.land_covers`);
     :meth:`land_use_field_capacity` gives the soil moisture capacity PREVAH derives
     from a soil map, and :meth:`apply_land_use_field_capacity` sets it per hydro unit
     and per month in one call.
@@ -808,7 +594,7 @@ class PrevahUniBE(Model):
         ----------
         land_use
             Name of the land use (e.g. ``'pasture'``); see
-            :data:`LAND_USE_COVER_TYPES`.
+            :data:`~hydrobricks.land_covers.PREVAH_LAND_USE_COVER_TYPES`.
 
         Returns
         -------
@@ -817,7 +603,10 @@ class PrevahUniBE(Model):
         PrevahUniBE._check_land_use(land_use)
 
         return [
-            s * v for s, v in zip(LAND_USE_SI_MAX[land_use], LAND_USE_VEG_COV[land_use])
+            s * v
+            for s, v in zip(
+                PREVAH_LAND_USE_SI_MAX[land_use], PREVAH_LAND_USE_VEG_COV[land_use]
+            )
         ]
 
     @staticmethod
@@ -852,7 +641,8 @@ class PrevahUniBE(Model):
         Parameters
         ----------
         land_use
-            Name of the land use; see :data:`LAND_USE_COVER_TYPES`.
+            Name of the land use; see
+            :data:`~hydrobricks.land_covers.PREVAH_LAND_USE_COVER_TYPES`.
         available_water_content
             Available water content of the soil [Vol-%], from a soil map (the ``NFC``
             column of a PREVAH hydrotope table).
@@ -866,15 +656,15 @@ class PrevahUniBE(Model):
         """
         PrevahUniBE._check_land_use(land_use)
 
-        cover = LAND_USE_COVER_TYPES[land_use]
-        if cover in LAND_USE_FIELD_CAPACITY_FIXED:
-            return [LAND_USE_FIELD_CAPACITY_FIXED[cover]] * 12
+        cover = PREVAH_LAND_USE_COVER_TYPES[land_use]
+        if cover in PREVAH_LAND_USE_FIELD_CAPACITY_FIXED:
+            return [PREVAH_LAND_USE_FIELD_CAPACITY_FIXED[cover]] * 12
 
-        minimum = LAND_USE_FIELD_CAPACITY_MIN.get(
-            cover, LAND_USE_FIELD_CAPACITY_MIN_DEF
+        minimum = PREVAH_LAND_USE_FIELD_CAPACITY_MIN.get(
+            cover, PREVAH_LAND_USE_FIELD_CAPACITY_MIN_DEF
         )
         values = []
-        for depth in LAND_USE_ROOT_DEPTH[land_use]:
+        for depth in PREVAH_LAND_USE_ROOT_DEPTH[land_use]:
             thickness = depth + 0.05
             if soil_depth is not None:
                 thickness = min(thickness, soil_depth)
@@ -910,8 +700,9 @@ class PrevahUniBE(Model):
             The :class:`~hydrobricks.hydro_units.HydroUnits` to add the properties to.
         land_use
             Name of the land use (e.g. ``'pasture'``); see
-            :data:`LAND_USE_COVER_TYPES`. A PREVAH hydrotope carries a single land
-            use, so a sequence of names is accepted too, one per hydro unit.
+            :data:`~hydrobricks.land_covers.PREVAH_LAND_USE_COVER_TYPES`.
+            A PREVAH hydrotope carries a single land use, so a sequence of names is
+            accepted too, one per hydro unit.
         available_water_content
             Available water content of the soil [Vol-%], one value per hydro unit.
         soil_depth
@@ -1129,11 +920,11 @@ class PrevahUniBE(Model):
         for i, (unit_land_use, unit_awc, unit_depth) in enumerate(
             zip(land_uses, awc, depths)
         ):
-            cover = LAND_USE_COVER_TYPES[unit_land_use]
-            if cover not in LAND_USE_FIELD_CAPACITY_FIXED or cover == "glacier":
+            cover = PREVAH_LAND_USE_COVER_TYPES[unit_land_use]
+            if cover not in PREVAH_LAND_USE_FIELD_CAPACITY_FIXED or cover == "glacier":
                 continue
-            forced = LAND_USE_FIELD_CAPACITY_FIXED[cover]
-            for month, depth in enumerate(LAND_USE_ROOT_DEPTH[unit_land_use]):
+            forced = PREVAH_LAND_USE_FIELD_CAPACITY_FIXED[cover]
+            for month, depth in enumerate(PREVAH_LAND_USE_ROOT_DEPTH[unit_land_use]):
                 thickness = depth + 0.05
                 if unit_depth is not None:
                     thickness = min(thickness, unit_depth)
@@ -1174,7 +965,7 @@ class PrevahUniBE(Model):
             The :class:`~hydrobricks.parameters.ParameterSet` to fill.
         land_use
             Name of the land use (e.g. ``'pasture'``); see
-            :data:`LAND_USE_COVER_TYPES`.
+            :data:`~hydrobricks.land_covers.PREVAH_LAND_USE_COVER_TYPES`.
         cover_name
             Name of the land cover to parameterize. Defaults to the land-use name.
 
@@ -1203,16 +994,16 @@ class PrevahUniBE(Model):
         )
         if parameters.has(f"canopy_et_factor{suffix}"):
             parameters.set_monthly_values(
-                f"canopy_et_factor{suffix}", LAND_USE_VEG_COV[land_use]
+                f"canopy_et_factor{suffix}", PREVAH_LAND_USE_VEG_COV[land_use]
             )
 
     @staticmethod
     def _check_land_use(land_use: str) -> None:
         """Reject an unknown land-use name."""
-        if land_use not in LAND_USE_COVER_TYPES:
+        if land_use not in PREVAH_LAND_USE_COVER_TYPES:
             raise ConfigurationError(
                 f'Unknown PREVAH land use "{land_use}". Available: '
-                f"{', '.join(sorted(LAND_USE_COVER_TYPES))}.",
+                f"{', '.join(sorted(PREVAH_LAND_USE_COVER_TYPES))}.",
                 item_name="land_use",
                 item_value=land_use,
                 reason="Unknown land use",
@@ -1240,9 +1031,10 @@ class PrevahUniBE(Model):
         Generate the parameter set, with PREVAH's vegetation tables where known.
 
         Every canopy whose land cover is named after a PREVAH land use (e.g.
-        ``pasture``, ``coniferous_forest``; see :data:`LAND_USE_COVER_TYPES`) gets
-        the monthly interception capacity and canopy evaporation factor of that land
-        use (see :meth:`apply_land_use`). Covers with a generic name (``open``,
+        ``pasture``, ``coniferous_forest``; see
+        :data:`~hydrobricks.land_covers.PREVAH_LAND_USE_COVER_TYPES`) gets the
+        monthly interception capacity and canopy evaporation factor of that land use
+        (see :meth:`apply_land_use`). Covers with a generic name (``open``,
         ``forest``) keep the constant defaults: call :meth:`apply_land_use` with the
         land use they stand for.
 
@@ -1256,7 +1048,7 @@ class PrevahUniBE(Model):
         canopy_covers = self.options.get("interception_covers") or []
         generic = []
         for cover_name in canopy_covers:
-            if cover_name in LAND_USE_SI_MAX:
+            if cover_name in PREVAH_LAND_USE_SI_MAX:
                 self.apply_land_use(parameters, cover_name, cover_name=cover_name)
             else:
                 generic.append(cover_name)

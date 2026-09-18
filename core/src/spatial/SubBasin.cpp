@@ -4,6 +4,7 @@
 #include <utility>
 
 #include "LandCover.h"
+#include "Reach.h"
 #include "SettingsBasin.h"
 #include "SurfaceComponent.h"
 
@@ -173,6 +174,9 @@ void SubBasin::Reset() {
     _inflowVolume = 0;
     _outletVolume = 0;
     _outletDischarge = 0;
+    _reachInflow = 0;
+    _reachOutflow = 0;
+    _reachStorage = 0;
 }
 
 void SubBasin::SaveAsInitialState() {
@@ -377,6 +381,15 @@ double* SubBasin::GetValuePointer(std::string_view name) {
     if (name == "outlet") {
         return &_outletDischarge;
     }
+    if (name == "reach:inflow") {
+        return &_reachInflow;
+    }
+    if (name == "reach:outflow") {
+        return &_reachOutflow;
+    }
+    if (name == "reach:storage") {
+        return &_reachStorage;
+    }
     LogError("Element '{}' not found", name);
 
     return nullptr;
@@ -395,6 +408,13 @@ bool SubBasin::ComputeOutletDischarge() {
     // total itself (assigned, not recomputed, so single-sub basin runs stay bit-identical).
     _outletVolume = _outletTotal * _area + _inflowVolume;
     _outletDischarge = _hasUpstream ? _outletVolume / _drainedArea : _outletTotal;
+
+    // The reach values, logged in the same unit as the outlet (mm over the drained area).
+    if (_reach != nullptr && _hasUpstream) {
+        _reachInflow = _reach->GetInflow() / _drainedArea;
+        _reachOutflow = _reach->GetOutflow() / _drainedArea;
+        _reachStorage = _reach->GetStorage() / _drainedArea;
+    }
 
     return true;
 }

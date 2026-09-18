@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 
+#include <algorithm>
 #include <cmath>
 #include <filesystem>
 #include <memory>
@@ -223,4 +224,82 @@ TEST(ModelNetwork, ResultsFileCarriesTheSubbasinDimension) {
     }
     file.Close();
     std::filesystem::remove_all(outDir);
+}
+
+TEST(ModelNetwork, LagRoutingDelaysTheUpstreamWaterByOneStep) {
+    // Upstream subbasin 2 drains through a reach of 86.4 km at 1 m/s: one day of travel time.
+    auto build = [](const string& scheme, ModelHydro& model, SettingsModel& settings, SettingsBasin& basin) {
+        BuildStructure(settings);
+        settings.SetRouting(scheme);
+        settings.SetParameterValue("routing", "celerity", 1.0f);
+        basin.AddSubbasin(1, 0, "outlet");
+        basin.AddSubbasinPropertyDouble("length", 86400.0, "m");
+        basin.AddSubbasin(2, 1, "upstream");
+        basin.AddSubbasinPropertyDouble("length", 5000.0, "m");
+        AddUnits(basin, kUnitIds, true);
+        ASSERT_TRUE(model.InitializeWithBasin(settings, basin));
+        AttachForcing(model, kUnitIds);
+        ASSERT_TRUE(model.Run());
+    };
+
+    SettingsModel noneSettings;
+    SettingsBasin noneBasin;
+    ModelHydro none;
+    build("none", none, noneSettings, noneBasin);
+
+    SettingsModel lagSettings;
+    SettingsBasin lagBasin;
+    ModelHydro lag;
+    build("lag", lag, lagSettings, lagBasin);
+
+    // The upstream subbasin is unaffected (its own reach carries nothing), the outlet receives the upstream
+    // water one step later: outlet_lag(t) = outlet_none(t) + (up(t-1) - up(t)) * A2 / A_drained.
+    axd upNone = none.GetSubbasinDischarge(2);
+    axd upLag = lag.GetSubbasinDischarge(2);
+    axd outNone = none.GetOutletDischarge();
+    axd outLag = lag.GetOutletDischarge();
+    double ratio = 600.0 / 1000.0;
+    for (int t = 0; t < kSteps; ++t) {
+        EXPECT_NEAR(upLag[t], upNone[t], 1e-12) << "t=" << t;
+        double previous = t > 0 ? upNone[t - 1] : 0.0;
+        EXPECT_NEAR(outLag[t], outNone[t] + (previous - upNone[t]) * ratio, 1e-10) << "t=" << t;
+    }
+
+    // Mass: the water still in the reach at the end explains the difference of the totals.
+    double inTransit = lag.GetNetwork()->GetOutlet()->GetReach()->GetStorage() / 1000.0;
+    EXPECT_NEAR(lag.GetTotalOutletDischarge() + inTransit, none.GetTotalOutletDischarge(), 1e-9);
+}
+
+TEST(ModelNetwork, ReachValuesAreLoggedWhenRequested) {
+    SettingsModel settings;
+    BuildStructure(settings);
+    settings.SetRouting("lag");
+    settings.AddLoggingToItems({"reach:inflow", "reach:outflow", "reach:storage"});
+    SettingsBasin basin;
+    basin.AddSubbasin(1, 0, "outlet");
+    basin.AddSubbasinPropertyDouble("length", 86400.0, "m");
+    basin.AddSubbasin(2, 1, "upstream");
+    AddUnits(basin, kUnitIds, true);
+    ModelHydro model;
+    ASSERT_TRUE(model.InitializeWithBasin(settings, basin));
+    AttachForcing(model, kUnitIds);
+    ASSERT_TRUE(model.Run());
+
+    const vecStr& labels = model.GetLogger()->GetSubBasinLabels();
+    auto index = [&labels](const string& name) {
+        return static_cast<int>(std::find(labels.begin(), labels.end(), name) - labels.begin());
+    };
+    const vecAxxd& values = model.GetLogger()->GetSubBasinValuesPerSubbasin();
+    ASSERT_LT(index("reach:inflow"), static_cast<int>(labels.size()));
+    axd inflow = values[index("reach:inflow")].col(1);  // the outlet subbasin (last)
+    axd outflow = values[index("reach:outflow")].col(1);
+    axd upstream = model.GetSubbasinDischarge(2);
+    for (int t = 0; t < kSteps; ++t) {
+        // The reach inflow is the upstream discharge, over the drained area of the outlet subbasin.
+        EXPECT_NEAR(inflow[t], upstream[t] * 600.0 / 1000.0, 1e-12) << "t=" << t;
+        double previous = t > 0 ? inflow[t - 1] : 0.0;
+        EXPECT_NEAR(outflow[t], previous, 1e-12) << "t=" << t;
+    }
+    // The headwater has no upstream: its reach values stay at zero.
+    EXPECT_DOUBLE_EQ(values[index("reach:inflow")].col(0).sum(), 0.0);
 }

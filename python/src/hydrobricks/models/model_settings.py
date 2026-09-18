@@ -13,7 +13,11 @@ class ModelSettings:
     """Base class for the model settings"""
 
     def __init__(
-        self, solver: str = "crank_nicolson", record_all: bool = False, **kwargs: Any
+        self,
+        solver: str = "crank_nicolson",
+        record_all: bool = False,
+        routing: str = "none",
+        **kwargs: Any,
     ) -> None:
         """
         Parameters
@@ -44,12 +48,38 @@ class ModelSettings:
             choose: https://hydrobricks.readthedocs.io/en/latest/doc/solvers.html
         record_all
             Record all state and flux values
+        routing
+            Channel routing scheme between the subbasins of a river network (see
+            :meth:`set_routing`). Default: ``"none"``
         kwargs
             Keyword arguments
         """
         self.settings: SettingsModel = SettingsModel()
         self.settings.log_all(record_all)
         self.settings.set_solver(solver)
+        self.settings.set_routing(routing)
+
+    def set_routing(self, scheme: str) -> None:
+        """
+        Set the channel routing scheme between the subbasins of a river network.
+
+        Parameters
+        ----------
+        scheme
+            One of:
+
+            - ``"none"`` -- the water leaving a subbasin reaches the outlet of the
+              downstream subbasin within the same time step (default).
+            - ``"lag"`` -- pure translation by the travel time ``length / celerity``
+              of each reach.
+            - ``"muskingum"`` -- the Muskingum method with ``K = length / celerity``
+              and the weighting factor ``x``.
+
+            The reach ``length`` [m] is a subbasin property; ``celerity`` [m/s] and
+            ``x`` [-] are model parameters (component ``routing``), which a
+            subbasin's ``celerity`` / ``muskingum_x`` properties override.
+        """
+        self.settings.set_routing(scheme)
 
     def set_solver(self, solver: str) -> None:
         """

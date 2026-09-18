@@ -115,6 +115,12 @@ void RiverNetwork::TransferInflow(SubBasin* subbasin, double timeStepInDays) {
     subbasin->SetInflowVolume(subbasin->GetReach()->Route(inflowVolume, timeStepInDays));
 }
 
+void RiverNetwork::SetRouting(const RoutingSettings& settings) {
+    for (const auto& reach : _reaches) {
+        reach->SetRouting(settings);
+    }
+}
+
 ModelResult RiverNetwork::AssignFractions(SettingsBasin& basinSettings) {
     for (const auto& subbasin : _subbasins) {
         if (auto r = subbasin->AssignFractions(basinSettings); !r) {

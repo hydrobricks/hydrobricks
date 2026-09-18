@@ -500,14 +500,17 @@ class SubBasin {
     int _id = 1;
     int _downstreamId = 0;  // 0: terminal outlet of the network
     string _name;
-    double _area;                                                 // m2, own hydro units
-    double _drainedArea = 0;                                      // m2, own + upstream (set by the network)
-    bool _hasUpstream = false;                                    // other sub basins drain into this one
-    Reach* _reach = nullptr;                                      // non-owning: owned by the river network
-    double _outletTotal;                                          // mm over the local area, own runoff
-    double _inflowVolume = 0;                                     // m3 per step, routed from upstream
-    double _outletVolume = 0;                                     // m3 per step, at the outlet
-    double _outletDischarge = 0;                                  // mm over the drained area, at the outlet
+    double _area;                 // m2, own hydro units
+    double _drainedArea = 0;      // m2, own + upstream (set by the network)
+    bool _hasUpstream = false;    // other sub basins drain into this one
+    Reach* _reach = nullptr;      // non-owning: owned by the river network
+    double _outletTotal;          // mm over the local area, own runoff
+    double _inflowVolume = 0;     // m3 per step, routed from upstream
+    double _outletVolume = 0;     // m3 per step, at the outlet
+    double _outletDischarge = 0;  // mm over the drained area, at the outlet
+    double _reachInflow = 0;      // mm over the drained area: the volume entering the reach from upstream
+    double _reachOutflow = 0;     // mm over the drained area: the routed volume reaching the outlet
+    double _reachStorage = 0;     // mm over the drained area: the volume in transit in the reach
     std::vector<std::unique_ptr<HydroUnitProperty>> _properties;  // owning
     std::vector<std::unique_ptr<Brick>> _bricks;                  // owning: SubBasin-level bricks
     std::unordered_map<string, Brick*> _brickMap;                 // non-owning views into _bricks

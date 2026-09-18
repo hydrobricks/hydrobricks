@@ -28,6 +28,16 @@ void SettingsModel::SetSolver(const string& solverName) {
     _solver.name = solverName;
 }
 
+void SettingsModel::SetRouting(const string& scheme) {
+    _routing.scheme = scheme;
+    if (_routing.parameters.empty()) {
+        // Created once and never reallocated: the reaches keep pointers to these values.
+        _routing.parameters.reserve(2);
+        _routing.parameters.emplace_back("celerity", 1.0f);
+        _routing.parameters.emplace_back("x", 0.2f);
+    }
+}
+
 void SettingsModel::SetTimer(const string& start, const string& end, int timeStep, const string& timeStepUnit) {
     _timer.start = start;
     _timer.end = end;
@@ -960,6 +970,17 @@ bool SettingsModel::SetParameterValue(const string& component, const string& nam
             }
         }
         return true;
+    }
+
+    // The channel routing parameters are model-wide (not part of a structure variant). Only the names the
+    // routing owns are taken here: a model may also have a brick called 'routing' (e.g. the HBV transfer).
+    if (component == "routing") {
+        for (auto& parameter : _routing.parameters) {
+            if (parameter.GetName() == name) {
+                parameter.SetValue(value);
+                return true;
+            }
+        }
     }
 
     // Apply to every structure variant that contains the component (a parameter may

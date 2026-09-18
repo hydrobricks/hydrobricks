@@ -199,3 +199,128 @@ def test_results_file_has_the_subbasin_dimension(runs):
             results.get_subbasin_values("outlet", 7)
         with pytest.raises(hb.DataError):
             results.get_subbasin_values("no_such_component")
+
+
+# ---- Routing schemes ----------------------------------------------------------------
+
+
+def _split_units_with_reaches(length_m: float) -> hb.HydroUnits:
+    hydro_units = _load_units(STGALLEN_HUS)
+    ids = hydro_units.hydro_units["id"].iloc[:, 0].to_numpy()
+    hydro_units.add_property(("subbasin", "-"), np.where(ids >= _UPSTREAM_MIN_ID, 2, 1))
+    hydro_units.set_subbasins(
+        pd.DataFrame(
+            {
+                "id": [1, 2],
+                "downstream": [0, 1],
+                "length": [
+                    length_m,
+                    3000.0,
+                ],  # the outlet reach carries the upper Sitter
+            }
+        )
+    )
+    return hydro_units
+
+
+def _run_routed(out: Path, routing: str, **params) -> models.Socont:
+    hydro_units = _split_units_with_reaches(86400.0)
+    model = models.Socont(
+        soil_storage_nb=2,
+        surface_runoff="linear_storage",
+        routing=routing,
+        record_all=True,
+    )
+    parameters = model.generate_parameters()
+    parameters.set_values(
+        {
+            "A": 2000,
+            "a_snow": 3,
+            "k_slow_1": 0.9,
+            "k_slow_2": 0.8,
+            "k_quick": 1,
+            "percol": 9.8,
+            **params,
+        }
+    )
+    out.mkdir(exist_ok=True)
+    model.setup(
+        spatial_structure=hydro_units,
+        output_path=str(out),
+        start_date=_START,
+        end_date=_END,
+    )
+    model.run(parameters=parameters, forcing=_forcing(hydro_units))
+    model.dump_outputs(str(out))
+    return model
+
+
+def test_routing_parameters_follow_the_scheme(tmp_path):
+    assert (
+        not models.Socont(surface_runoff="linear_storage")
+        .generate_parameters()
+        .has("routing_celerity")
+    )
+    lag = models.Socont(surface_runoff="linear_storage", routing="lag")
+    lag_params = lag.generate_parameters()
+    assert lag_params.has("routing_celerity")
+    assert not lag_params.has("routing_x")
+    musk = models.Socont(surface_runoff="linear_storage", routing="muskingum")
+    musk_params = musk.generate_parameters()
+    assert musk_params.has("routing_celerity")
+    assert musk_params.has("routing_x")
+    with pytest.raises(hb.ConfigurationError):
+        models.Socont(surface_runoff="linear_storage", routing="kinematic").setup(
+            spatial_structure=_split_units_with_reaches(1000.0),
+            output_path=str(tmp_path),
+            start_date=_START,
+            end_date=_END,
+        )
+
+
+def test_lag_routing_delays_the_upstream_water(runs, tmp_path):
+    # 86.4 km at 1 m/s: the upper Sitter reaches the outlet one day later.
+    lag = _run_routed(tmp_path / "lag", "lag", routing_celerity=1.0)
+    none = runs["network"]
+    areas = lag.get_subbasin_areas()
+    ratio = areas.loc[2, "local"] / areas.loc[1, "drained"]
+
+    np.testing.assert_allclose(
+        lag.get_subbasin_discharge(2), none.get_subbasin_discharge(2), rtol=1e-9
+    )
+    up = none.get_subbasin_discharge(2)
+    shifted = np.concatenate(([0.0], up[:-1]))
+    expected = none.get_outlet_discharge() + (shifted - up) * ratio
+    np.testing.assert_allclose(
+        lag.get_outlet_discharge(), expected, rtol=1e-9, atol=1e-12
+    )
+
+    with hb.Results(str(tmp_path / "lag" / "results.nc")) as results:
+        inflow = results.get_subbasin_values("reach:inflow", 1)
+        outflow = results.get_subbasin_values("reach:outflow", 1)
+        np.testing.assert_allclose(inflow, up * ratio, rtol=1e-9, atol=1e-12)
+        np.testing.assert_allclose(outflow, shifted * ratio, rtol=1e-9, atol=1e-12)
+        storage = results.get_subbasin_values("reach:storage", 1)
+        assert np.all(storage >= 0)
+        # The headwater's reach carries nothing.
+        assert results.get_subbasin_values("reach:inflow", 2).sum() == 0.0
+
+
+def test_muskingum_routing_conserves_mass_and_attenuates(runs, tmp_path):
+    musk = _run_routed(
+        tmp_path / "muskingum", "muskingum", routing_celerity=0.5, routing_x=0.2
+    )
+    none = runs["network"]
+    np.testing.assert_allclose(
+        musk.get_subbasin_discharge(2), none.get_subbasin_discharge(2), rtol=1e-9
+    )
+    with hb.Results(str(tmp_path / "muskingum" / "results.nc")) as results:
+        storage = results.get_subbasin_values("reach:storage", 1)
+    # Water balance at the outlet: routed totals differ from the instantaneous ones only
+    # by what is still in the reach at the end.
+    assert musk.get_total_outlet_discharge() + storage[-1] == pytest.approx(
+        none.get_total_outlet_discharge(), rel=1e-9
+    )
+    # Attenuation: the routed outlet has a lower peak than the instantaneous one.
+    assert musk.get_outlet_discharge().max() < none.get_outlet_discharge().max()
+    assert np.all(musk.get_outlet_discharge() >= 0)

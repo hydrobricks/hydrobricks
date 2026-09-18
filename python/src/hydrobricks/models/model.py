@@ -48,7 +48,8 @@ class Model(ABC):
             Name identifier for the model instance. Default: None
         **kwargs
             Additional keyword arguments for model configuration.
-            Allowed keys: 'solver', 'record_all', 'land_cover_types', 'land_cover_names'
+            Allowed keys: 'solver', 'record_all', 'routing', 'land_cover_types',
+            'land_cover_names'
 
         Raises
         ------
@@ -68,6 +69,7 @@ class Model(ABC):
         self.allowed_kwargs: set[str] = {
             "solver",
             "record_all",
+            "routing",
             "land_cover_types",
             "land_cover_names",
         }
@@ -77,6 +79,9 @@ class Model(ABC):
         self.options: dict[str, Any] = dict()
         self.solver: str = "crank_nicolson"
         self.record_all: bool = False
+        # Channel routing between the subbasins of a river network ('none', 'lag' or
+        # 'muskingum'); irrelevant for a catchment without a declared network.
+        self.routing: str = "none"
         self.land_cover_types: list[str] = ["open"]
         self.land_cover_names: list[str] = ["open"]
         self.allowed_land_cover_types: list[str] = ["open"]
@@ -99,7 +104,7 @@ class Model(ABC):
 
         # Setting base settings
         self.settings: ModelSettings = ModelSettings(
-            solver=self.solver, record_all=self.record_all
+            solver=self.solver, record_all=self.record_all, routing=self.routing
         )
 
     def __del__(self) -> None:
@@ -501,6 +506,7 @@ class Model(ABC):
         settings = {
             "base": self.name,
             "solver": self.solver,
+            "routing": self.routing,
             "options": self.options,
             "land_covers": {
                 "names": self.land_cover_names,
@@ -997,6 +1003,8 @@ class Model(ABC):
             if key in ["solver", "record_all", "land_cover_types", "land_cover_names"]:
                 continue
             self.options[key] = value
+        # The routing is a basic option, but the parameter generation reads it too.
+        self.options["routing"] = self.routing
 
         self._set_specific_options(kwargs)
         self._check_cover_types()
@@ -1097,6 +1105,7 @@ class Model(ABC):
         Extracts and applies the following options if present:
         - 'solver': Numerical solver name
         - 'record_all': Whether to record all state/flux values
+        - 'routing': Channel routing scheme between subbasins
         - 'land_cover_types': List of land cover types
         - 'land_cover_names': List of land cover names
 
@@ -1109,6 +1118,8 @@ class Model(ABC):
             self.solver = kwargs["solver"]
         if "record_all" in kwargs:
             self.record_all = kwargs["record_all"]
+        if "routing" in kwargs:
+            self.routing = str(kwargs["routing"])
         if "land_cover_types" in kwargs:
             self.land_cover_types = kwargs["land_cover_types"]
         if "land_cover_names" in kwargs:
@@ -1224,6 +1235,12 @@ class Model(ABC):
                     self._set_structure_process(key, process, process_data)
 
         self.settings.add_logging_to("outlet")
+        # The reach values (in mm over the drained area, like the outlet) are logged
+        # only when the routing is on: a catchment without a network has no use for
+        # them, and adding labels would change the recorded set of existing runs.
+        if self.record_all and self.routing != "none":
+            for item in ("reach:inflow", "reach:outflow", "reach:storage"):
+                self.settings.add_logging_to(item)
 
     def _define_structure_variants(
         self,

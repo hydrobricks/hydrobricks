@@ -8,6 +8,7 @@
 #include "Includes.h"
 #include "Reach.h"
 #include "SettingsBasin.h"
+#include "SettingsModel.h"
 #include "SubBasin.h"
 
 /**
@@ -95,6 +96,13 @@ class RiverNetwork {
      * @param timeStepInDays The time step [days].
      */
     void TransferInflow(SubBasin* subbasin, double timeStepInDays);
+
+    /**
+     * Set the routing scheme and parameters of every reach.
+     *
+     * @param settings The routing settings of the model.
+     */
+    void SetRouting(const RoutingSettings& settings);
 
     /**
      * Assign the land cover fractions of every hydro unit from the basin settings.

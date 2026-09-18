@@ -27,7 +27,8 @@ Reach::Scheme Reach::SchemeFromString(const string& name) {
     if (name == "muskingum") {
         return Scheme::Muskingum;
     }
-    throw ModelConfigError(std::format("Unknown routing scheme '{}' (expected 'none', 'lag' or 'muskingum').", name));
+    throw ModelConfigError(
+        std::format("Unknown channel routing scheme '{}' (expected 'none', 'lag' or 'muskingum').", name));
 }
 
 void Reach::Initialize() {
@@ -45,7 +46,7 @@ void Reach::Initialize() {
     }
 }
 
-void Reach::SetRouting(const RoutingSettings& settings) {
+void Reach::SetChannelRouting(const ChannelRoutingSettings& settings) {
     _scheme = SchemeFromString(settings.scheme);
     _celerity = nullptr;
     _x = nullptr;
@@ -57,10 +58,10 @@ void Reach::SetRouting(const RoutingSettings& settings) {
         }
     }
     if (_scheme != Scheme::None && _celerity == nullptr && std::isnan(_celerityOverride)) {
-        throw ModelConfigError("The routing scheme needs the 'celerity' parameter.");
+        throw ModelConfigError("The channel routing scheme needs the 'celerity' parameter.");
     }
     if (_scheme == Scheme::Muskingum && _x == nullptr && std::isnan(_xOverride)) {
-        throw ModelConfigError("The Muskingum routing scheme needs the 'x' parameter.");
+        throw ModelConfigError("The Muskingum channel routing scheme needs the 'x' parameter.");
     }
     if (_scheme != Scheme::None && _length <= 0) {
         LogWarning("Subbasin {} has no reach length: its routing is instantaneous.", _subbasin->GetId());

@@ -16,7 +16,7 @@ class ModelSettings:
         self,
         solver: str = "crank_nicolson",
         record_all: bool = False,
-        routing: str = "none",
+        channel_routing: str = "none",
         **kwargs: Any,
     ) -> None:
         """
@@ -48,20 +48,23 @@ class ModelSettings:
             choose: https://hydrobricks.readthedocs.io/en/latest/doc/solvers.html
         record_all
             Record all state and flux values
-        routing
+        channel_routing
             Channel routing scheme between the subbasins of a river network (see
-            :meth:`set_routing`). Default: ``"none"``
+            :meth:`set_channel_routing`). Default: ``"none"``
         kwargs
             Keyword arguments
         """
         self.settings: SettingsModel = SettingsModel()
         self.settings.log_all(record_all)
         self.settings.set_solver(solver)
-        self.settings.set_routing(routing)
+        self.settings.set_channel_routing(channel_routing)
 
-    def set_routing(self, scheme: str) -> None:
+    def set_channel_routing(self, scheme: str) -> None:
         """
         Set the channel routing scheme between the subbasins of a river network.
+
+        This is the routing along the reaches of the network, not the in-catchment
+        ``routing:*`` processes of a model structure (unit hydrographs, MAXBAS, ...).
 
         Parameters
         ----------
@@ -76,10 +79,10 @@ class ModelSettings:
               and the weighting factor ``x``.
 
             The reach ``length`` [m] is a subbasin property; ``celerity`` [m/s] and
-            ``x`` [-] are model parameters (component ``routing``), which a
+            ``x`` [-] are model parameters (component ``channel``), which a
             subbasin's ``celerity`` / ``muskingum_x`` properties override.
         """
-        self.settings.set_routing(scheme)
+        self.settings.set_channel_routing(scheme)
 
     def set_solver(self, solver: str) -> None:
         """

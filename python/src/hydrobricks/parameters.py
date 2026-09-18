@@ -57,26 +57,27 @@ class ParameterTransform:
 
 
 # -----------------------------------------------------------------------------
-# Channel routing between the subbasins of a river network (component 'routing').
+# Channel routing between the subbasins of a river network (component 'channel').
+# Distinct from the in-catchment 'routing:*' processes (unit hydrographs, MAXBAS).
 # -----------------------------------------------------------------------------
 
 _ROUTING_CELERITY = ParamSpec(
     name="celerity",
     unit="m/s",
-    aliases=["routing_celerity"],
+    aliases=["channel_celerity"],
     min=0.1,
     max=5.0,
     default=1.0,
 )
 
-ROUTING_PARAM_SPECS: dict[str, list[ParamSpec]] = {
+CHANNEL_ROUTING_PARAM_SPECS: dict[str, list[ParamSpec]] = {
     "lag": [_ROUTING_CELERITY],
     "muskingum": [
         _ROUTING_CELERITY,
         ParamSpec(
             name="x",
             unit="-",
-            aliases=["routing_x", "muskingum_x"],
+            aliases=["muskingum_x"],
             min=0.0,
             max=0.5,
             default=0.2,
@@ -2073,7 +2074,7 @@ class ParameterSet:
         # General parameters
         self._generate_snow_parameters(options, land_cover_types, land_cover_names)
         self._generate_precipitation_correction_parameters(options)
-        self._generate_routing_parameters(options)
+        self._generate_channel_routing_parameters(options)
 
         # Parameters for the glaciers
         self._generate_glacier_parameters(land_cover_types, land_cover_names, structure)
@@ -2454,24 +2455,25 @@ class ParameterSet:
                     "r_snow", "<", alias_map["radiation_coefficient"][0]
                 )
 
-    def _generate_routing_parameters(self, options: dict) -> None:
+    def _generate_channel_routing_parameters(self, options: dict) -> None:
         """Register the channel routing parameters of a river network.
 
-        The routing between subbasins is a model-wide setting (option ``routing``):
+        The routing along the reaches is a model-wide setting (option
+        ``channel_routing``):
         ``lag`` needs the wave celerity (the travel time of a reach is its length
         over the celerity), ``muskingum`` needs the celerity and the weighting
-        factor. Nothing is registered without routing.
+        factor. Nothing is registered without channel routing.
 
         Parameters
         ----------
         options
-            Model options dictionary (uses 'routing').
+            Model options dictionary (uses 'channel_routing').
         """
-        scheme = str(options.get("routing", "none") or "none")
+        scheme = str(options.get("channel_routing", "none") or "none")
         if scheme == "none":
             return
-        for spec in ROUTING_PARAM_SPECS[scheme]:
-            self._register(component="routing", spec=spec)
+        for spec in CHANNEL_ROUTING_PARAM_SPECS[scheme]:
+            self._register(component="channel", spec=spec)
 
     def _generate_precipitation_correction_parameters(self, options: dict) -> None:
         """Register the optional precipitation correction factors.

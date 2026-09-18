@@ -98,11 +98,11 @@ class RiverNetwork {
     void TransferInflow(SubBasin* subbasin, double timeStepInDays);
 
     /**
-     * Set the routing scheme and parameters of every reach.
+     * Set the channel routing scheme and parameters of every reach.
      *
-     * @param settings The routing settings of the model.
+     * @param settings The channel routing settings of the model.
      */
-    void SetRouting(const RoutingSettings& settings);
+    void SetChannelRouting(const ChannelRoutingSettings& settings);
 
     /**
      * Assign the land cover fractions of every hydro unit from the basin settings.

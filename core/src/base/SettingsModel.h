@@ -17,10 +17,10 @@ struct SolverSettings {
 /**
  * The channel routing between the subbasins of a river network: the scheme ('none', 'lag' or 'muskingum') and
  * its model-wide parameters (the celerity [m/s] and the Muskingum weighting factor x [-]), settable like any
- * other parameter under the component 'routing' (a brick of that name, e.g. the HBV transfer, keeps its own
- * parameters: only the names the routing owns are resolved here).
+ * other parameter under the component 'channel' (distinct from the in-catchment 'routing:*' processes of a
+ * model structure, e.g. the GR4J unit hydrographs or the HBV transfer).
  */
-struct RoutingSettings {
+struct ChannelRoutingSettings {
     string scheme = "none";
     vector<Parameter> parameters;
 };
@@ -101,7 +101,7 @@ class SettingsModel {
      *
      * @param scheme name of the routing scheme.
      */
-    void SetRouting(const string& scheme);
+    void SetChannelRouting(const string& scheme);
 
     /**
      * Set the timer settings.
@@ -745,12 +745,13 @@ class SettingsModel {
     }
 
     /**
-     * Get the routing settings (the parameters are owned here; the reaches keep pointers to their values).
+     * Get the channel routing settings (the parameters are owned here; the reaches keep pointers to their
+     * values).
      *
-     * @return routing settings.
+     * @return channel routing settings.
      */
-    const RoutingSettings& GetRoutingSettings() const {
-        return _routing;
+    const ChannelRoutingSettings& GetChannelRoutingSettings() const {
+        return _channelRouting;
     }
 
     /**
@@ -983,7 +984,7 @@ class SettingsModel {
     bool _recordFractions;
     vector<ModelStructure> _modelStructures;
     SolverSettings _solver;
-    RoutingSettings _routing;
+    ChannelRoutingSettings _channelRouting;
     TimerSettings _timer;
     ModelStructure* _selectedStructure;   // non-owning reference
     BrickSettings* _selectedBrick;        // non-owning reference

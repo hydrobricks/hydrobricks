@@ -28,13 +28,13 @@ void SettingsModel::SetSolver(const string& solverName) {
     _solver.name = solverName;
 }
 
-void SettingsModel::SetRouting(const string& scheme) {
-    _routing.scheme = scheme;
-    if (_routing.parameters.empty()) {
+void SettingsModel::SetChannelRouting(const string& scheme) {
+    _channelRouting.scheme = scheme;
+    if (_channelRouting.parameters.empty()) {
         // Created once and never reallocated: the reaches keep pointers to these values.
-        _routing.parameters.reserve(2);
-        _routing.parameters.emplace_back("celerity", 1.0f);
-        _routing.parameters.emplace_back("x", 0.2f);
+        _channelRouting.parameters.reserve(2);
+        _channelRouting.parameters.emplace_back("celerity", 1.0f);
+        _channelRouting.parameters.emplace_back("x", 0.2f);
     }
 }
 
@@ -972,10 +972,9 @@ bool SettingsModel::SetParameterValue(const string& component, const string& nam
         return true;
     }
 
-    // The channel routing parameters are model-wide (not part of a structure variant). Only the names the
-    // routing owns are taken here: a model may also have a brick called 'routing' (e.g. the HBV transfer).
-    if (component == "routing") {
-        for (auto& parameter : _routing.parameters) {
+    // The channel routing parameters are model-wide (not part of a structure variant).
+    if (component == "channel") {
+        for (auto& parameter : _channelRouting.parameters) {
             if (parameter.GetName() == name) {
                 parameter.SetValue(value);
                 return true;

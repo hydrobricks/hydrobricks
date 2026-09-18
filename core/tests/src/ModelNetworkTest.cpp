@@ -230,8 +230,8 @@ TEST(ModelNetwork, LagRoutingDelaysTheUpstreamWaterByOneStep) {
     // Upstream subbasin 2 drains through a reach of 86.4 km at 1 m/s: one day of travel time.
     auto build = [](const string& scheme, ModelHydro& model, SettingsModel& settings, SettingsBasin& basin) {
         BuildStructure(settings);
-        settings.SetRouting(scheme);
-        settings.SetParameterValue("routing", "celerity", 1.0f);
+        settings.SetChannelRouting(scheme);
+        settings.SetParameterValue("channel", "celerity", 1.0f);
         basin.AddSubbasin(1, 0, "outlet");
         basin.AddSubbasinPropertyDouble("length", 86400.0, "m");
         basin.AddSubbasin(2, 1, "upstream");
@@ -273,7 +273,7 @@ TEST(ModelNetwork, LagRoutingDelaysTheUpstreamWaterByOneStep) {
 TEST(ModelNetwork, ReachValuesAreLoggedWhenRequested) {
     SettingsModel settings;
     BuildStructure(settings);
-    settings.SetRouting("lag");
+    settings.SetChannelRouting("lag");
     settings.AddLoggingToItems({"reach:inflow", "reach:outflow", "reach:storage"});
     SettingsBasin basin;
     basin.AddSubbasin(1, 0, "outlet");

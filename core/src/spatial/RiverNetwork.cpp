@@ -115,9 +115,9 @@ void RiverNetwork::TransferInflow(SubBasin* subbasin, double timeStepInDays) {
     subbasin->SetInflowVolume(subbasin->GetReach()->Route(inflowVolume, timeStepInDays));
 }
 
-void RiverNetwork::SetRouting(const RoutingSettings& settings) {
+void RiverNetwork::SetChannelRouting(const ChannelRoutingSettings& settings) {
     for (const auto& reach : _reaches) {
-        reach->SetRouting(settings);
+        reach->SetChannelRouting(settings);
     }
 }
 

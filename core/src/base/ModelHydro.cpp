@@ -52,7 +52,7 @@ ModelResult ModelHydro::Initialize(SettingsModel& modelSettings, SettingsBasin& 
         }
 
         if (_network) {
-            _network->SetRouting(modelSettings.GetRoutingSettings());
+            _network->SetChannelRouting(modelSettings.GetChannelRoutingSettings());
         }
 
         _timer.Initialize(modelSettings.GetTimerSettings());

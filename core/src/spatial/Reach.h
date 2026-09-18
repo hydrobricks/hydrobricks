@@ -4,7 +4,7 @@
 #include "Includes.h"
 
 class SubBasin;
-struct RoutingSettings;
+struct ChannelRoutingSettings;
 
 /**
  * The channel reach of a sub basin: the main channel from the point where the upstream sub basins enter to
@@ -52,11 +52,11 @@ class Reach {
     void Initialize();
 
     /**
-     * Set the routing scheme and bind the model-wide routing parameters.
+     * Set the channel routing scheme and bind the model-wide routing parameters.
      *
-     * @param settings The routing settings of the model.
+     * @param settings The channel routing settings of the model.
      */
-    void SetRouting(const RoutingSettings& settings);
+    void SetChannelRouting(const ChannelRoutingSettings& settings);
 
     /**
      * Route the inflow of the current time step through the reach.

@@ -26,12 +26,12 @@ struct Fixture {
         subbasinSettings.id = 1;
         subbasinSettings.propertiesDouble.push_back({"length", lengthM, "m"});
         subbasin.SetNetworkProperties(subbasinSettings);
-        settings.SetRouting(scheme);
-        settings.SetParameterValue("routing", "celerity", celerity);
-        settings.SetParameterValue("routing", "x", x);
+        settings.SetChannelRouting(scheme);
+        settings.SetParameterValue("channel", "celerity", celerity);
+        settings.SetParameterValue("channel", "x", x);
         reach = std::make_unique<Reach>(&subbasin);
         reach->Initialize();
-        reach->SetRouting(settings.GetRoutingSettings());
+        reach->SetChannelRouting(settings.GetChannelRoutingSettings());
     }
 
     // Route a pulse of the given volume at step 0, then zeros; returns the outflow series.
@@ -186,10 +186,10 @@ TEST(Reach, SubbasinPropertiesOverrideTheParameters) {
     subbasinSettings.propertiesDouble.push_back({"muskingum_x", 0.1, ""});
     subbasin.SetNetworkProperties(subbasinSettings);
     SettingsModel settings;
-    settings.SetRouting("muskingum");
+    settings.SetChannelRouting("muskingum");
     Reach reach(&subbasin);
     reach.Initialize();
-    reach.SetRouting(settings.GetRoutingSettings());
+    reach.SetChannelRouting(settings.GetChannelRoutingSettings());
     EXPECT_DOUBLE_EQ(reach.GetCelerity(), 2.5);
     EXPECT_DOUBLE_EQ(reach.GetMuskingumX(), 0.1);
     EXPECT_NEAR(reach.GetTravelTimeInDays(), 1000.0 / (2.5 * kSecondsPerDay), 1e-15);
@@ -201,7 +201,7 @@ TEST(Reach, ParameterChangeIsPickedUpBetweenRuns) {
     EXPECT_DOUBLE_EQ(out[2], 100.0);
 
     f.reach->Reset();
-    f.settings.SetParameterValue("routing", "celerity", 2.0f);  // one day now
+    f.settings.SetParameterValue("channel", "celerity", 2.0f);  // one day now
     out = f.Pulse(100.0, 4);
     EXPECT_DOUBLE_EQ(out[1], 100.0);
     EXPECT_DOUBLE_EQ(out[2], 0.0);
@@ -221,13 +221,13 @@ TEST(Reach, ResetRestoresTheSavedState) {
     EXPECT_NEAR(f.reach->Route(0.0, kDay), 100.0, 1e-12);
 }
 
-TEST(SettingsModel, RoutingParametersAreSettable) {
+TEST(SettingsModel, ChannelRoutingParametersAreSettable) {
     SettingsModel settings;
-    EXPECT_FALSE(settings.SetParameterValue("routing", "celerity", 2.0f));  // no scheme yet
-    settings.SetRouting("lag");
-    EXPECT_TRUE(settings.SetParameterValue("routing", "celerity", 2.0f));
-    EXPECT_FALSE(settings.SetParameterValue("routing", "manning", 0.03f));
-    const RoutingSettings& routing = settings.GetRoutingSettings();
+    EXPECT_FALSE(settings.SetParameterValue("channel", "celerity", 2.0f));  // no scheme yet
+    settings.SetChannelRouting("lag");
+    EXPECT_TRUE(settings.SetParameterValue("channel", "celerity", 2.0f));
+    EXPECT_FALSE(settings.SetParameterValue("channel", "manning", 0.03f));
+    const ChannelRoutingSettings& routing = settings.GetChannelRoutingSettings();
     EXPECT_EQ(routing.scheme, "lag");
     ASSERT_EQ(routing.parameters.size(), 2);
     EXPECT_FLOAT_EQ(routing.parameters[0].GetValue(), 2.0f);

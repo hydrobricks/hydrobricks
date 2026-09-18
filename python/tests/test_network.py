@@ -228,7 +228,7 @@ def _run_routed(out: Path, routing: str, **params) -> models.Socont:
     model = models.Socont(
         soil_storage_nb=2,
         surface_runoff="linear_storage",
-        routing=routing,
+        channel_routing=routing,
         record_all=True,
     )
     parameters = model.generate_parameters()
@@ -259,18 +259,20 @@ def test_routing_parameters_follow_the_scheme(tmp_path):
     assert (
         not models.Socont(surface_runoff="linear_storage")
         .generate_parameters()
-        .has("routing_celerity")
+        .has("channel_celerity")
     )
-    lag = models.Socont(surface_runoff="linear_storage", routing="lag")
+    lag = models.Socont(surface_runoff="linear_storage", channel_routing="lag")
     lag_params = lag.generate_parameters()
-    assert lag_params.has("routing_celerity")
-    assert not lag_params.has("routing_x")
-    musk = models.Socont(surface_runoff="linear_storage", routing="muskingum")
+    assert lag_params.has("channel_celerity")
+    assert not lag_params.has("muskingum_x")
+    musk = models.Socont(surface_runoff="linear_storage", channel_routing="muskingum")
     musk_params = musk.generate_parameters()
-    assert musk_params.has("routing_celerity")
-    assert musk_params.has("routing_x")
+    assert musk_params.has("channel_celerity")
+    assert musk_params.has("muskingum_x")
     with pytest.raises(hb.ConfigurationError):
-        models.Socont(surface_runoff="linear_storage", routing="kinematic").setup(
+        models.Socont(
+            surface_runoff="linear_storage", channel_routing="kinematic"
+        ).setup(
             spatial_structure=_split_units_with_reaches(1000.0),
             output_path=str(tmp_path),
             start_date=_START,
@@ -280,7 +282,7 @@ def test_routing_parameters_follow_the_scheme(tmp_path):
 
 def test_lag_routing_delays_the_upstream_water(runs, tmp_path):
     # 86.4 km at 1 m/s: the upper Sitter reaches the outlet one day later.
-    lag = _run_routed(tmp_path / "lag", "lag", routing_celerity=1.0)
+    lag = _run_routed(tmp_path / "lag", "lag", channel_celerity=1.0)
     none = runs["network"]
     areas = lag.get_subbasin_areas()
     ratio = areas.loc[2, "local"] / areas.loc[1, "drained"]
@@ -308,7 +310,7 @@ def test_lag_routing_delays_the_upstream_water(runs, tmp_path):
 
 def test_muskingum_routing_conserves_mass_and_attenuates(runs, tmp_path):
     musk = _run_routed(
-        tmp_path / "muskingum", "muskingum", routing_celerity=0.5, routing_x=0.2
+        tmp_path / "muskingum", "muskingum", channel_celerity=0.5, muskingum_x=0.2
     )
     none = runs["network"]
     np.testing.assert_allclose(
@@ -324,3 +326,153 @@ def test_muskingum_routing_conserves_mass_and_attenuates(runs, tmp_path):
     # Attenuation: the routed outlet has a lower peak than the instantaneous one.
     assert musk.get_outlet_discharge().max() < none.get_outlet_discharge().max()
     assert np.all(musk.get_outlet_discharge() >= 0)
+
+
+# ---- Gauges on subbasins ----------------------------------------------------------
+
+
+def _upstream_gauge(network: models.Socont, **kwargs) -> hb.DischargeObservations:
+    """A synthetic gauge on subbasin 2: the model's own upstream discharge plus noise,
+    written to a CSV and loaded back like an observed record."""
+    rng = np.random.default_rng(0)
+    values = network.get_subbasin_discharge(2) * (1 + 0.1 * rng.standard_normal(1))
+    values = np.maximum(values + 0.05 * rng.standard_normal(len(values)), 0.0)
+    time = network.get_recorded_time()
+    return values, time
+
+
+def _write_gauge(path: Path, time, values, scale: float = 1.0) -> None:
+    pd.DataFrame(
+        {"date": time.strftime("%Y-%m-%d"), "q": np.asarray(values) * scale}
+    ).to_csv(path, index=False)
+
+
+def test_gauge_on_a_subbasin_is_scored_against_its_outlet(runs, tmp_path):
+    network = runs["network"]
+    values, time = _upstream_gauge(network)
+    _write_gauge(tmp_path / "gauge.csv", time, values)
+
+    gauge = hb.DischargeObservations(_START, _END, subbasin=2)
+    gauge.load_from_csv(tmp_path / "gauge.csv", "date", "%Y-%m-%d", {"discharge": "q"})
+    assert gauge.subbasin == 2
+    assert gauge.name == "discharge (subbasin 2)"
+    np.testing.assert_allclose(
+        gauge.simulated_series(network), network.get_subbasin_discharge(2)
+    )
+    np.testing.assert_allclose(
+        gauge.simulated(network), gauge.simulated_series(network)
+    )
+
+    # Scored against the subbasin outlet, not the catchment outlet.
+    score_gauge = network.eval("nse", gauge)
+    score_outlet = hb.evaluate(network.get_outlet_discharge(), gauge.observed(), "nse")
+    assert score_gauge > score_outlet
+    assert score_gauge > 0.9
+
+    periods = hb.Periods(
+        calibration=(_START, "1981-12-31"), validation=("1982-01-01", _END)
+    )
+    table = hb.evaluate_periods(network, gauge, periods, metrics=("nse",))
+    assert table.loc["calibration", "nse"] > 0.9
+    assert table.loc["validation", "nse"] > 0.9
+
+    # An unknown units string and m3/s without an area are refused.
+    with pytest.raises(hb.DataError):
+        hb.DischargeObservations(_START, _END, units="liters")
+    with pytest.raises(hb.DataError):
+        hb.DischargeObservations(_START, _END, units="m3/s")
+
+
+def test_gauge_in_cubic_meters_per_second_is_converted(runs, tmp_path):
+    network = runs["network"]
+    values, time = _upstream_gauge(network)
+    areas = network.get_subbasin_areas()
+    drained = float(areas.loc[2, "drained"])
+    # mm/day -> m3/s: q [mm/d] * A [m2] / 1000 / 86400
+    _write_gauge(
+        tmp_path / "gauge_m3s.csv", time, values, scale=drained / 1000.0 / 86400.0
+    )
+
+    gauge = hb.DischargeObservations(
+        _START, _END, subbasin=2, units="m3/s", drained_area=drained
+    )
+    gauge.load_from_csv(
+        tmp_path / "gauge_m3s.csv", "date", "%Y-%m-%d", {"discharge": "q"}
+    )
+    np.testing.assert_allclose(gauge.observed(), values, rtol=1e-10)
+
+    # The Python-side drained areas match the model's.
+    hydro_units = _split_units_with_reaches(1000.0)
+    table = hydro_units.get_subbasin_areas()
+    assert table.loc[1, "drained"] == pytest.approx(areas.loc[1, "drained"])
+    assert table.loc[2, "drained"] == pytest.approx(areas.loc[2, "drained"])
+    assert table.loc[2, "local"] == pytest.approx(areas.loc[2, "local"])
+
+
+def test_calibration_with_a_gauge_on_a_subbasin(runs, tmp_path):
+    pytest.importorskip("spotpy")
+    import hydrobricks.trainer as trainer
+
+    network = runs["network"]
+    values, time = _upstream_gauge(network)
+    _write_gauge(tmp_path / "gauge.csv", time, values)
+    outlet_values = network.get_outlet_discharge()
+    _write_gauge(tmp_path / "outlet.csv", time, outlet_values)
+
+    # A fresh model over the same period, calibrated on the outlet plus the
+    # upstream gauge as an additional signal.
+    hydro_units = _split_units_with_reaches(1000.0)
+    model = models.Socont(soil_storage_nb=2, surface_runoff="linear_storage")
+    parameters = model.generate_parameters()
+    parameters.set_values(
+        {
+            "A": 2000,
+            "a_snow": 3,
+            "k_slow_1": 0.9,
+            "k_slow_2": 0.8,
+            "k_quick": 1,
+            "percol": 9.8,
+        }
+    )
+    parameters.allow_changing = ["a_snow", "k_quick"]
+    out = tmp_path / "calib"
+    out.mkdir()
+    model.setup(
+        spatial_structure=hydro_units,
+        output_path=str(out),
+        start_date=_START,
+        end_date=_END,
+    )
+    forcing = _forcing(hydro_units)
+
+    outlet = hb.DischargeObservations(_START, _END)
+    outlet.load_from_csv(
+        tmp_path / "outlet.csv", "date", "%Y-%m-%d", {"discharge": "q"}
+    )
+    gauge = hb.DischargeObservations(_START, _END, subbasin=2, metric="nse", weight=0.5)
+    gauge.load_from_csv(tmp_path / "gauge.csv", "date", "%Y-%m-%d", {"discharge": "q"})
+
+    spot_setup = trainer.SpotpySetup(
+        model,
+        parameters,
+        forcing,
+        outlet,
+        warmup=30,
+        obj_func="nse",
+        extra_observations=[gauge],
+    )
+    assert spot_setup._obs_subbasins == [None]
+    sampler = trainer.calibrate(spot_setup, "mc", repetitions=3, dbformat="ram")
+    best = trainer.get_best(sampler)
+    assert np.isfinite(best["score"])
+
+    # The primary signal may itself be the upstream gauge (a fresh object: the setup
+    # above restricted `gauge` to its post-warmup evaluation period).
+    gauge = hb.DischargeObservations(_START, _END, subbasin=2)
+    gauge.load_from_csv(tmp_path / "gauge.csv", "date", "%Y-%m-%d", {"discharge": "q"})
+    upstream_only = trainer.SpotpySetup(
+        model, parameters, forcing, gauge, warmup=30, obj_func="nse"
+    )
+    assert upstream_only._obs_subbasins == [2]
+    sampler = trainer.calibrate(upstream_only, "mc", repetitions=2, dbformat="ram")
+    assert np.isfinite(trainer.get_best(sampler)["score"])

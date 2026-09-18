@@ -1,21 +1,27 @@
 """PREVAH on the Ticino-Bellinzona catchment (570 HRUs, distributed).
 
 A real, spatially-distributed PREVAH setup: 570 hydrotopes (HRUs) with three land
-covers (open / forest / wetland), forcing given per meteo zone and read per HRU
-(``load_spatialized_data_from_csv``), PREVAH's **monthly vegetation tables** applied
-per cover (``apply_land_use``), and a soil moisture capacity that varies per hydrotope
-*and* per month (``apply_land_use_field_capacity``).
+covers (open / forest / wetland), the forcing given per meteo zone and read per HRU,
+PREVAH's **monthly vegetation tables** applied per cover (``apply_land_use``), and a
+soil moisture capacity that varies per hydrotope *and* per month
+(``apply_land_use_field_capacity``).
+
+The whole setup -- model, hydro units, forcing, periods and the calibrated parameters
+-- is declared in ``prevah_ticino_project.yaml``. Only PREVAH's land-use tables are
+left to Python: they are model-specific calls that the project-file schema does not
+cover. So the file is loaded with ``setup=False``, the tables are applied, and the
+model is set up and run.
 
 The reference discharge (``discharge_prevah.csv``) is the *Fortran PREVAH* simulated
 total runoff for this case (not a gauge series), so this example is a
 cross-implementation reproduction: hydrobricks PREVAH-UniBE against the original Fortran
 PREVAH (1984-2000). It reaches NSE ~= 0.98 over the validation period.
 
-Every parameter below is the original PREVAH one (``cal_2020pest.inp``) and every
-option follows the method switches of that control file; **nothing is calibrated
-here**. The processes are the faithful ones throughout: the vapour-density Hamon PET,
-the albedo-reduced soil, canopy and snow evaporation, the PREVAH snow water release
-(CEXLIQ) and the wet-surface evaporation from the groundwater.
+Every parameter of the project file is the original PREVAH one (``cal_2020pest.inp``)
+and every option follows the method switches of that control file; **nothing is
+calibrated here**. The processes are the faithful ones throughout: the vapour-density
+Hamon PET, the albedo-reduced soil, canopy and snow evaporation, the PREVAH snow water
+release (CEXLIQ) and the wet-surface evaporation from the groundwater.
 
 The snowmelt is the radiation-corrected (Hock) one selected by the control file. It
 is driven by ``potential_radiation.csv``, the potential clear-sky radiation of each
@@ -38,20 +44,9 @@ import numpy as np
 import pandas as pd
 
 import hydrobricks as hb
-import hydrobricks.models as models
 
-DATA = (
-    Path(__file__).parent.parent.parent
-    / "tests"
-    / "files"
-    / "catchments"
-    / "ch_ticino_bellinzona"
-)
-OUT = Path(__file__).parent / "output"
-OUT.mkdir(exist_ok=True)
-
-COVERS = ["open", "forest", "wetland"]
-LATITUDE = 46.4  # catchment latitude, for the Hamon PET
+HERE = Path(__file__).parent
+DATA = HERE.parent.parent / "tests" / "files" / "catchments" / "ch_ticino_bellinzona"
 
 # PREVAH parameterizes its vegetation through monthly tables, one per land use.
 # Each cover of this dataset aggregates several of them (area shares of the source
@@ -70,80 +65,55 @@ LAND_USES = {
 }
 
 # ---------------------------------------------------------------------------
-# 1. Hydro units (570 HRUs): elevation and per-cover area, plus the per-HRU columns
-#    used further down: the soil (available water content and depth) and the land use
-#    that give the soil moisture capacity, and the meteo zone each HRU reads its
-#    forcing from.
+# 1. The project file: model, hydro units, forcing, periods, parameters.
+#    setup=False, because the land-use tables below must be applied first.
 # ---------------------------------------------------------------------------
-hydro_units = hb.HydroUnits(land_cover_types=COVERS, land_cover_names=COVERS)
-hydro_units.load_from_csv(
-    DATA / "hydro_units.csv",
-    column_elevation="elevation",
-    columns_areas={c: f"area_{c}" for c in COVERS},
-    other_columns={
-        "land_use": "land_use",
-        "awc": "awc",
-        "soil_depth": "soil_depth",
-        "mez": "mez",
-    },
-)
+project = hb.load_project(HERE / "prevah_ticino_project.yaml", setup=False)
+model = project.model
+parameters = project.parameters
+hydro_units = project.hydro_units
+periods = project.periods
 
 
 def unit_column(name):
-    """One value per hydro unit, from a column loaded with other_columns."""
+    """One value per hydro unit, from a column declared in hydro_units.columns."""
     return hydro_units.hydro_units[name].to_numpy().flatten()
 
 
-# Each hydrotope carries a single land use (used for its soil moisture capacity).
+# ---------------------------------------------------------------------------
+# 2. PREVAH's land-use tables, the part the project file cannot express
+# ---------------------------------------------------------------------------
+# The soil moisture capacity: PREVAH builds it from the soil (available water content
+# and depth) and from the rooting depth of the hydrotope's land use, which varies by
+# month, so the capacity varies in space and through the year at once. The soil depth
+# caps the rooting depth per unit, which is why the two cannot be separated into a
+# per-unit value times a shared monthly shape.
 land_use = unit_column("land_use")
+model.apply_land_use_field_capacity(
+    parameters,
+    hydro_units,
+    land_use,  # one land use per hydrotope
+    available_water_content=unit_column("awc"),
+    soil_depth=unit_column("soil_depth"),
+)
+
+# The wet-surface evaporation needs nothing here: the model reads the wet share of
+# each unit from its wetland covers (their area fraction times the 'wet_fraction' of
+# the project file), which on this dataset is 0.7 on a wetland hydrotope and 0
+# elsewhere, as PREVAH's wet_surface is.
+
+# The monthly vegetation tables: the canopy interception capacity of each cover
+# (si_max x veg_cov) and its canopy evaporation factor (veg_cov), month by month.
+for cover, cover_land_use in LAND_USES.items():
+    model.apply_land_use(parameters, cover_land_use, cover_name=cover)
 
 # ---------------------------------------------------------------------------
-# 2. Forcing: the precipitation and the temperature are given per meteo zone -- an
-#    elevation band of this catchment -- so each HRU reads the series of the zone its
-#    'mez' column points at. The potential radiation is a climatology instead: one row
-#    per day of the year, one column per HRU, repeating every year.
-#    PET is the vapour-density Hamon used by PREVAH (the default 'Hamon' of pyet is
-#    an exponential variant that runs markedly hotter).
+# 3. Run
 # ---------------------------------------------------------------------------
-forcing = hb.Forcing(hydro_units)
-forcing.load_spatialized_data_from_csv(
-    DATA / "precipitation.csv",
-    variable="precipitation",
-    column_time="date",
-    columns_are="mez",
-)
-forcing.load_spatialized_data_from_csv(
-    DATA / "temperature.csv",
-    variable="temperature",
-    column_time="date",
-    columns_are="mez",
-)
-forcing.load_spatialized_data_from_csv(
-    DATA / "potential_radiation.csv",
-    variable="solar_radiation",
-    column_day_of_year="day_of_year",
-    columns_are="id",
-)
-forcing.compute_pet(method="Hamon_vapor_density", use=["t", "lat"], lat=LATITUDE)
-forcing.apply_operations()
+project.setup()
+project.run()
 
-# ---------------------------------------------------------------------------
-# 3. Observations (Fortran PREVAH reference discharge)
-# ---------------------------------------------------------------------------
-periods = hb.Periods(
-    calibration=("1985-01-01", "1994-12-31"),
-    validation=("1995-01-01", "2000-12-31"),
-    spinup="1y",
-)
-observations = hb.DischargeObservations(
-    periods.simulation.start, periods.simulation.end
-)
-observations.load_from_csv(
-    DATA / "discharge_prevah.csv",
-    column_time="date",
-    time_format="%Y-%m-%d",
-    content={"discharge": "discharge (mm/d)"},
-)
+observations = project.observations
 
 # The gauged discharge of the Ticino at Bellinzona, for reference: the point of this
 # example is the agreement with the Fortran, but both models face the same reality.
@@ -156,104 +126,7 @@ measured.load_from_csv(
 )
 
 # ---------------------------------------------------------------------------
-# 4. The PREVAH model with the calibrated parameters
-# ---------------------------------------------------------------------------
-# Calibrated PREVAH parameters (cal_2020pest.inp), mapped to hydrobricks aliases.
-# PREVAH storage times are in hours; hydrobricks uses response factors k = 24 / K_h.
-# The defaults of PrevahUniBE are PREVAH's own processes, so no option is needed:
-# - the radiation-corrected melt, (CSNOMF + CASNO * R_pot) * (T - T0), with a
-#   refreezing carrying its own seasonal factor;
-# - the snow water release of the ablation branch, with the CEXLIQ graded partition;
-# - the surface-albedo reduction (1 - albedo)/0.8 of the potential rate on the soil,
-#   the canopy and the snow alike, the snow albedo ageing between snowfalls;
-# - a canopy on every cover, evaporating at et_pot * veg_cov;
-# - the wet-surface evaporation drawn from the groundwater store (PREVAH's EWET), at
-#   et_pot times the wetland area times its wet fraction.
-model = models.PrevahUniBE(
-    land_cover_names=COVERS,
-    land_cover_types=COVERS,
-    record_all=True,
-)
-parameters = model.generate_parameters()
-# PREVAH melts from -1 degC; the default range of the melt threshold starts at 0.
-parameters.change_range("melt_t_snow", -3.0, 5.0)
-parameters.set_values(
-    {
-        # precipitation / snow correction factors
-        "rfcf": 1.0 - 22.363 / 100.0,
-        "sfcf": 1.0 + 33.502 / 100.0,
-        # snow/rain linear transition (all snow below t_start, all rain above t_end)
-        "prec_t_start": -0.75,
-        "prec_t_end": 0.75,
-        # radiation-corrected snow melt (CSNOMF, CASNO)
-        "melt_factor": 1.0038092221,
-        "r_snow": 5.5527817e-5,
-        "melt_t_snow": -1.0,
-        # refreezing: CRFR times the seasonal factor between TMFMIN and TMFMAX
-        "cwh": 0.1,
-        "cfr": 0.1,
-        "cfr_ddf_min": 1.0,
-        "cfr_ddf_max": 2.0,
-        "cfr_melt_t": -1.0,
-        # snow water release: the retention collapses above the melt threshold, and
-        # CEXLIQ grades how much of the fresh melt passes straight through.
-        "holding_melt_t": -1.0,
-        "cexliq": 0.5,
-        # soil moisture / ET (per-cover beta, all at the calibrated CBETA)
-        "fc": 13.7,  # global fallback; the per-HRU monthly capacity overrides it
-        "beta_open": 0.5,
-        "beta_forest": 0.5,
-        "beta_wetland": 0.5,
-        "wet_fraction": 0.7,  # PREVAH wetland wet-surface fraction
-        # upper zone (surface runoff Q0 threshold, interflow Q1)
-        "k0": 24.0 / 29.146,
-        "sgrluz": 74.655,
-        "k1": 24.0 / 150.0,
-        # soil-moisture-gated percolation (mm/h -> mm/d)
-        "cperc": 0.23576 * 24.0,
-        "cu_perc": 0.7,
-        # SLOWCOMP three-store groundwater
-        "slz1max": 112.903,
-        "k_gw1": 24.0 / 1000.0,
-        "k_gw2": 24.0 / 3009.72,
-        "k_gw3": 24.0 / 9000.0,
-    }
-)
-# The control file selects the Hamon evapotranspiration method, whose branch in
-# PREVAH evaporates the soil at the potential rate with no soil-moisture limitation.
-# Setting the CU limit to ~0 reproduces that (the range has to be opened first).
-parameters.change_range("cu", 0.0, 1.0)
-parameters.set_values({"cu": 1e-6})
-
-# The headline: each HRU uses its own field capacity instead of one global value.
-# PREVAH builds it from the soil (available water content and depth) and from the
-# rooting depth of the hydrotope's land use, which varies by month, so the capacity
-# varies in space and through the year at once. The soil depth caps the rooting
-# depth per unit, which is why the two cannot be separated into a per-unit value
-# times a shared monthly shape.
-model.apply_land_use_field_capacity(
-    parameters,
-    hydro_units,
-    land_use,  # one land use per hydrotope
-    available_water_content=unit_column("awc"),
-    soil_depth=unit_column("soil_depth"),
-)
-
-# PREVAH's monthly vegetation tables: the canopy interception capacity of each cover
-# (si_max x veg_cov) and its canopy evaporation factor (veg_cov), month by month.
-for cover, land_use in LAND_USES.items():
-    model.apply_land_use(parameters, land_use, cover_name=cover)
-
-model.setup(
-    spatial_structure=hydro_units,
-    output_path=str(OUT),
-    period=periods.simulation,
-    spinup=periods.spinup,
-)
-model.run(parameters=parameters, forcing=forcing)
-
-# ---------------------------------------------------------------------------
-# 5. Evaluate against the Fortran PREVAH reference, per period
+# 4. Evaluate against the Fortran PREVAH reference, per period
 # ---------------------------------------------------------------------------
 scores = hb.evaluate_periods(model, observations, periods, metrics=("nse", "kge_2012"))
 print("\nhydrobricks PREVAH-UniBE vs Fortran PREVAH (Ticino-Bellinzona):")
@@ -266,7 +139,7 @@ print("\nhydrobricks PREVAH-UniBE vs the gauged discharge:")
 print(measured_scores.round(3))
 
 # ---------------------------------------------------------------------------
-# 6. Plot the daily hydrograph (a sample year) and the monthly climatology
+# 5. Plot the daily hydrograph (a sample year) and the monthly climatology
 # ---------------------------------------------------------------------------
 try:
     import matplotlib
@@ -298,7 +171,8 @@ try:
     ax[1].set_ylabel("mm/d")
     ax[1].legend(fontsize=8)
     fig.tight_layout()
-    fig.savefig(OUT / "prevah_ticino.png", dpi=130)
-    print(f"saved {OUT / 'prevah_ticino.png'}")
+    figure = project.output_dir / "prevah_ticino.png"
+    fig.savefig(figure, dpi=130)
+    print(f"saved {figure}")
 except ImportError:
     print("(matplotlib not available; skipping the plot)")

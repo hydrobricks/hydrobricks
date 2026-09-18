@@ -721,6 +721,95 @@ def glacier_config(tmp_path, land_cover_types, land_cover_names, **land_covers):
     }
 
 
+def test_radiation_needed_by_the_model_is_reported(tmp_path):
+    """A radiation-driven melt without a radiation source fails at load time."""
+    config = minimal_config(tmp_path)
+    config["model"] = {"name": "prevah_unibe"}
+    config["parameters"] = {}
+    with pytest.raises(hb.ConfigurationError) as excinfo:
+        hb.load_project(config, base_dir=SITTER_DIR)
+    message = str(excinfo.value)
+    assert "the model needs a solar radiation forcing" in message
+    assert "'radiation' section" in message
+
+
+def test_radiation_requires_a_catchment(tmp_path):
+    config = minimal_config(tmp_path)
+    config["forcing"]["radiation"] = {"resolution": 100}
+    with pytest.raises(hb.ConfigurationError) as excinfo:
+        hb.load_project(config, base_dir=SITTER_DIR)
+    message = str(excinfo.value)
+    assert "forcing.radiation: requires 'outline' and 'dem'" in message
+    assert "forcing.radiation: requires a 'discretization' or a" in message
+
+
+def test_radiation_options_are_validated(tmp_path):
+    config = minimal_config(tmp_path)
+    config["forcing"]["radiation"] = {
+        "method": "measured",
+        "atmos_transmissivity": 1.5,
+        "steps_per_hour": 0,
+        "shadows": True,
+    }
+    with pytest.raises(hb.ConfigurationError) as excinfo:
+        hb.load_project(config, base_dir=SITTER_DIR)
+    message = str(excinfo.value)
+    assert "forcing.radiation.method: unknown method 'measured'" in message
+    assert "forcing.radiation.atmos_transmissivity: must be in (0, 1]" in message
+    assert "forcing.radiation.steps_per_hour: must be a positive integer" in message
+    assert "shadows" in message
+
+
+def test_radiation_computed_and_given_is_rejected(tmp_path):
+    config = minimal_config(tmp_path)
+    config["forcing"]["radiation"] = "potential"
+    config["forcing"]["columns"]["solar_radiation"] = "temp(C)"
+    with pytest.raises(hb.ConfigurationError) as excinfo:
+        hb.load_project(config, base_dir=SITTER_DIR)
+    assert "the solar radiation is also given as a source" in str(excinfo.value)
+
+
+@needs_catchment_packages
+@needs_gridded_packages
+def test_potential_radiation_from_the_dem_drives_the_prevah_melt(tmp_path):
+    """The radiation computed from the DEM feeds the default PREVAH (Hock) melt."""
+    config = glacier_config(tmp_path, ["ground"], ["ground"])
+    config["model"] = {"name": "prevah_unibe"}
+    # A coarse, shadow-free computation keeps the test fast.
+    config["forcing"]["radiation"] = {
+        "resolution": 200,
+        "steps_per_hour": 1,
+        "with_cast_shadows": False,
+    }
+    config["parameters"] = {
+        "melt_factor": 2.0,
+        "r_snow": 5e-5,
+        "fc": 200,
+        "beta": 2,
+        "cu": 0.7,
+        "k0": 0.5,
+        "sgrluz": 20,
+        "k1": 0.2,
+        "cperc": 2.0,
+        "k_gw1": 0.05,
+        "k_gw2": 0.01,
+        "k_gw3": 0.005,
+    }
+    project = hb.load_project(config, base_dir=GLETSCH_DIR)
+
+    assert (tmp_path / "radiation" / "daily_potential_radiation.nc").exists()
+    discharge = project.run()
+    assert np.all(discharge.to_numpy() >= 0)
+    names = list(project.forcing.data2D.data_name)
+    radiation = project.forcing.data2D.data[
+        names.index(project.forcing.Variable.R_SOLAR)
+    ]
+    # A clear-sky radiation climatology: positive, and higher in summer.
+    radiation = np.asarray(radiation)
+    assert np.all(radiation >= 0)
+    assert radiation[172].mean() > radiation[355].mean()
+
+
 def cover_fractions(project, cover):
     """The land cover fractions of a project's hydro units."""
     return project.hydro_units.hydro_units[f"fraction-{cover}"].to_numpy().squeeze()
@@ -1234,3 +1323,29 @@ def test_spatialized_forcing_reports_a_missing_column(tmp_path):
     config["forcing"]["spatialized"]["precipitation"]["columns_are"] = "id"
     with pytest.raises(hb.ForcingError, match="No column"):
         hb.load_project(config, base_dir=tmp_path)
+
+
+def test_parameter_can_widen_its_range(tmp_path):
+    """A published value outside the model's default range is expressible."""
+    config = minimal_config(tmp_path)
+    # a_snow defaults to [2, 12] in Socont; this set wants it below that.
+    config["parameters"]["a_snow"] = {"value": 0.5, "min": 0.1, "max": 12}
+    project = hb.load_project(config, base_dir=SITTER_DIR)
+
+    assert project.parameters.get("a_snow") == pytest.approx(0.5)
+
+
+def test_parameter_value_outside_its_own_range_is_refused(tmp_path):
+    config = minimal_config(tmp_path)
+    config["parameters"]["a_snow"] = {"value": 20, "min": 0.1, "max": 12}
+    with pytest.raises(hb.ConfigurationError) as excinfo:
+        hb.load_project(config, base_dir=SITTER_DIR)
+    assert "outside the range given for it" in str(excinfo.value)
+
+
+def test_parameter_range_needs_both_bounds(tmp_path):
+    config = minimal_config(tmp_path)
+    config["parameters"]["a_snow"] = {"value": 3, "min": 0.1}
+    with pytest.raises(hb.ConfigurationError) as excinfo:
+        hb.load_project(config, base_dir=SITTER_DIR)
+    assert "both 'min' and 'max'" in str(excinfo.value)

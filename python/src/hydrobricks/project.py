@@ -85,6 +85,20 @@ a ``unit_ids_raster`` to aggregate the grid cells, and optionally an
           dim_x: E
           dim_y: N
 
+A radiation-driven snow melt (e.g. ``melt:temperature_index``, the default of
+PREVAH-UniBE) needs a potential clear-sky radiation forcing. It can be computed
+from the catchment DEM (the hydro units then need an ``outline`` + ``dem`` and
+either a ``discretization`` or a ``unit_ids_raster``), once per day of the year,
+and is cached with the other preprocessing results::
+
+    forcing:
+      radiation:
+        resolution: 100            # optional: grid [m], default the DEM's
+        with_cast_shadows: true    # optional (default true)
+
+A radiation series of your own can instead be given as any other variable
+(``solar_radiation`` in ``columns``, ``gridded`` or ``spatialized``).
+
 Land covers beyond the single default soil cover are declared on the model
 (the ``land_cover_types`` / ``land_cover_names`` options); the data they are
 initialized from goes in ``hydro_units.land_covers``. A glacier extent (an
@@ -1276,11 +1290,78 @@ def _validate_spatialized_forcing(
     return out
 
 
+# Names under which a solar radiation source can be declared (Forcing aliases).
+_RADIATION_NAMES = frozenset({"solar_radiation", "r_solar", "r_s", "rs"})
+
+
+def _validate_radiation(spec: Any, errors: list[str]) -> dict | None:
+    """
+    Validate the 'forcing.radiation' section: the potential radiation from the DEM.
+
+    Parameters
+    ----------
+    spec
+        The section: a mapping of options, or the method name ('potential').
+    errors
+        Collected validation errors, appended to.
+
+    Returns
+    -------
+    The options of the potential radiation computation, or None when absent.
+    """
+    where = "forcing.radiation"
+    if spec is None:
+        return None
+    if isinstance(spec, str):
+        spec = {"method": spec}
+    if not isinstance(spec, dict):
+        errors.append(
+            f"{where}: expected a mapping of options (e.g. {{resolution: 100}}), or "
+            f"'potential'."
+        )
+        return None
+
+    valid = {
+        "method",
+        "resolution",
+        "atmos_transmissivity",
+        "steps_per_hour",
+        "with_cast_shadows",
+    }
+    _check_keys(spec, valid, where, errors)
+    method = _get_str(spec, "method", where, errors) or "potential"
+    if method != "potential":
+        errors.append(
+            f"{where}.method: unknown method '{method}'; the only one is 'potential' "
+            f"(the potential clear-sky radiation computed from the DEM)."
+        )
+
+    out: dict[str, Any] = {
+        "resolution": _get_number(spec, "resolution", where, errors),
+        "atmos_transmissivity": _get_number(
+            spec, "atmos_transmissivity", where, errors
+        ),
+        "steps_per_hour": _get_number(spec, "steps_per_hour", where, errors),
+        "with_cast_shadows": _get_bool(spec, "with_cast_shadows", where, errors),
+    }
+    if out["resolution"] is not None and out["resolution"] <= 0:
+        errors.append(f"{where}.resolution: must be positive.")
+    transmissivity = out["atmos_transmissivity"]
+    if transmissivity is not None and not 0 < transmissivity <= 1:
+        errors.append(f"{where}.atmos_transmissivity: must be in (0, 1].")
+    steps = out["steps_per_hour"]
+    if steps is not None and (steps < 1 or int(steps) != steps):
+        errors.append(f"{where}.steps_per_hour: must be a positive integer.")
+
+    return out
+
+
 def _validate_forcing(config: dict, base: Path, errors: list[str]) -> dict:
     out: dict[str, Any] = {
         "station": None,
         "gridded": {},
         "spatialized": {},
+        "radiation": None,
         "pet_method": "Oudin",
         "pet_lat": None,
         "variables": set(),
@@ -1298,6 +1379,7 @@ def _validate_forcing(config: dict, base: Path, errors: list[str]) -> dict:
         "pet",
         "gridded",
         "spatialized",
+        "radiation",
     }
     _check_keys(section, valid, "forcing", errors)
 
@@ -1308,6 +1390,7 @@ def _validate_forcing(config: dict, base: Path, errors: list[str]) -> dict:
     out["spatialized"] = _validate_spatialized_forcing(
         section.get("spatialized"), base, errors
     )
+    out["radiation"] = _validate_radiation(section.get("radiation"), errors)
 
     if not has_station and not out["gridded"] and not out["spatialized"]:
         errors.append(
@@ -1345,6 +1428,13 @@ def _validate_forcing(config: dict, base: Path, errors: list[str]) -> dict:
                 f"in {labels[second]}; pick one source per variable."
             )
     out["variables"] = set().union(*sources.values())
+
+    declared = sorted(out["variables"] & _RADIATION_NAMES)
+    if out["radiation"] is not None and declared:
+        errors.append(
+            f"forcing.radiation: the solar radiation is also given as a source "
+            f"('{declared[0]}'); pick one."
+        )
 
     if out["variables"] and "precipitation" not in out["variables"]:
         errors.append(
@@ -1416,20 +1506,70 @@ def _validate_periods(config: dict, errors: list[str]) -> Periods | None:
         return None
 
 
-def _validate_parameters(config: dict, errors: list[str]) -> dict:
+def _validate_parameters(config: dict, errors: list[str]) -> tuple[dict, dict]:
+    """
+    Validate the parameters section: a value, or a value with its allowed range.
+
+    A published parameter set does not always fall inside the default range of the
+    model, so a parameter can widen its own with ``{value: -1, min: -3, max: 5}``.
+
+    Parameters
+    ----------
+    config
+        The project configuration.
+    errors
+        Collected validation errors, appended to.
+
+    Returns
+    -------
+    The values by parameter name, and the ranges to widen before setting them.
+    """
     section = config.get("parameters")
     if section is None:
-        return {}
+        return {}, {}
     if not isinstance(section, dict):
-        errors.append("parameters: expected a mapping of parameter name to value.")
-        return {}
-    values = {}
-    for name, value in section.items():
-        if isinstance(value, bool) or not isinstance(value, numbers.Real):
-            errors.append(f"parameters.{name}: expected a number, got {value!r}.")
+        errors.append(
+            "parameters: expected a mapping of parameter name to a value or a "
+            "{value, min, max} mapping."
+        )
+        return {}, {}
+
+    values: dict[str, float] = {}
+    ranges: dict[str, tuple[float, float]] = {}
+    for name, spec in section.items():
+        where = f"parameters.{name}"
+        if not isinstance(spec, bool) and isinstance(spec, numbers.Real):
+            values[str(name)] = float(spec)
             continue
+        if not isinstance(spec, dict):
+            errors.append(
+                f"{where}: expected a number or a mapping (value, min, max), got "
+                f"{spec!r}."
+            )
+            continue
+        _check_keys(spec, {"value", "min", "max"}, where, errors)
+        value = _get_number(spec, "value", where, errors)
+        if value is None:
+            if "value" not in spec:
+                errors.append(f"{where}.value: a value is required.")
+            continue
+        minimum = _get_number(spec, "min", where, errors)
+        maximum = _get_number(spec, "max", where, errors)
+        if (minimum is None) != (maximum is None):
+            errors.append(f"{where}: give both 'min' and 'max', or neither.")
+        elif minimum is not None:
+            if minimum > maximum:
+                errors.append(f"{where}: 'min' ({minimum}) is above 'max' ({maximum}).")
+            elif not minimum <= value <= maximum:
+                errors.append(
+                    f"{where}.value: {value} is outside the range given for it "
+                    f"[{minimum}, {maximum}]."
+                )
+            else:
+                ranges[str(name)] = (float(minimum), float(maximum))
         values[str(name)] = float(value)
-    return values
+
+    return values, ranges
 
 
 def _validate_data_parameters(config: dict, errors: list[str]) -> dict:
@@ -1630,6 +1770,19 @@ def _validate_cross_checks(cfg: dict, errors: list[str]) -> None:
                 f"forcing.gridded.{variable}.apply_data_gradient: requires "
                 "'outline' and 'dem' in the hydro_units section (a DEM is "
                 "needed to derive the gradients from the data)."
+            )
+
+    if fc.get("radiation") is not None:
+        if not has_catchment:
+            errors.append(
+                "forcing.radiation: requires 'outline' and 'dem' in the hydro_units "
+                "section (the radiation is computed from the catchment DEM)."
+            )
+        if hu.get("unit_ids_raster") is None and hu.get("discretization") is None:
+            errors.append(
+                "forcing.radiation: requires a 'discretization' or a "
+                "'unit_ids_raster' in the hydro_units section (a raster of the hydro "
+                "unit ids, used to aggregate the radiation grid)."
             )
 
     variables = fc.get("variables") or set()
@@ -1844,11 +1997,13 @@ def _validate_config(config: dict, base: Path, errors: list[str]) -> dict:
         "forcing": _validate_forcing(config, base, errors),
         "observations": _validate_observations(config, base, errors),
         "periods": _validate_periods(config, errors),
-        "parameters": _validate_parameters(config, errors),
+        "parameters": {},
+        "parameter_ranges": {},
         "data_parameters": _validate_data_parameters(config, errors),
         "actions": _validate_actions(config, base, errors),
         "calibration": _validate_calibration(config, errors),
     }
+    cfg["parameters"], cfg["parameter_ranges"] = _validate_parameters(config, errors)
     _validate_cross_checks(cfg, errors)
 
     if cfg["calibration"] is not None:
@@ -2034,6 +2189,8 @@ def _build_project(
         _raise_if_errors(errors, path)
         raise AssertionError("unreachable")  # pragma: no cover
 
+    _check_radiation_needed(model, cfg["forcing"], errors)
+
     # Hydro units: loaded from a CSV or delineated from the DEM, optionally
     # within a Catchment (needed for the delineation and to derive elevation
     # gradients from gridded data).
@@ -2068,7 +2225,7 @@ def _build_project(
         catchment.create_elevation_bands(**kwargs)
         _initialize_land_covers(catchment, hu_cfg["land_covers"], model)
         hydro_units = catchment.hydro_units
-        if cfg["forcing"]["gridded"]:
+        if cfg["forcing"]["gridded"] or cfg["forcing"]["radiation"] is not None:
             # The gridded aggregation needs the unit ids as a raster.
             catchment.save_unit_ids_raster(cfg["output"])
             unit_ids_raster = cfg["output"] / "unit_ids.tif"
@@ -2232,6 +2389,13 @@ def _build_project(
                 end_date=end_date,
             )
 
+    if fc["radiation"] is not None and not errors:
+        # Queued after the dated sources: the radiation is a day-of-year climatology,
+        # expanded onto their dates.
+        _add_potential_radiation(
+            forcing, catchment, fc["radiation"], unit_ids_raster, cfg
+        )
+
     if "pet" not in fc["variables"]:
         pet_lat = fc["pet_lat"]
         if pet_lat is None and not hydro_units.has("latitude"):
@@ -2257,6 +2421,10 @@ def _build_project(
         )
     _raise_if_errors(errors, path)
     if cfg["parameters"]:
+        # Widen the ranges first: a value from a published set can sit outside the
+        # default range of the model, and set_values would refuse it.
+        for name, (minimum, maximum) in cfg["parameter_ranges"].items():
+            parameter_set.change_range(name, minimum, maximum)
         parameter_set.set_values(cfg["parameters"])
 
     if setup:
@@ -2300,6 +2468,63 @@ def _build_project(
         calibration=calibration,
         base_dir=cfg["base_dir"],
         actions=actions,
+    )
+
+
+def _model_forcing_names(model: Model) -> set[str]:
+    """The forcing variables the model structure reads (every structure variant)."""
+    names: set[str] = set()
+    for structure in model.settings.get_structure():
+        for key in ("hydro_unit_bricks", "sub_basin_bricks"):
+            for brick in structure.get(key, []):
+                names.update(brick.get("forcing", []))
+                for process in brick.get("processes", []):
+                    names.update(process.get("forcing", []))
+        for key in ("hydro_unit_splitters", "sub_basin_splitters"):
+            for splitter in structure.get(key, []):
+                names.update(splitter.get("forcing", []))
+    return names
+
+
+def _check_radiation_needed(model: Model, fc: dict, errors: list[str]) -> None:
+    """Report a model that reads a solar radiation no forcing source provides."""
+    if "solar_radiation" not in _model_forcing_names(model):
+        return
+    if fc["radiation"] is not None or fc["variables"] & _RADIATION_NAMES:
+        return
+    errors.append(
+        "forcing: the model needs a solar radiation forcing (e.g. for its "
+        "radiation-corrected snow melt, 'melt:temperature_index'). Add a "
+        "'radiation' section to compute the potential radiation from the catchment "
+        "DEM, give a 'solar_radiation' source ('columns', 'gridded' or "
+        "'spatialized'), or select a melt process without radiation (e.g. "
+        "snow_melt_process: melt:degree_day_seasonal)."
+    )
+
+
+def _add_potential_radiation(
+    forcing: Forcing,
+    catchment: Any,
+    options: dict,
+    unit_ids_raster: Path | None,
+    cfg: dict,
+) -> None:
+    """Compute the potential radiation from the DEM and add it to the forcing."""
+    _check_gridded_dependencies()
+    radiation_dir = cfg["output"] / "radiation"
+    radiation_dir.mkdir(parents=True, exist_ok=True)
+    kwargs = {key: value for key, value in options.items() if value is not None}
+    if "steps_per_hour" in kwargs:
+        kwargs["steps_per_hour"] = int(kwargs["steps_per_hour"])
+    logger.info("Computing the potential radiation from the catchment DEM.")
+    catchment.calculate_daily_potential_radiation(
+        str(radiation_dir), cache_dir=cfg["cache"], **kwargs
+    )
+    forcing.spatialize_from_gridded_data(
+        variable="solar_radiation",
+        path=radiation_dir / "daily_potential_radiation.nc",
+        var_name="radiation",
+        raster_hydro_units=unit_ids_raster,
     )
 
 

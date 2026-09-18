@@ -124,12 +124,12 @@ class GSM(GlacierModule):
 
         # Catchment-level reservoirs for the glacierized-area contributions.
         structure[self.RAIN_SNOWMELT_STORAGE] = {
-            "attach_to": "sub_basin",
+            "attach_to": "subbasin",
             "kind": "storage",
             "processes": {"outflow": {"kind": "outflow:linear", "target": "outlet"}},
         }
         structure[self.ICEMELT_STORAGE] = {
-            "attach_to": "sub_basin",
+            "attach_to": "subbasin",
             "kind": "storage",
             "processes": {"outflow": {"kind": "outflow:linear", "target": "outlet"}},
         }
@@ -266,7 +266,7 @@ class PrevahGlacier(GlacierModule):
 
         # Catchment-level reservoirs for the glacierized-area contributions.
         structure[self.RAIN_SNOWMELT_STORAGE] = {
-            "attach_to": "sub_basin",
+            "attach_to": "subbasin",
             "kind": "storage",
             "processes": {
                 "outflow": {
@@ -276,20 +276,20 @@ class PrevahGlacier(GlacierModule):
             },
         }
         structure[self.RAIN_SNOWMELT_DELAY] = {
-            "attach_to": "sub_basin",
+            "attach_to": "subbasin",
             "kind": "storage",
             "processes": {"delay": {"kind": "routing:delay", "target": "outlet"}},
         }
         if ice_names:
             structure[self.ICEMELT_STORAGE] = {
-                "attach_to": "sub_basin",
+                "attach_to": "subbasin",
                 "kind": "storage",
                 "processes": {
                     "outflow": {"kind": "outflow:linear", "target": self.ICEMELT_DELAY}
                 },
             }
             structure[self.ICEMELT_DELAY] = {
-                "attach_to": "sub_basin",
+                "attach_to": "subbasin",
                 "kind": "storage",
                 "processes": {"delay": {"kind": "routing:delay", "target": "outlet"}},
             }

@@ -4,6 +4,8 @@
 #include "Includes.h"
 #include "Parameter.h"
 
+class FileNetcdf;
+
 struct LandCoverSettings {
     string name;
     string type;
@@ -31,6 +33,7 @@ struct HydroUnitSettings {
     int id;
     double area;
     double elevation;
+    int subbasinId = 1;  // subbasin the unit drains to (1 when no network is declared)
     vector<LandCoverSettings> landCovers;
     vector<SurfaceComponentSettings> surfaceComponents;
     vector<HydroUnitPropertyDouble> propertiesDouble;
@@ -42,6 +45,18 @@ struct LateralConnectionSettings {
     int giverHydroUnitId;
     int receiverHydroUnitId;
     double fraction;
+};
+
+/**
+ * A subbasin of the river network: a node of the tree, holding hydro units and
+ * draining into its downstream subbasin (0: the terminal outlet).
+ */
+struct SubbasinSettings {
+    int id = 1;
+    int downstreamId = 0;  // 0: terminal outlet of the network
+    string name;
+    vector<HydroUnitPropertyDouble> propertiesDouble;
+    vector<HydroUnitPropertyString> propertiesString;
 };
 
 class SettingsBasin {
@@ -56,8 +71,51 @@ class SettingsBasin {
      * @param id ID of the hydro unit.
      * @param area area of the hydro unit.
      * @param elevation elevation of the hydro unit.
+     * @param subbasinId ID of the subbasin the unit drains to (1 when no network is declared).
      */
-    void AddHydroUnit(int id, double area, double elevation = -9999);
+    void AddHydroUnit(int id, double area, double elevation = -9999, int subbasinId = 1);
+
+    /**
+     * Add a subbasin to the river network and select it for the following property additions.
+     *
+     * @param id ID of the subbasin (> 0).
+     * @param downstreamId ID of the downstream subbasin (0: terminal outlet).
+     * @param name name of the subbasin (optional, e.g. the gauge name).
+     */
+    void AddSubbasin(int id, int downstreamId = 0, const string& name = "");
+
+    /**
+     * Add a numeric property to the selected subbasin (e.g. the reach length or slope).
+     *
+     * @param name name of the property.
+     * @param value value of the property.
+     * @param unit unit of the property.
+     */
+    void AddSubbasinPropertyDouble(const string& name, double value, const string& unit = "");
+
+    /**
+     * Add a string property to the selected subbasin.
+     *
+     * @param name name of the property.
+     * @param value value of the property.
+     */
+    void AddSubbasinPropertyString(const string& name, const string& value);
+
+    /**
+     * Select a subbasin by index.
+     *
+     * @param index index of the subbasin.
+     */
+    void SelectSubbasin(int index);
+
+    /**
+     * Check the river network: unique subbasin IDs, one terminal outlet, no cycle, every hydro unit assigned
+     * to a declared subbasin and every subbasin holding at least one hydro unit. A model without declared
+     * subbasins is valid when all its units drain to subbasin 1 (the implicit single subbasin).
+     *
+     * @return an empty result when valid, else the description of the first problem found.
+     */
+    [[nodiscard]] ModelResult ValidateNetwork() const;
 
     /**
      * Add a new land cover to the selected hydro unit.
@@ -125,6 +183,35 @@ class SettingsBasin {
     HydroUnitSettings GetHydroUnitSettings(int index) const {
         assert(_hydroUnits.size() > index);
         return _hydroUnits[index];
+    }
+
+    /**
+     * Get the settings of a subbasin.
+     *
+     * @param index The index of the subbasin.
+     * @return the subbasin settings.
+     */
+    const SubbasinSettings& GetSubbasinSettings(int index) const {
+        assert(_subbasins.size() > index);
+        return _subbasins[index];
+    }
+
+    /**
+     * Get the settings of all the declared subbasins (empty when no network is declared).
+     *
+     * @return vector of subbasin settings.
+     */
+    const vector<SubbasinSettings>& GetSubbasins() const {
+        return _subbasins;
+    }
+
+    /**
+     * Get the number of declared subbasins (0 when no network is declared).
+     *
+     * @return number of subbasins.
+     */
+    int GetSubbasinCount() const {
+        return static_cast<int>(_subbasins.size());
     }
 
     /**
@@ -206,9 +293,18 @@ class SettingsBasin {
     [[nodiscard]] double GetTotalArea() const;
 
   private:
+    /**
+     * Parse the subbasins dimension of a hydro units file (IDs, downstream links, names, properties).
+     *
+     * @param file The open NetCDF file.
+     */
+    void ParseSubbasins(const FileNetcdf& file);
+
     vector<HydroUnitSettings> _hydroUnits;
     vector<LateralConnectionSettings> _lateralConnections;
-    HydroUnitSettings* _selectedHydroUnit;  // non-owning reference
+    vector<SubbasinSettings> _subbasins;
+    HydroUnitSettings* _selectedHydroUnit;          // non-owning reference
+    SubbasinSettings* _selectedSubbasin = nullptr;  // non-owning reference
 };
 
 #endif  // HYDROBRICKS_SETTING_BASIN_H

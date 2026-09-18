@@ -31,7 +31,7 @@ bricks:
 
   slow_reservoir:
     kind: storage              # attached to each hydro unit (default);
-    parameters:                # use 'attach_to: sub_basin' for
+    parameters:                # use 'attach_to: subbasin' for
       capacity: 200            # catchment-level stores
     processes:
       et:

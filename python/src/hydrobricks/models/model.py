@@ -1317,8 +1317,8 @@ class Model(ABC):
         else:
             if brick["attach_to"] == "hydro_unit":
                 self.settings.add_hydro_unit_brick(key, brick["kind"])
-            elif brick["attach_to"] == "sub_basin":
-                self.settings.add_sub_basin_brick(key, brick["kind"])
+            elif brick["attach_to"] in ("subbasin", "sub_basin"):
+                self.settings.add_subbasin_brick(key, brick["kind"])
             else:
                 raise ConfigurationError(
                     f'Brick {key} has an invalid "attach_to" value.',

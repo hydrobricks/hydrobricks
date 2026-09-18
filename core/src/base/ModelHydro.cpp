@@ -18,11 +18,18 @@ ModelHydro::ModelHydro(SubBasin* subBasin)
 ModelHydro::~ModelHydro() = default;
 
 ModelResult ModelHydro::InitializeWithBasin(SettingsModel& modelSettings, SettingsBasin& basinSettings) {
-    _ownedSubBasin = std::make_unique<SubBasin>();
-    _subBasin = _ownedSubBasin.get();
-    if (auto r = _subBasin->Initialize(basinSettings); !r) {
+    _network = std::make_unique<RiverNetwork>();
+    if (auto r = _network->Initialize(basinSettings); !r) {
         return r;
     }
+    if (_network->GetSubbasinCount() > 1) {
+        // The network can be declared, validated and inspected, but the run loop, the water transfer between
+        // sub basins and the per-sub basin logging are not there yet.
+        return std::unexpected(std::format(
+            "The river network holds {} subbasins, but running a multi-subbasin model is not supported yet.",
+            _network->GetSubbasinCount()));
+    }
+    _subBasin = _network->GetOutlet();
 
     // Assign each unit its structure variant from its land covers before building.
     ModelBuilder builder(_subBasin, &_timer, &_logger);

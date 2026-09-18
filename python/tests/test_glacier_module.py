@@ -132,7 +132,7 @@ class _SingleReservoirGlacier(GlacierModule):
                 },
             }
         structure[self.STORAGE] = {
-            "attach_to": "sub_basin",
+            "attach_to": "subbasin",
             "kind": "storage",
             "processes": {"outflow": {"kind": "outflow:linear", "target": "outlet"}},
         }

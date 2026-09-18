@@ -55,9 +55,9 @@ bool ResultWriter::WriteNetCDF(const string& path, const axd& time, const vecInt
         file.PutVar(varId, hydroUnitAreas);
         file.PutAttText("long_name", "hydrological units areas", varId);
 
-        varId = file.DefVarDouble("sub_basin_values", {dimIdItemsAgg, dimIdTime}, 2, true);
+        varId = file.DefVarDouble("subbasin_values", {dimIdItemsAgg, dimIdTime}, 2, true);
         file.PutVar(varId, subBasinValues);
-        file.PutAttText("long_name", "aggregated values over the sub basin", varId);
+        file.PutAttText("long_name", "aggregated values over the subbasin", varId);
         file.PutAttText("units", "mm", varId);
 
         varId = file.DefVarDouble("hydro_units_values", {dimIdItemsDist, dimIdUnit, dimIdTime}, 3, true);

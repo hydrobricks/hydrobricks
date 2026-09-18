@@ -7,6 +7,7 @@
 
 #include "Connector.h"
 #include "HydroUnit.h"
+#include "HydroUnitProperty.h"
 #include "Includes.h"
 #include "SettingsBasin.h"
 #include "TimeMachine.h"
@@ -24,6 +25,102 @@ class SubBasin {
      * @return True if the initialization was successful, false otherwise.
      */
     [[nodiscard]] ModelResult Initialize(SettingsBasin& basinSettings);
+
+    /**
+     * Create a hydro unit from its settings and add it to the sub basin.
+     *
+     * @param unitSettings The settings of the hydro unit.
+     * @return the created hydro unit (owned by the sub basin).
+     */
+    HydroUnit* AddHydroUnitFromSettings(HydroUnitSettings& unitSettings);
+
+    /**
+     * Set the network properties of the sub basin (ID, downstream link, name, properties).
+     *
+     * @param subbasinSettings The settings of the subbasin.
+     */
+    void SetNetworkProperties(const SubbasinSettings& subbasinSettings);
+
+    void SetId(int id) {
+        _id = id;
+    }
+
+    [[nodiscard]] int GetId() const {
+        return _id;
+    }
+
+    void SetDownstreamId(int id) {
+        _downstreamId = id;
+    }
+
+    /**
+     * Get the ID of the downstream sub basin (0: terminal outlet of the network).
+     *
+     * @return the downstream sub basin ID.
+     */
+    [[nodiscard]] int GetDownstreamId() const {
+        return _downstreamId;
+    }
+
+    [[nodiscard]] bool IsTerminal() const {
+        return _downstreamId == 0;
+    }
+
+    void SetName(const string& name) {
+        _name = name;
+    }
+
+    [[nodiscard]] const string& GetName() const {
+        return _name;
+    }
+
+    /**
+     * Get the area of the sub basin's own hydro units [m2] (same as GetArea()).
+     *
+     * @return the local area.
+     */
+    [[nodiscard]] double GetLocalArea() const {
+        return _area;
+    }
+
+    void SetDrainedArea(double area) {
+        _drainedArea = area;
+    }
+
+    /**
+     * Get the area drained at the sub basin outlet [m2]: the local area plus the area of every upstream sub basin.
+     * Set by the river network; equals the local area for a single sub basin.
+     *
+     * @return the drained area.
+     */
+    [[nodiscard]] double GetDrainedArea() const {
+        return _drainedArea;
+    }
+
+    /**
+     * Check if the sub basin has a property with the given name.
+     *
+     * @param name The property name.
+     * @return true if the property exists.
+     */
+    [[nodiscard]] bool HasProperty(std::string_view name) const;
+
+    /**
+     * Get a numeric property of the sub basin (e.g. the reach length).
+     *
+     * @param name The property name.
+     * @param unit The unit to convert the value to (optional).
+     * @return the property value.
+     */
+    [[nodiscard]] double GetPropertyDouble(std::string_view name, std::string_view unit = "") const;
+
+    /**
+     * Get a string property of the sub basin.
+     *
+     * @param name The property name.
+     * @return the property value.
+     */
+    [[nodiscard]] string GetPropertyString(std::string_view name) const;
 
     /**
      * Build the basin with the given settings.
@@ -326,17 +423,22 @@ class SubBasin {
     }
 
   protected:
-    double _area;  // m2
+    int _id = 1;
+    int _downstreamId = 0;  // 0: terminal outlet of the network
+    string _name;
+    double _area;             // m2, own hydro units
+    double _drainedArea = 0;  // m2, own + upstream (set by the network)
     double _outletTotal;
-    std::vector<std::unique_ptr<Brick>> _bricks;          // owning: SubBasin-level bricks
-    std::unordered_map<string, Brick*> _brickMap;         // non-owning views into _bricks
-    std::vector<std::unique_ptr<Splitter>> _splitters;    // owning: SubBasin-level splitters
-    std::unordered_map<string, Splitter*> _splitterMap;   // non-owning views into _splitters
-    std::vector<std::unique_ptr<HydroUnit>> _hydroUnits;  // owning
-    std::unordered_map<int, HydroUnit*> _hydroUnitMap;    // non-owning views into _hydroUnits
-    std::vector<Connector*> _inConnectors;                // non-owning: lifetime managed externally
-    std::vector<Connector*> _outConnectors;               // non-owning: lifetime managed externally
-    std::vector<Flux*> _outletFluxes;                     // non-owning: lifetime managed by process owners
+    std::vector<std::unique_ptr<HydroUnitProperty>> _properties;  // owning
+    std::vector<std::unique_ptr<Brick>> _bricks;                  // owning: SubBasin-level bricks
+    std::unordered_map<string, Brick*> _brickMap;                 // non-owning views into _bricks
+    std::vector<std::unique_ptr<Splitter>> _splitters;            // owning: SubBasin-level splitters
+    std::unordered_map<string, Splitter*> _splitterMap;           // non-owning views into _splitters
+    std::vector<std::unique_ptr<HydroUnit>> _hydroUnits;          // owning
+    std::unordered_map<int, HydroUnit*> _hydroUnitMap;            // non-owning views into _hydroUnits
+    std::vector<Connector*> _inConnectors;                        // non-owning: lifetime managed externally
+    std::vector<Connector*> _outConnectors;                       // non-owning: lifetime managed externally
+    std::vector<Flux*> _outletFluxes;                             // non-owning: lifetime managed by process owners
 };
 
 #endif

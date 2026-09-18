@@ -35,9 +35,7 @@ void SubBasin::BuildBasin(SettingsBasin& basinSettings) {
         basinSettings.SelectUnit(iUnit);
 
         HydroUnitSettings unitSettings = basinSettings.GetHydroUnitSettings(iUnit);
-        auto unit = std::make_unique<HydroUnit>(unitSettings.area);
-        unit->SetProperties(unitSettings);
-        AddHydroUnit(std::move(unit));
+        AddHydroUnitFromSettings(unitSettings);
     }
 
     // Create the lateral connections
@@ -52,6 +50,60 @@ void SubBasin::BuildBasin(SettingsBasin& basinSettings) {
             LogError("Invalid hydro unit IDs in lateral connection settings.");
         }
     }
+}
+
+HydroUnit* SubBasin::AddHydroUnitFromSettings(HydroUnitSettings& unitSettings) {
+    auto unit = std::make_unique<HydroUnit>(unitSettings.area);
+    unit->SetProperties(unitSettings);
+    HydroUnit* rawUnit = unit.get();
+    AddHydroUnit(std::move(unit));
+
+    return rawUnit;
+}
+
+void SubBasin::SetNetworkProperties(const SubbasinSettings& subbasinSettings) {
+    _id = subbasinSettings.id;
+    _downstreamId = subbasinSettings.downstreamId;
+    _name = subbasinSettings.name;
+
+    _properties.reserve(_properties.size() + subbasinSettings.propertiesDouble.size() +
+                        subbasinSettings.propertiesString.size());
+    for (const auto& property : subbasinSettings.propertiesDouble) {
+        _properties.push_back(std::make_unique<HydroUnitProperty>(property.name, property.value, property.unit));
+    }
+    for (const auto& property : subbasinSettings.propertiesString) {
+        _properties.push_back(std::make_unique<HydroUnitProperty>(property.name, property.value));
+    }
+}
+
+bool SubBasin::HasProperty(std::string_view name) const {
+    for (const auto& property : _properties) {
+        if (property->GetName() == name) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+double SubBasin::GetPropertyDouble(std::string_view name, std::string_view unit) const {
+    for (const auto& property : _properties) {
+        if (property->GetName() == name) {
+            return property->GetValue(unit);
+        }
+    }
+
+    throw ModelConfigError(std::format("No property with the name '{}' was found on subbasin {}.", name, _id));
+}
+
+string SubBasin::GetPropertyString(std::string_view name) const {
+    for (const auto& property : _properties) {
+        if (property->GetName() == name) {
+            return property->GetValueString();
+        }
+    }
+
+    throw ModelConfigError(std::format("No property with the name '{}' was found on subbasin {}.", name, _id));
 }
 
 ModelResult SubBasin::AssignFractions(SettingsBasin& basinSettings) {

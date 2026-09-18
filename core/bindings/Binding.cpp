@@ -108,7 +108,7 @@ py::list SplittersToList(SettingsModel& settings, bool subBasin) {
         py::dict d;
         d["name"] = s.name;
         d["kind"] = s.type;
-        d["attach"] = subBasin ? "sub_basin" : "hydro_unit";
+        d["attach"] = subBasin ? "subbasin" : "hydro_unit";
         d["forcing"] = ForcingToList(s.forcing);
         d["outputs"] = OutputsToList(s.outputs);
         list.append(d);
@@ -139,15 +139,15 @@ py::list ExportStructure(SettingsModel& settings) {
 
         py::list subBasinBricks;
         for (int i = 0; i < settings.GetSubBasinBrickCount(); ++i) {
-            subBasinBricks.append(BrickToDict(settings.GetSubBasinBrickSettings(i), "sub_basin", false, false));
+            subBasinBricks.append(BrickToDict(settings.GetSubBasinBrickSettings(i), "subbasin", false, false));
         }
 
         py::dict structure;
         structure["id"] = id;
         structure["hydro_unit_bricks"] = hydroUnitBricks;
-        structure["sub_basin_bricks"] = subBasinBricks;
+        structure["subbasin_bricks"] = subBasinBricks;
         structure["hydro_unit_splitters"] = SplittersToList(settings, false);
-        structure["sub_basin_splitters"] = SplittersToList(settings, true);
+        structure["subbasin_splitters"] = SplittersToList(settings, true);
         structures.append(structure);
     }
 
@@ -195,7 +195,7 @@ PYBIND11_MODULE(_hydrobricks, m) {
         .def("add_land_cover_brick", &SettingsModel::AddLandCoverBrick, "Add a land cover brick.", "name"_a, "kind"_a)
         .def("add_hydro_unit_brick", &SettingsModel::AddHydroUnitBrick, "Add a hydro unit brick.", "name"_a,
              "kind"_a = "storage")
-        .def("add_sub_basin_brick", &SettingsModel::AddSubBasinBrick, "Add a sub basin brick.", "name"_a,
+        .def("add_subbasin_brick", &SettingsModel::AddSubBasinBrick, "Add a subbasin brick.", "name"_a,
              "kind"_a = "storage")
         .def("select_hydro_unit_brick", &SettingsModel::SelectHydroUnitBrickByName, "Select a hydro unit brick.",
              "name"_a)
@@ -255,7 +255,64 @@ PYBIND11_MODULE(_hydrobricks, m) {
     py::class_<SettingsBasin>(m, "SettingsBasin")
         .def(py::init<>())
         .def("add_hydro_unit", &SettingsBasin::AddHydroUnit, "Add a hydro unit to the spatial structure.", "id"_a,
-             "area"_a, "elevation"_a = -9999)
+             "area"_a, "elevation"_a = -9999, "subbasin_id"_a = 1)
+        .def("add_subbasin", &SettingsBasin::AddSubbasin,
+             "Add a subbasin to the river network (and select it for the following properties).", "id"_a,
+             "downstream_id"_a = 0, "name"_a = "")
+        .def("add_subbasin_property_double", &SettingsBasin::AddSubbasinPropertyDouble,
+             "Set a numeric property of the selected subbasin.", "name"_a, "value"_a, "unit"_a = "")
+        .def("add_subbasin_property_str", &SettingsBasin::AddSubbasinPropertyString,
+             "Set a string property of the selected subbasin.", "name"_a, "value"_a)
+        .def("get_subbasin_count", &SettingsBasin::GetSubbasinCount, "Get the number of declared subbasins.")
+        .def("get_hydro_unit_count", &SettingsBasin::GetHydroUnitCount, "Get the number of hydro units.")
+        .def(
+            "get_hydro_unit_subbasin_ids",
+            [](const SettingsBasin& s) {
+                vecInt ids;
+                for (int i = 0; i < s.GetHydroUnitCount(); ++i) {
+                    ids.push_back(s.GetHydroUnitSettings(i).subbasinId);
+                }
+                return ids;
+            },
+            "Get the subbasin ID of every hydro unit, in declaration order.")
+        .def(
+            "get_subbasin_ids",
+            [](const SettingsBasin& s) {
+                vecInt ids;
+                for (const auto& subbasin : s.GetSubbasins()) {
+                    ids.push_back(subbasin.id);
+                }
+                return ids;
+            },
+            "Get the IDs of the declared subbasins.")
+        .def(
+            "get_subbasin_downstream_ids",
+            [](const SettingsBasin& s) {
+                vecInt ids;
+                for (const auto& subbasin : s.GetSubbasins()) {
+                    ids.push_back(subbasin.downstreamId);
+                }
+                return ids;
+            },
+            "Get the downstream IDs of the declared subbasins (0: terminal outlet).")
+        .def(
+            "get_subbasin_property_double",
+            [](const SettingsBasin& s, int index, const string& name) {
+                for (const auto& property : s.GetSubbasinSettings(index).propertiesDouble) {
+                    if (property.name == name) return property.value;
+                }
+                throw py::key_error(name);
+            },
+            "Get a numeric property of a subbasin by index.", "index"_a, "name"_a)
+        .def(
+            "validate_network",
+            [](const SettingsBasin& s) {
+                auto r = s.ValidateNetwork();
+                if (!r) throw py::value_error(r.error());
+            },
+            "Check the river network (subbasin tree and hydro unit assignment); raises on error.")
+        .def("parse", &SettingsBasin::Parse, "Load the hydro units (and the river network) from a netCDF file.",
+             "path"_a)
         .def("add_land_cover", &SettingsBasin::AddLandCover, "Add a land cover element.", "name"_a, "kind"_a,
              "fraction"_a)
         .def("add_hydro_unit_property_str", &SettingsBasin::AddHydroUnitPropertyString, "Set a hydro unit property.",

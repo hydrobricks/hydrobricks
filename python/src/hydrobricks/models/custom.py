@@ -51,7 +51,7 @@ with ``target`` (a declared brick, a generated one such as
 the flux instantaneous. ``gate: <brick>`` names a brick whose state modulates
 the process rate without receiving its flux (required by state-gated processes
 such as ``percolation:prevah``). Bricks attach to each hydro unit by default;
-use ``attach_to: sub_basin`` for catchment-level stores.
+use ``attach_to: subbasin`` for catchment-level stores.
 """
 
 from __future__ import annotations
@@ -197,9 +197,9 @@ def _validate_brick(brick: Any, where: str, errors: list[str]) -> None:
         brick.setdefault("attach_to", "hydro_unit")
     else:
         attach_to = brick.setdefault("attach_to", "hydro_unit")
-        if attach_to not in ("hydro_unit", "sub_basin"):
+        if attach_to not in ("hydro_unit", "subbasin", "sub_basin"):
             errors.append(
-                f"{where}.attach_to: expected 'hydro_unit' or 'sub_basin', "
+                f"{where}.attach_to: expected 'hydro_unit' or 'subbasin', "
                 f"got {attach_to!r}."
             )
     if "computed_directly" in brick and not isinstance(

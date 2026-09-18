@@ -85,21 +85,24 @@ class Results:
             for label in self.labels_distributed:
                 print("- " + label)
 
-    def list_sub_basin_components(self) -> None:
+    def list_subbasin_components(self) -> None:
         """
-        Print a list of the aggregated (sub-basin level) components.
+        Print a list of the aggregated (subbasin level) components.
 
-        Displays all component names that have aggregated values at the sub-basin level.
+        Displays all component names that have aggregated values at the subbasin level.
         These are typically fluxes or flows that are summed across the entire catchment
         (e.g., total runoff, evapotranspiration).
         """
-        print("Sub basins components:")
+        print("Subbasin components:")
         if isinstance(self.labels_aggregated, str):
             print("- " + self.labels_aggregated)
             return
         elif isinstance(self.labels_aggregated, list):
             for label in self.labels_aggregated:
                 print("- " + label)
+
+    # Former spelling, kept for one release.
+    list_sub_basin_components = list_subbasin_components
 
     def get_land_cover_areas(
         self,

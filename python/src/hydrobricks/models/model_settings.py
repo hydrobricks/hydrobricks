@@ -401,7 +401,7 @@ class ModelSettings:
         """
         self.settings.add_hydro_unit_brick(name, kind)
 
-    def add_sub_basin_brick(self, name: str, kind: str) -> None:
+    def add_subbasin_brick(self, name: str, kind: str) -> None:
         """
         Add a sub basin brick
 
@@ -412,7 +412,10 @@ class ModelSettings:
         kind
             Type of the sub basin brick
         """
-        self.settings.add_sub_basin_brick(name, kind)
+        self.settings.add_subbasin_brick(name, kind)
+
+    # Former spelling, kept for one release.
+    add_sub_basin_brick = add_subbasin_brick
 
     def select_hydro_unit_brick(self, name: str) -> None:
         """

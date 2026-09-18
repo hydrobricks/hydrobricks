@@ -2475,12 +2475,12 @@ def _model_forcing_names(model: Model) -> set[str]:
     """The forcing variables the model structure reads (every structure variant)."""
     names: set[str] = set()
     for structure in model.settings.get_structure():
-        for key in ("hydro_unit_bricks", "sub_basin_bricks"):
+        for key in ("hydro_unit_bricks", "subbasin_bricks"):
             for brick in structure.get(key, []):
                 names.update(brick.get("forcing", []))
                 for process in brick.get("processes", []):
                     names.update(process.get("forcing", []))
-        for key in ("hydro_unit_splitters", "sub_basin_splitters"):
+        for key in ("hydro_unit_splitters", "subbasin_splitters"):
             for splitter in structure.get(key, []):
                 names.update(splitter.get("forcing", []))
     return names

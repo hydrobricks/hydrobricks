@@ -40,11 +40,17 @@ class HydroUnits:
         List of land cover names. Default: ['open']
     hydro_units : pd.DataFrame
         Dataframe containing the hydro units data.
+    subbasins : pd.DataFrame | None
+        The river network (one row per subbasin: ``id``, ``downstream``, optional
+        ``name`` and property columns), set with :meth:`set_subbasins`. None when
+        the catchment is a single subbasin.
     """
 
     FRACTION_PREFIX: ClassVar[str] = "fraction-"
+    #: Column of the hydro units giving the subbasin each unit drains to.
+    SUBBASIN_COLUMN: ClassVar[str] = "subbasin"
     # Properties loaded from a CSV without being listed in 'other_columns'.
-    IMPLICIT_PROPERTIES: ClassVar[tuple[str, ...]] = ("slope", "latitude")
+    IMPLICIT_PROPERTIES: ClassVar[tuple[str, ...]] = ("slope", "latitude", "subbasin")
 
     def __init__(
         self,
@@ -82,6 +88,7 @@ class HydroUnits:
             land_cover_names = ["open"]
         self.land_cover_types: list[str] = land_cover_types
         self.land_cover_names: list[str] = land_cover_names
+        self.subbasins: pd.DataFrame | None = None
         land_cover_cols: list[tuple[str, str]] = []
         for item in land_cover_names:
             land_cover_cols.append((f"{self.FRACTION_PREFIX}{item}", "fraction"))
@@ -422,7 +429,7 @@ class HydroUnits:
         nc = Dataset(path, "w", "NETCDF4")
 
         # Global attributes
-        nc.version = 1.0
+        nc.version = 1.1
         nc.land_cover_names = self.land_cover_names
 
         # Dimensions
@@ -445,6 +452,36 @@ class HydroUnits:
             var_cover[:] = self.hydro_units[self.FRACTION_PREFIX + cover_name]
             var_cover.units = "fraction"
             var_cover.type = cover_type
+
+        # The subbasin of each unit (1 everywhere without a network).
+        var_subbasin = nc.createVariable(self.SUBBASIN_COLUMN, "int", ("hydro_units",))
+        if self.has(self.SUBBASIN_COLUMN):
+            var_subbasin[:] = (
+                self.hydro_units[self.SUBBASIN_COLUMN].iloc[:, 0].astype(int).to_numpy()
+            )
+        else:
+            var_subbasin[:] = np.ones(len(self.hydro_units), dtype=int)
+        var_subbasin.long_name = "subbasin the hydro unit drains to"
+
+        # The river network: the subbasin tree and the subbasin properties.
+        if self.subbasins is not None:
+            nc.createDimension("subbasins", len(self.subbasins))
+            var_ids = nc.createVariable("subbasin_id", "int", ("subbasins",))
+            var_ids[:] = self.subbasins["id"].to_numpy()
+            var_down = nc.createVariable(
+                "subbasin_downstream_id", "int", ("subbasins",)
+            )
+            var_down[:] = self.subbasins["downstream"].to_numpy()
+            var_down.long_name = "downstream subbasin (0: catchment outlet)"
+            if "name" in self.subbasins.columns:
+                nc.subbasin_names = [str(n) for n in self.subbasins["name"]]
+            for column in self.subbasins.columns:
+                if column in ("id", "downstream", "name"):
+                    continue
+                if not pd.api.types.is_numeric_dtype(self.subbasins[column]):
+                    continue
+                var_prop = nc.createVariable(column, "float64", ("subbasins",))
+                var_prop[:] = self.subbasins[column].astype(float).to_numpy()
 
         nc.close()
 
@@ -697,10 +734,14 @@ class HydroUnits:
         """
         self.settings.clear()
 
+        # The river network (declared subbasins) comes first: the units refer to it.
+        if self.subbasins is not None:
+            self._populate_subbasins()
+
         # List properties to be set
         properties = []
         for prop in self.hydro_units.columns.tolist():
-            if prop[0] in ["id", "area", "elevation"]:
+            if prop[0] in ["id", "area", "elevation", self.SUBBASIN_COLUMN]:
                 continue
             if self.FRACTION_PREFIX in prop[0]:
                 continue
@@ -715,11 +756,16 @@ class HydroUnits:
         hydro_units = self.hydro_units.copy()
         hydro_units.sort_values(by=("elevation", "m"), ascending=False, inplace=True)
 
+        has_subbasin = self.has(self.SUBBASIN_COLUMN)
         for _, row in hydro_units.iterrows():
+            subbasin_id = 1
+            if has_subbasin:
+                subbasin_id = int(row[self.SUBBASIN_COLUMN].values[0])
             self.settings.add_hydro_unit(
                 int(row["id"].values[0]),
                 float(row["area"].values[0]),
                 float(row["elevation"].values[0]),
+                subbasin_id,
             )
             for prop in properties:
                 if isinstance(row[prop].values[0], str):
@@ -756,7 +802,116 @@ class HydroUnits:
                     )
                 self.settings.add_land_cover(cover_name, cover_type, fraction)
 
+        # Check the tree once the network is declared. Without a table, a 'subbasin'
+        # column with several values is only an error at model setup (the table may
+        # still be set after loading the units from a CSV).
+        if self.subbasins is not None:
+            try:
+                self.settings.validate_network()
+            except ValueError as e:
+                raise DataError(
+                    f"Invalid river network: {e}",
+                    data_type="subbasins",
+                    reason="Inconsistent subbasin tree",
+                ) from e
+
         self._basin_populated = True
+
+    def _populate_subbasins(self) -> None:
+        """Pass the subbasin table (tree and properties) to the C++ settings."""
+        assert self.subbasins is not None
+        reserved = {"id", "downstream", "name"}
+        for _, row in self.subbasins.iterrows():
+            name = str(row["name"]) if "name" in self.subbasins.columns else ""
+            self.settings.add_subbasin(int(row["id"]), int(row["downstream"]), name)
+            for column in self.subbasins.columns:
+                if column in reserved:
+                    continue
+                value = row[column]
+                if isinstance(value, str):
+                    self.settings.add_subbasin_property_str(column, value)
+                elif pd.notna(value):
+                    self.settings.add_subbasin_property_double(column, float(value))
+
+    def set_subbasins(self, subbasins: pd.DataFrame | Path | str) -> None:
+        """
+        Declare the river network: the subbasins and how they drain into each other.
+
+        The catchment is then a tree of subbasins. Each hydro unit belongs to one
+        subbasin through the ``subbasin`` column of the hydro units (loaded from the
+        CSV when present, or added with :meth:`add_property`).
+
+        Parameters
+        ----------
+        subbasins
+            A DataFrame, or the path of a single-header CSV file, with one row per
+            subbasin and the columns:
+
+            - ``id``: the subbasin ID (positive integer, matching the ``subbasin``
+              column of the hydro units);
+            - ``downstream``: the ID of the subbasin it drains into, 0 for the
+              catchment outlet (exactly one subbasin must have 0);
+            - ``name`` (optional): a label, e.g. the gauge name;
+            - any other column: a subbasin property (e.g. the reach ``length`` [m]
+              and ``slope`` [-]), passed to the model as is.
+
+        Raises
+        ------
+        DataError
+            If the table lacks the required columns or the IDs are not unique.
+
+        Notes
+        -----
+        Running a model on more than one subbasin is not supported yet: the network
+        can be declared, saved and inspected, but a multi-subbasin model is refused at
+        setup. Single-subbasin models are unaffected.
+        """
+        if isinstance(subbasins, (str, Path)):
+            subbasins = pd.read_csv(subbasins)
+        if not isinstance(subbasins, pd.DataFrame):
+            raise DataError(
+                "The subbasins must be given as a DataFrame or a CSV path.",
+                data_type="subbasins",
+                reason="Unsupported type",
+            )
+        table = subbasins.copy()
+        table.columns = [str(c).strip() for c in table.columns]
+        for column in ("id", "downstream"):
+            if column not in table.columns:
+                raise DataError(
+                    f"The subbasins table needs a '{column}' column.",
+                    data_type="subbasins",
+                    reason="Missing column",
+                )
+        table["id"] = table["id"].astype(int)
+        table["downstream"] = table["downstream"].fillna(0).astype(int)
+        if table["id"].duplicated().any():
+            raise DataError(
+                "The subbasin IDs must be unique.",
+                data_type="subbasins",
+                reason="Duplicate subbasin ID",
+            )
+        if "name" in table.columns:
+            table["name"] = table["name"].fillna("").astype(str)
+        self.subbasins = table.reset_index(drop=True)
+        if self._basin_populated:
+            self.populate_bounded_instance()
+
+    def get_subbasin_ids(self) -> list[int]:
+        """
+        Get the IDs of the subbasins the hydro units drain to.
+
+        Returns
+        -------
+        The declared subbasin IDs when a network was set, else the distinct values of
+        the ``subbasin`` column, else ``[1]`` (the implicit single subbasin).
+        """
+        if self.subbasins is not None:
+            return [int(i) for i in self.subbasins["id"]]
+        if self.has(self.SUBBASIN_COLUMN):
+            values = self.hydro_units[self.SUBBASIN_COLUMN].iloc[:, 0]
+            return sorted({int(v) for v in values})
+        return [1]
 
     def set_connectivity(self, connectivity: pd.DataFrame | Path | str) -> None:
         """

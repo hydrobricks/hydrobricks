@@ -7,6 +7,7 @@
 #include "Includes.h"
 #include "Logger.h"
 #include "Processor.h"
+#include "RiverNetwork.h"
 #include "SettingsModel.h"
 #include "SubBasin.h"
 #include "TimeSeries.h"
@@ -200,8 +201,17 @@ class ModelHydro {
      * @param subBasin pointer to the sub basin.
      */
     void SetSubBasin(SubBasin* subBasin) {
-        _ownedSubBasin.reset();
+        _network.reset();
         _subBasin = subBasin;
+    }
+
+    /**
+     * Get the river network (the tree of sub basins), owned by the model once InitializeWithBasin has run.
+     *
+     * @return the river network, or nullptr when the sub basin was provided externally.
+     */
+    RiverNetwork* GetNetwork() const {
+        return _network.get();
     }
 
     /**
@@ -289,8 +299,8 @@ class ModelHydro {
 
   protected:
     Processor _processor;
-    std::unique_ptr<SubBasin> _ownedSubBasin;  // owning: set only when ModelHydro creates the SubBasin
-    SubBasin* _subBasin;                       // non-owning view (points to _ownedSubBasin or an external SubBasin)
+    std::unique_ptr<RiverNetwork> _network;  // owning: set only when ModelHydro builds the network from settings
+    SubBasin* _subBasin;                     // non-owning view (the network outlet or an external SubBasin)
     TimeMachine _timer;
     Logger _logger;
     ActionsManager _actionsManager;

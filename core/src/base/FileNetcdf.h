@@ -82,6 +82,14 @@ class FileNetcdf {
     int GetDimId(const string& dimName) const;
 
     /**
+     * Check if a dimension exists.
+     *
+     * @param dimName name of the dimension.
+     * @return true if the dimension exists.
+     */
+    bool HasDim(const string& dimName) const;
+
+    /**
      * Get a dimension length.
      *
      * @param dimName The name of the dimension.

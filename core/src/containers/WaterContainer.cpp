@@ -309,6 +309,24 @@ double WaterContainer::SumIncomingChangeRates() const {
     return rate;
 }
 
+double WaterContainer::SumIncomingAmounts() const {
+    // Same classification as ApplyConstraints: once booked, these amounts are part of
+    // the content and must not be counted again.
+    if (_inputsBooked) {
+        return 0;
+    }
+    double sum = 0;
+    for (auto& input : _inputs) {
+        if (input->IsInstantaneous()) {
+            sum += dynamic_cast<FluxToBrickInstantaneous*>(input)->GetRealAmount();
+        } else if (input->IsForcing() || input->IsStatic()) {
+            sum += input->GetAmount();
+        }
+    }
+
+    return sum;
+}
+
 bool WaterContainer::ContentAccessible() const {
     return GetContentWithChanges() > 0;
 }

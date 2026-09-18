@@ -513,15 +513,15 @@ class PrevahUniBE(Model):
     - No runoff concentration or flood routing (PREVAH's single linear storage
       and translation elements): the unit outflows aggregate directly at the
       outlet, as in the PREVAH model core.
-    - The glacier melt reservoirs carry no translation (lag) element; their
-      translation times are sub-daily.
+    - The glacier translation times (``lag_*``) keep their meaning in hours at
+      any time step; daily xPREVAH runs its hourly glacier routing once a day, so
+      there its storage and translation times act as days.
     - No karst outflow (the optional fourth upper-zone outflow Q3 = k3 · SUZ of
       the gridded PREVAH). It is a plain linear reservoir outflow, so it can be
       added to the upper zone through a custom structure if needed.
-    - The percolation rate is not scaled by the soil hydraulic conductivity
-      (PREVAH's KWPER factor).
-    - PET is computed in preprocessing (e.g. ``forcing.compute_pet``, incl. the
-      vapour-density Hamon used by PREVAH) instead of in-model.
+    - The percolation rate at saturation holds for the whole step; xPREVAH keeps,
+      within a day, the rate of the previous sub-step once the soil saturates.
+    - PET is computed in preprocessing instead of in-model.
     """
 
     def __init__(self, name: str = "prevah_unibe", **kwargs: Any) -> None:
@@ -997,6 +997,162 @@ class PrevahUniBE(Model):
 
         return names
 
+    @staticmethod
+    def conductivity_factor(conductivity: Any, areas: Any) -> np.ndarray:
+        """
+        PREVAH's percolation factor KWPER, one value per hydro unit.
+
+        PREVAH scales the percolation rate by the soil hydraulic conductivity k of
+        each hydrotope, relative to the catchment::
+
+            kwper = max((ln k - kwminl) / (kwmitl - kwminl), 0.05)
+
+        kwminl and kwmitl being the minimum and the area-weighted mean of the shifted
+        logs ln k - min(ln k) + 1. This is a transcription of xPREVAH, quirks
+        included: the unit's own log is not shifted, so kwminl is always 1; and as
+        soon as one hydrotope has no (or a negative) conductivity, the factor is 1
+        everywhere.
+
+        Parameters
+        ----------
+        conductivity
+            Soil hydraulic conductivity of each hydro unit, in the unit of the
+            hydrotope table (only the logs relative to the catchment matter).
+        areas
+            Area of each hydro unit, the weights of the mean.
+
+        Returns
+        -------
+        The factor of each hydro unit.
+        """
+        k = np.maximum(np.atleast_1d(np.asarray(conductivity, dtype=float)), 0.0)
+        areas = np.atleast_1d(np.asarray(areas, dtype=float))
+        if len(k) != len(areas):
+            raise ConfigurationError(
+                f"The conductivity has {len(k)} values and the areas {len(areas)}; "
+                f"they must match (one per hydro unit).",
+                item_name="conductivity",
+                item_value=len(k),
+                reason="Length mismatch",
+            )
+        factor = np.ones(len(k))
+        if k.min() <= 0 or np.average(k, weights=areas) <= 0:
+            return factor
+
+        logs = np.log(k)
+        shifted = logs - logs.min() + 1.0
+        kwminl = shifted.min()
+        kwmitl = np.average(shifted, weights=areas)
+        if kwmitl > kwminl:
+            factor = np.maximum((logs - kwminl) / (kwmitl - kwminl), 0.05)
+
+        return factor
+
+    def apply_land_use_percolation(
+        self,
+        parameters: Any,
+        hydro_units: Any,
+        land_use: Any,
+        available_water_content: Any,
+        soil_depth: Any = None,
+        conductivity: Any = None,
+    ) -> list[str]:
+        """
+        Set PREVAH's per-unit percolation factors from the soil and the land use.
+
+        Two things vary per hydro unit in PREVAH's percolation:
+
+        - the hydraulic-conductivity factor KWPER (``kwper``), from the soil
+          conductivity (see :meth:`conductivity_factor`); without a conductivity it
+          stays 1;
+        - the constant-rate branch (``perc_const``): the hydrotope percolates at
+          ``cperc * kwper`` whatever its soil moisture when its ET limit is at least
+          its soil capacity. PREVAH takes the ET limit (``cu`` times the capacity)
+          from the soil map *before* the land cover forces its capacity, so this
+          happens on built-up and rock hydrotopes whose soil promises more than their
+          fixed 5 mm or 3 mm. The rooting depth making that capacity monthly, the
+          branch is set per unit and per month. It is off under snow.
+
+        The branch depends on ``cu_perc``, read from ``parameters``: set it first,
+        and apply this again if it changes.
+
+        Parameters
+        ----------
+        parameters
+            The :class:`~hydrobricks.parameters.ParameterSet` to fill.
+        hydro_units
+            The :class:`~hydrobricks.hydro_units.HydroUnits` to add the properties to.
+        land_use
+            Land use of each hydro unit (or a single name for all).
+        available_water_content
+            Available water content of the soil [Vol-%], one value per hydro unit.
+        soil_depth
+            Depth of the soil [m], one value per hydro unit.
+        conductivity
+            Soil hydraulic conductivity, one value per hydro unit.
+
+        Returns
+        -------
+        The names of the hydro-unit properties that were added.
+        """
+        awc = np.atleast_1d(np.asarray(available_water_content, dtype=float))
+        n_units = len(awc)
+        if isinstance(land_use, str):
+            land_uses = [land_use] * n_units
+        else:
+            land_uses = [str(name) for name in land_use]
+        if soil_depth is None:
+            depths: Any = [None] * n_units
+        else:
+            depths = np.atleast_1d(np.asarray(soil_depth, dtype=float))
+        if len(land_uses) != n_units or len(depths) != n_units:
+            raise ConfigurationError(
+                "The land use, the available water content and the soil depth must "
+                "have one value per hydro unit.",
+                item_name="land_use",
+                item_value=len(land_uses),
+                reason="Length mismatch",
+            )
+        for name in set(land_uses):
+            self._check_land_use(name)
+        for name in ("perc_const", "kwper", "cu_perc"):
+            if not parameters.has(name):
+                raise ConfigurationError(
+                    f'No "{name}" in the parameter set.',
+                    item_name=name,
+                    reason="Missing percolation parameter",
+                )
+
+        # The constant branch: ET limit from the soil map >= the forced capacity.
+        cu = parameters.get("cu_perc")
+        table = np.zeros((n_units, 12))
+        for i, (unit_land_use, unit_awc, unit_depth) in enumerate(
+            zip(land_uses, awc, depths)
+        ):
+            cover = LAND_USE_COVER_TYPES[unit_land_use]
+            if cover not in LAND_USE_FIELD_CAPACITY_FIXED or cover == "glacier":
+                continue
+            forced = LAND_USE_FIELD_CAPACITY_FIXED[cover]
+            for month, depth in enumerate(LAND_USE_ROOT_DEPTH[unit_land_use]):
+                thickness = depth + 0.05
+                if unit_depth is not None:
+                    thickness = min(thickness, unit_depth)
+                table[i, month] = float(cu * unit_awc * thickness * 10.0 >= forced)
+
+        names = [f"perc_const_{month:02d}" for month in range(1, 13)]
+        for month, name in enumerate(names):
+            hydro_units.add_property((name, "-"), table[:, month])
+        parameters.set_spatial_monthly("perc_const", names)
+
+        if conductivity is not None:
+            areas = hydro_units.hydro_units["area"].to_numpy().flatten()
+            factor = self.conductivity_factor(conductivity, areas)
+            hydro_units.add_property(("kwper", "-"), factor)
+            parameters.set_spatial("kwper", "kwper")
+            names.append("kwper")
+
+        return names
+
     def apply_land_use(
         self,
         parameters: Any,
@@ -1158,12 +1314,22 @@ class PrevahUniBE(Model):
         )
 
     def _gate_bricks(self) -> str | list[str]:
-        """The soil moisture store(s) gating the percolation.
+        """The bricks gating the percolation.
 
-        A single name with a shared store (the usual PREVAH hydrotope), otherwise the
-        list of the per-cover stores, whose saturations the process averages.
+        The soil moisture store(s): a single one with a shared store (the usual
+        PREVAH hydrotope), otherwise the per-cover stores, whose saturations the
+        process averages. Then the snowpacks of the glacier-free covers (present in
+        every unit), which switch the constant-rate branch off under snow.
         """
         names = list(dict.fromkeys(self._soil_names.values()))
+        if self.options.get("with_snow", True):
+            names += [
+                f"{name}_snowpack"
+                for name, cover_type in zip(
+                    self.land_cover_names, self.land_cover_types
+                )
+                if cover_type != "glacier"
+            ]
 
         return names[0] if len(names) == 1 else names
 
@@ -1209,6 +1375,9 @@ class PrevahUniBE(Model):
         if self._glacier_module is not None:
             self.parameter_aliases.update(
                 self._glacier_module.parameter_aliases(self._glacier_cover_names)
+            )
+            self.parameter_defaults.update(
+                self._glacier_module.parameter_defaults(self._glacier_cover_names)
             )
 
     def _define_parameter_constraints(self) -> None:

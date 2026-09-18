@@ -116,6 +116,27 @@ PROCESS_PARAM_SPECS: dict[str, list[ParamSpec]] = {
             default=0.7,
             mandatory=False,
         ),
+        # PREVAH's KWPER, from the soil hydraulic conductivity (usually per unit).
+        ParamSpec(
+            name="conductivity_factor",
+            unit="-",
+            aliases=["kwper"],
+            min=0,
+            max=10,
+            default=1.0,
+            mandatory=False,
+        ),
+        # Share of the unit percolating at the constant rate whatever the soil
+        # moisture (PREVAH's built-up and rock surfaces; usually per unit).
+        ParamSpec(
+            name="constant_fraction",
+            unit="-",
+            aliases=["perc_const"],
+            min=0,
+            max=1,
+            default=0.0,
+            mandatory=False,
+        ),
     ],
     # PREVAH canopy interception (Menzel asymptotic filling). The interception
     # capacity carries the 'ic' alias like the built-in canopy brick; in custom
@@ -619,6 +640,19 @@ PROCESS_PARAM_SPECS: dict[str, list[ParamSpec]] = {
             aliases=["cflux"],
             min=0,
             max=3,
+            default=0.0,
+            mandatory=False,
+        ),
+    ],
+    # Pure translation: the inflow leaves unchanged, a fixed duration later (the
+    # translation element of PREVAH's glacier reservoirs, ITRTH, at most 24 h).
+    "routing:delay": [
+        ParamSpec(
+            name="delay",
+            unit="d",
+            aliases=[],
+            min=0,
+            max=1,
             default=0.0,
             mandatory=False,
         ),

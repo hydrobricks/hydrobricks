@@ -524,6 +524,58 @@ TEST_F(PrevahPercolation, PercolationGatedBySoilMoisture) {
     }
 }
 
+TEST_F(PrevahPercolation, ConductivityFactorScalesTheRamp) {
+    // The ramp is scaled by KWPER; the soil never saturates here.
+    _model.SelectHydroUnitBrickByName("upper_zone");
+    _model.SelectProcess("percolation");
+    _model.SetProcessParameterValue("conductivity_factor", 0.5f);
+
+    SettingsBasin basinSettings;
+    basinSettings.AddHydroUnit(1, 100);
+    SubBasin subBasin;
+    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    ModelHydro model(&subBasin);
+    ASSERT_TRUE(model.Initialize(_model, basinSettings));
+    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));
+    ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
+    EXPECT_TRUE(model.Run());
+
+    vecDouble expectedOutputs = {0.0, 0.0, 0.0, 0.0, 0.0, 0.333333, 0.333333, 0.966667, 0.966667, 0.966667};
+    for (auto& basinOutput : model.GetLogger()->GetSubBasinValues()) {
+        ASSERT_EQ(basinOutput.size(), expectedOutputs.size());
+        for (int j = 0; j < basinOutput.size(); ++j) {
+            EXPECT_NEAR(basinOutput[j], expectedOutputs[j], 0.000001);
+        }
+    }
+}
+
+TEST_F(PrevahPercolation, ConstantBranchIgnoresTheSoilMoisture) {
+    // The whole unit follows the constant branch (no snowpack: snow free): it
+    // percolates at rate x KWPER as soon as the upper zone holds water, dry soil or not.
+    _model.SelectHydroUnitBrickByName("upper_zone");
+    _model.SelectProcess("percolation");
+    _model.SetProcessParameterValue("conductivity_factor", 0.5f);
+    _model.SetProcessParameterValue("constant_fraction", 1.0f);
+
+    SettingsBasin basinSettings;
+    basinSettings.AddHydroUnit(1, 100);
+    SubBasin subBasin;
+    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    ModelHydro model(&subBasin);
+    ASSERT_TRUE(model.Initialize(_model, basinSettings));
+    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));
+    ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
+    EXPECT_TRUE(model.Run());
+
+    for (auto& basinOutput : model.GetLogger()->GetSubBasinValues()) {
+        ASSERT_EQ(basinOutput.size(), 10);
+        EXPECT_NEAR(basinOutput[0], 0.0, 0.000001);  // empty upper zone
+        for (int j = 2; j < basinOutput.size(); ++j) {
+            EXPECT_NEAR(basinOutput[j], 1.0, 0.000001) << "day " << j;
+        }
+    }
+}
+
 TEST_F(PrevahPercolation, MissingGateBrickFailsInitialization) {
     SettingsBasin basinSettings;
     basinSettings.AddHydroUnit(1, 100);

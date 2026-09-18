@@ -93,6 +93,9 @@ class Model(ABC):
         self.parameter_constraints: list[tuple[str, ...]] = []
         self.parameter_transforms: dict[str, tuple[Any, Any]] = dict()
         self.parameter_ranges: dict[str, tuple[float, float]] = dict()
+        # Initial values that differ from the default of the process kind, for a
+        # parameter the model wants to start elsewhere (keyed by name or alias).
+        self.parameter_defaults: dict[str, float] = dict()
 
         # Setting base settings
         self.settings: ModelSettings = ModelSettings(
@@ -792,6 +795,11 @@ class Model(ABC):
         for key, (min_val, max_val) in self.parameter_ranges.items():
             if ps.has(key):
                 ps.change_range(key, min_val, max_val)
+
+        # Then the model's own starting values, inside the (possibly widened) ranges.
+        for key, value in self.parameter_defaults.items():
+            if ps.has(key):
+                ps.set_values({key: value})
 
         # Apply transforms after aliases so keys may be aliases or "component:name".
         for key, (to_transformed, to_real) in self.parameter_transforms.items():

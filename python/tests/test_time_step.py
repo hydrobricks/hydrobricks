@@ -576,3 +576,120 @@ def test_computed_pet_is_an_amount_per_step(tmp_path):
         totals[freq] = float(np.sum(forcing.data2D.data[idx]))
 
     assert totals["h"] == pytest.approx(totals["D"], rel=1e-6)
+
+
+# ---------------------------------------------------------------------------
+# Per-step amounts must leave within the step, not a day
+# ---------------------------------------------------------------------------
+
+
+def _daily_hourly_agreement(daily_model, hourly_model):
+    """Hourly discharge aggregated to days, against the daily run."""
+    d = np.asarray(daily_model.get_outlet_discharge())
+    h = np.asarray(hourly_model.get_outlet_discharge())
+    n_days = len(h) // 24
+    h = h[: n_days * 24].reshape(n_days, 24).sum(axis=1)
+    d = d[:n_days]
+    nse = 1 - np.sum((h - d) ** 2) / np.sum((d - d.mean()) ** 2)
+    volume = h.sum() / d.sum() - 1
+    return nse, volume
+
+
+def test_hbv_hourly_agrees_with_daily(tmp_path):
+    """Refining the step must not slow the water down.
+
+    Several processes (infiltration:hbv, outflow:direct, outflow:rest, routing:hbv)
+    computed the amount to move during the step and handed it back as a daily rate.
+    The solver multiplies rates by the step, so below a day only a fraction left
+    each step and the rest was carried over: an instant transfer became a one-day
+    reservoir. The water balance still closed, which hid it; the timing did not.
+    """
+    daily, _ = _run_hbv(tmp_path / "d", 24, 3.0, n_days=200, pulsed=False)
+    hourly, _ = _run_hbv(tmp_path / "h", 1, 3.0, n_days=200, pulsed=False)
+    nse, volume = _daily_hourly_agreement(daily, hourly)
+
+    assert nse > 0.98
+    assert abs(volume) < 0.005
+
+
+def test_hbv_short_routing_does_not_add_a_day(tmp_path):
+    """A one-day MAXBAS lags the rain by at most a day at an hourly step.
+
+    The routing handed back an amount as a rate, so at an hourly step it delivered
+    1/24 of what was due and carried the rest, adding about a day of delay.
+    """
+    _, q = _run_hbv(tmp_path, 1, 1.0)
+    assert _lag_days(q) <= 1
+
+
+def test_socont_hourly_agrees_with_daily(tmp_path):
+    """Same check for the Socont infiltration and quick runoff."""
+    models_by_step = {}
+    for hours in (24, 1):
+        sub = tmp_path / f"socont{hours:02d}"
+        sub.mkdir(parents=True, exist_ok=True)
+        hu_csv = sub / "hydro_units.csv"
+        hu_csv.write_text(
+            "id,elevation,area,slope\n-,m,m^2,degree\n1,1000,1000000,10\n"
+        )
+        units = hb.HydroUnits()
+        units.load_from_csv(
+            hu_csv,
+            column_elevation="elevation",
+            column_area="area",
+            other_columns={"slope": "slope"},
+        )
+
+        n_steps = (200 * 24) // hours
+        stamps = pd.date_range(pd.Timestamp(_START), periods=n_steps, freq=f"{hours}h")
+        share = hours / 24.0
+        lines = ["date,precip,pet,temp"]
+        for stamp in stamps:
+            lines.append(
+                f"{stamp.strftime('%Y-%m-%d %H:%M')},{5.0 * share:.10f},"
+                f"{1.5 * share:.10f},10.0"
+            )
+        meteo = sub / "meteo.csv"
+        meteo.write_text("\n".join(lines) + "\n")
+
+        forcing = hb.Forcing(units)
+        forcing.load_station_data_from_csv(
+            meteo,
+            column_time="date",
+            time_format="%Y-%m-%d %H:%M",
+            content={"precipitation": "precip", "pet": "pet", "temperature": "temp"},
+        )
+        forcing.spatialize_from_station_data(
+            variable="precipitation", ref_elevation=1000, gradient=0.0
+        )
+        forcing.spatialize_from_station_data(
+            variable="temperature", ref_elevation=1000, gradient=0.0
+        )
+        forcing.spatialize_from_station_data(variable="pet")
+
+        model = models.Socont(soil_storage_nb=2, surface_runoff="socont_runoff")
+        parameters = model.generate_parameters()
+        parameters.set_values(
+            {
+                "A": 200,
+                "a_snow": 3,
+                "k_slow_1": 0.05,
+                "k_slow_2": 0.01,
+                "percol": 1,
+                "beta": 300,
+            }
+        )
+        model.setup(
+            spatial_structure=units,
+            output_path=str(sub),
+            start_date=_START.strftime("%Y-%m-%d"),
+            end_date=(_START + timedelta(days=199)).strftime("%Y-%m-%d"),
+            time_step=hours,
+            time_step_unit="hour",
+        )
+        model.run(parameters=parameters, forcing=forcing)
+        models_by_step[hours] = model
+
+    nse, volume = _daily_hourly_agreement(models_by_step[24], models_by_step[1])
+    assert nse > 0.98
+    assert abs(volume) < 0.005

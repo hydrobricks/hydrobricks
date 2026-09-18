@@ -46,6 +46,7 @@
 #include "ProcessProductionGR4J.h"
 #include "ProcessRefreezeDegreeDay.h"
 #include "ProcessRefreezeSeasonal.h"
+#include "ProcessRoutingDelay.h"
 #include "ProcessRoutingGR4J.h"
 #include "ProcessRoutingGR6J.h"
 #include "ProcessRoutingHBV.h"
@@ -194,6 +195,13 @@ const std::unordered_map<string, ProcessEntry>& GetProcessRegistry() {
                 return std::make_unique<ProcessRoutingHBV>(b->GetWaterContainer());
             },
             &ProcessRoutingHBV::RegisterProcessSettings
+        }},
+
+        {"routing:delay", {
+            [](Brick* b) {
+                return std::make_unique<ProcessRoutingDelay>(b->GetWaterContainer());
+            },
+            &ProcessRoutingDelay::RegisterProcessSettings
         }},
 
         {"outflow:snow_holding", {

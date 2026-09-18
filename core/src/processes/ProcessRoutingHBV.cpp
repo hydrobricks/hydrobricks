@@ -75,7 +75,8 @@ const vecDouble& ProcessRoutingHBV::GetRates() {
     // previous under-deliveries) plus the same-step share of this timestep's inflow.
     double in = _container->SumIncomingFluxes();
 
-    return StoreRates({std::max(0.0, _stuh[0]) + _uhOrd[0] * in});
+    // The delivery is an amount due this step; the solver takes rates.
+    return StoreRates({(std::max(0.0, _stuh[0]) + _uhOrd[0] * in) / GetTimeStepInDays()});
 }
 
 void ProcessRoutingHBV::Finalize() {

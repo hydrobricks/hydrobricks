@@ -11,7 +11,9 @@ void ProcessOutflowRest::RegisterProcessSettings(SettingsModel*) {
 }
 
 const vecDouble& ProcessOutflowRest::GetRates() {
-    double rest = _container->GetContentWithChanges();
+    // The content is an amount over the step and the sibling outflows are rates, so
+    // the content is turned into the rate that empties it over one step first.
+    double rest = _container->GetContentWithChanges() / GetTimeStepInDays();
 
     Brick* brick = _container->GetParentBrick();
     if (brick != nullptr && brick->NeedsSolver()) {
@@ -21,7 +23,7 @@ const vecDouble& ProcessOutflowRest::GetRates() {
         // container's non-negativity constraint. Note: under multi-stage solvers (Heun, RK4) the
         // sibling rate seen in corrector stages is one stage stale, since the change-rate pointers
         // are only (re)linked in the constrained pass; the result stays stable and mass-conserving
-        // (exact on Euler). The mm-vs-rate subtraction follows the dt = 1 convention of this process.
+        // (exact on Euler).
         for (int i = 0; i < brick->GetProcessCount(); ++i) {
             Process* process = brick->GetProcess(i);
             if (process == this) {

@@ -97,6 +97,18 @@ model.apply_land_use_field_capacity(
     soil_depth=unit_column("soil_depth"),
 )
 
+# The percolation: PREVAH lets the built-up and rock hydrotopes whose soil map promises
+# more than their fixed 5 mm or 3 mm capacity percolate at a constant rate while snow
+# free. Its conductivity factor KWPER would need the soil conductivity, but PREVAH sets
+# it to 1 as soon as a hydrotope has none, as some do here, so it is left out.
+model.apply_land_use_percolation(
+    parameters,
+    hydro_units,
+    land_use,
+    available_water_content=unit_column("awc"),
+    soil_depth=unit_column("soil_depth"),
+)
+
 # The wet-surface evaporation needs nothing here: the model reads the wet share of
 # each unit from its wetland covers (their area fraction times the 'wet_fraction' of
 # the project file), which on this dataset is 0.7 on a wetland hydrotope and 0

@@ -311,6 +311,16 @@ class WaterContainer {
     double SumIncomingChangeRates() const;
 
     /**
+     * Sum the amounts delivered this step by the inputs that carry an amount rather
+     * than a rate (forcing, static and instantaneous fluxes), as long as the brick has
+     * not booked them into its content yet. The counterpart of SumIncomingChangeRates:
+     * together they give all the water reaching the container during the step.
+     *
+     * @return the summed incoming amount [mm], or 0 once the inputs are booked.
+     */
+    double SumIncomingAmounts() const;
+
+    /**
      * Check if the water content is accessible.
      *
      * @return true if the content (including pending changes) is greater than zero.

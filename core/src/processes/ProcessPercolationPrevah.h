@@ -5,19 +5,33 @@
 #include "Includes.h"
 #include "ProcessOutflow.h"
 
+class Snowpack;
+
 /**
  * PREVAH percolation: a constant maximum rate gated by the soil moisture state.
  *
- *   PERC = rate × clamp((SM/FC − θ) / (1 − θ), 0, 1)
+ *   PERC = rate                                  if SM >= FC
+ *   PERC = rate × kwper × (SM/FC − θ) / (1 − θ)  if θ×FC < SM < FC
+ *   PERC = 0                                     if SM <= θ×FC
  *
  * rate is the maximum percolation rate [mm/d], SM and FC the content and capacity
  * of the gate bricks (the soil moisture stores) and θ the soil moisture fraction
  * (PREVAH's CU, shared with the ET limit) below which percolation stops. The
  * percolation draws from the process's own container (the upper zone) but is
- * modulated by the soil state: full rate at saturation, linear ramp between
- * θ×FC and FC, none below θ×FC.
+ * modulated by the soil state. kwper is PREVAH's hydraulic-conductivity factor
+ * (KWPER, 'conductivity_factor'); as in the original, it scales the ramp but not
+ * the rate at saturation.
  *
- * With several gate bricks (one soil moisture store per land cover), the contents
+ * PREVAH also percolates at the constant rate × kwper, whatever the soil moisture,
+ * where its ET limit (θ times the capacity from the soil map) is at least the
+ * capacity the land cover finally imposes: built-up and rock surfaces whose soil map
+ * promises more than their fixed 5 mm or 3 mm. That branch is off under snow (SWE
+ * above 0.1 mm), where the ET limit above the capacity stops the percolation
+ * altogether. 'constant_fraction' is the share of the unit following that branch
+ * (0 or 1 for a unit carrying a single land use); the snowpacks given as gate
+ * bricks tell its snow-covered part, each weighted by the area of its land cover.
+ *
+ * With several soil gate bricks (one soil moisture store per land cover), the contents
  * and the capacities are summed before the ratio is taken, which is the
  * area-weighted mean saturation of the hydro unit: the stores are fed by their land
  * cover, whose outgoing fluxes already carry its area fraction, so their contents
@@ -56,14 +70,20 @@ class ProcessPercolationPrevah : public ProcessOutflow {
     /**
      * @copydoc Process::AddGateBrick()
      */
-    void AddGateBrick(Brick* brick) override {
-        _gateBricks.push_back(brick);
-    }
+    void AddGateBrick(Brick* brick) override;
 
   protected:
-    vector<Brick*> _gateBricks;       // non-owning references to the soil moisture stores
-    const float* _rate;               // maximum percolation rate [mm/d]
-    const float* _thresholdFraction;  // soil moisture fraction below which percolation stops [-]
+    vector<Brick*> _gateBricks;        // non-owning references to the soil moisture stores
+    vector<Snowpack*> _snowpacks;      // non-owning references to the unit's snowpacks
+    const float* _rate;                // maximum percolation rate [mm/d]
+    const float* _thresholdFraction;   // soil moisture fraction below which percolation stops [-]
+    const float* _conductivityFactor;  // hydraulic-conductivity factor (PREVAH's KWPER) [-]
+    const float* _constantFraction;    // share of the unit percolating at the constant rate [-]
+
+    /**
+     * Snow-covered share of the unit, from the snowpack gate bricks (0 without any).
+     */
+    [[nodiscard]] double GetSnowCoveredFraction() const;
 
     /**
      * @copydoc Process::GetRates()

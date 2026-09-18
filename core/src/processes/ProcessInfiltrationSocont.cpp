@@ -19,5 +19,7 @@ const vecDouble& ProcessInfiltrationSocont::GetRates() {
         return StoreRates({0});
     }
 
-    return StoreRates({_container->GetContentWithChanges() * (1 - pow(GetTargetFillingRatio(), 2))});
+    // The share of this step's input entering the soil, as a rate over the step.
+    return StoreRates(
+        {_container->GetContentWithChanges() * (1 - pow(GetTargetFillingRatio(), 2)) / GetTimeStepInDays()});
 }

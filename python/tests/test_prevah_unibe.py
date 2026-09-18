@@ -848,6 +848,47 @@ def test_prevah_firn_cover_exposes_firn_alias():
         assert parameters.has(name), f"glacier alias {name!r} not found"
 
 
+def test_prevah_glacier_translation_lags_default_to_prevah():
+    """Each glacier reservoir drains through a translation element whose delay starts
+    at PREVAH's default translation time (2 h snowmelt, 1 h ice melt, no firn lag)."""
+    parameters = models.PrevahUniBE(
+        land_cover_names=["open", "glacier_ice", "glacier_firn"],
+        land_cover_types=["open", "glacier", "glacier"],
+    ).generate_parameters()
+    assert parameters.get("lag_snow") == pytest.approx(2 / 24)
+    assert parameters.get("lag_ice") == pytest.approx(1 / 24)
+    assert parameters.get("lag_firn") == pytest.approx(0)
+
+
+def test_prevah_no_glacier_has_no_translation_lag():
+    parameters = models.PrevahUniBE(
+        land_cover_names=["open"], land_cover_types=["open"]
+    ).generate_parameters()
+    for name in ("lag_snow", "lag_ice", "lag_firn"):
+        assert not parameters.has(name)
+
+
+def test_prevah_glacier_translation_lag_moves_water_without_losing_it(tmp_path):
+    """A longer lag shifts the glacier outflow later: the balance still closes and the
+    total discharge barely changes (only the water in transit at the end differs)."""
+    common = dict(
+        cover_names=["open", "glacier"],
+        cover_types=["open", "glacier"],
+        areas=["1000000,0", "300000,700000"],
+    )
+    no_lag = dict(_PARAMS_GLACIER, lag_snow=0.0, lag_ice=0.0)
+    long_lag = dict(_PARAMS_GLACIER, lag_snow=0.9, lag_ice=0.9)
+    base, _ = _run_open_glacier(_subdir(tmp_path, "a"), params=no_lag, **common)
+    lagged, forcing = _run_open_glacier(
+        _subdir(tmp_path, "b"), params=long_lag, **common
+    )
+    assert _balance(lagged, forcing) == pytest.approx(0, abs=1e-6)
+    q_base = base.get_outlet_discharge()
+    q_lag = lagged.get_outlet_discharge()
+    assert not np.allclose(q_base, q_lag)
+    assert q_lag.sum() == pytest.approx(q_base.sum(), rel=1e-3)
+
+
 def test_prevah_glacier_water_balance_closes(tmp_path):
     """With a finite ice store (no unaccounted melt source) the balance closes."""
     model, forcing = _run_open_glacier(
@@ -1134,9 +1175,13 @@ def test_prevah_shares_the_soil_by_default():
     )
     soils = [name for name in model.structure if "soil_moisture" in name]
     assert soils == ["soil_moisture"]
-    # A single store: the percolation gates on it directly.
+    # A single store gates the percolation, the snowpacks its constant branch.
     percolation = model.structure["upper_zone"]["processes"]["percolation"]
-    assert percolation["gate"] == "soil_moisture"
+    assert percolation["gate"] == [
+        "soil_moisture",
+        "open_snowpack",
+        "forest_snowpack",
+    ]
 
     parameters = model.generate_parameters()
     assert parameters.has("fc")
@@ -1157,7 +1202,8 @@ def test_prevah_per_cover_soil_stores():
     ]
     # The percolation now reads them all (area-weighted mean saturation).
     percolation = model.structure["upper_zone"]["processes"]["percolation"]
-    assert percolation["gate"] == soils
+    snowpacks = ["open_snowpack", "forest_snowpack", "wetland_snowpack"]
+    assert percolation["gate"] == soils + snowpacks
 
     # The capacity and the ET limit are exposed per cover; the wetland store is
     # named after the cover, not after its internal pass-through brick.
@@ -1605,3 +1651,102 @@ def test_apply_land_use_requires_a_canopy():
     parameters = model.generate_parameters()
     with pytest.raises(hb.ConfigurationError):
         model.apply_land_use(parameters, "pasture")
+
+
+# ---------------------------------------------------------------------------
+# PREVAH percolation factors: KWPER and the constant-rate branch
+# ---------------------------------------------------------------------------
+
+
+def test_prevah_conductivity_factor_follows_xprevah():
+    k = np.array([1.0, 10.0, 100.0])
+    areas = np.array([1.0, 1.0, 2.0])
+    factor = models.PrevahUniBE.conductivity_factor(k, areas)
+    # Shifted logs: 1, 1 + ln 10, 1 + 2 ln 10; kwminl = 1, kwmitl = 1 + 1.25 ln 10.
+    # The unit's own log is not shifted (as in xPREVAH), and the floor is 0.05.
+    expected = np.maximum((np.log(k) - 1.0) / (1.25 * np.log(10.0)), 0.05)
+    assert factor == pytest.approx(expected)
+
+
+def test_prevah_conductivity_factor_is_one_with_a_zero_conductivity():
+    # xPREVAH's guard: one hydrotope without conductivity disables KWPER everywhere.
+    factor = models.PrevahUniBE.conductivity_factor([0.0, 10.0, 100.0], [1, 1, 1])
+    assert factor == pytest.approx([1.0, 1.0, 1.0])
+
+
+def _percolation_units(tmp_path, land_uses, awc):
+    hydro_units = hb.HydroUnits(land_cover_types=["open"], land_cover_names=["open"])
+    hu_csv = tmp_path / "hydro_units.csv"
+    rows = "".join(f"{i + 1},{1000 + 500 * i},1000000\n" for i in range(len(land_uses)))
+    hu_csv.write_text(f"id,elevation,area_open\n-,m,m^2\n{rows}")
+    hydro_units.load_from_csv(
+        hu_csv, column_elevation="elevation", columns_areas={"open": "area_open"}
+    )
+    return hydro_units
+
+
+def test_prevah_constant_percolation_on_built_up_surfaces_with_a_deep_soil(tmp_path):
+    """The constant branch applies where cu times the soil-map capacity reaches the
+    capacity the cover forces (5 mm built-up): a deep enough soil, never on a
+    vegetated cover."""
+    land_uses = ["urban", "urban", "alpine_meadow"]
+    awc = [20.0, 2.0, 20.0]
+    hydro_units = _percolation_units(tmp_path, land_uses, awc)
+    model = models.PrevahUniBE(land_cover_names=["open"], land_cover_types=["open"])
+    parameters = model.generate_parameters()
+    parameters.set_values({"cu_perc": 0.7})
+    names = model.apply_land_use_percolation(
+        parameters, hydro_units, land_uses, awc, soil_depth=[1.0, 1.0, 1.0]
+    )
+    assert len(names) == 12  # no conductivity given: KWPER stays 1
+    flags = hydro_units.hydro_units[names[0]].to_numpy().flatten()
+    assert flags.tolist() == [1.0, 0.0, 0.0]
+
+
+def test_prevah_constant_percolation_stops_under_snow(tmp_path):
+    """A built-up unit on the constant branch percolates more than on the ramp while
+    snow free, nothing under snow, and the balance still closes."""
+    land_uses = ["urban"]
+    awc = [20.0]
+
+    def run(path, constant):
+        hydro_units = _percolation_units(path, land_uses, awc)
+        forcing = _load_forcing(hydro_units, _meteo_csv_seasonal(path, _N_2Y, 5.0, 1.5))
+        model = models.PrevahUniBE(
+            land_cover_names=["open"], land_cover_types=["open"], record_all=True
+        )
+        parameters = model.generate_parameters()
+        parameters.set_values(_DEFAULT_PARAMS)
+        model.apply_land_use_field_capacity(
+            parameters, hydro_units, land_uses, awc, soil_depth=[1.0]
+        )
+        if constant:
+            model.apply_land_use_percolation(
+                parameters, hydro_units, land_uses, awc, soil_depth=[1.0]
+            )
+        end_date = (_START + timedelta(days=_N_2Y - 1)).strftime("%Y-%m-%d")
+        out = path / "out"
+        out.mkdir()
+        model.setup(
+            spatial_structure=hydro_units,
+            output_path=str(out),
+            start_date=_START.strftime("%Y-%m-%d"),
+            end_date=end_date,
+        )
+        model.run(parameters=parameters, forcing=forcing)
+        return model, forcing
+
+    ramp, _ = run(_subdir(tmp_path, "ramp"), False)
+    constant, forcing = run(_subdir(tmp_path, "const"), True)
+    assert _balance(constant, forcing) == pytest.approx(0, abs=1e-6)
+
+    label = "upper_zone:percolation:output"
+    perc_ramp = np.asarray(ramp.get_recorded_hydro_unit_values(label)).ravel()
+    perc_const = np.asarray(constant.get_recorded_hydro_unit_values(label)).ravel()
+    swe = np.asarray(
+        constant.get_recorded_hydro_unit_values("open_snowpack:snow_content")
+    ).ravel()
+    snow = swe > 0.1
+    assert snow.any() and (~snow).any()
+    assert perc_const[snow] == pytest.approx(0, abs=1e-9)
+    assert perc_const[~snow].sum() > perc_ramp[~snow].sum()

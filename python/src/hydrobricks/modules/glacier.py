@@ -68,6 +68,10 @@ class GlacierModule(Module):
     def parameter_aliases(self, glacier_names: list[str]) -> dict[str, list[str]]:
         """Return the glacier-specific parameter aliases (e.g. reservoir factors)."""
 
+    def parameter_defaults(self, glacier_names: list[str]) -> dict[str, float]:
+        """Return starting values for glacier parameters, by alias (none by default)."""
+        return {}
+
 
 @GlacierModule.register("gsm")
 class GSM(GlacierModule):
@@ -166,11 +170,32 @@ class PrevahGlacier(GlacierModule):
     module with PREVAH reservoir semantics. The ice is treated as an infinite
     storage by default (``glacier_infinite_storage``). The reservoir response
     factors [1/d] relate to PREVAH's storage times in hours as k = 24 / K_h.
+
+    Each reservoir is followed, as in PREVAH, by a translation element that delays
+    its outflow by a fixed time (TICSH, TICEH, TICFH), a ``routing:delay`` brick.
+    The delays are durations [d] (``lag_snow``, ``lag_ice``, ``lag_firn``), PREVAH's
+    translation times in hours divided by 24, and they start at PREVAH's defaults
+    (2 h for the snowmelt, 1 h for the ice melt, none for the firn). On an hourly
+    step a whole number of hours is an exact shift; on a daily step a delay of a few
+    hours moves the matching share of each day's outflow onto the next day.
+
+    PREVAH's daily code runs the reservoir and the translation once a day while
+    still treating the step as one hour, so there the storage and translation times
+    act as days. Here both keep their meaning in hours, as in the hourly original.
     """
 
     RAIN_SNOWMELT_STORAGE = "glacier_area_rain_snowmelt_storage"
     ICEMELT_STORAGE = "glacier_area_icemelt_storage"
     FIRNMELT_STORAGE = "glacier_area_firnmelt_storage"
+
+    # The translation element following each reservoir.
+    RAIN_SNOWMELT_DELAY = "glacier_area_rain_snowmelt_delay"
+    ICEMELT_DELAY = "glacier_area_icemelt_delay"
+    FIRNMELT_DELAY = "glacier_area_firnmelt_delay"
+
+    # PREVAH's default translation times (TICSH = 2 h, TICEH = 1 h, TICFH = 0 h) [d].
+    DEFAULT_LAG_SNOW = 2.0 / 24.0
+    DEFAULT_LAG_ICE = 1.0 / 24.0
 
     @staticmethod
     def _is_firn(cover_name: str) -> bool:
@@ -224,7 +249,18 @@ class PrevahGlacier(GlacierModule):
                 "attach_to": "hydro_unit",
                 "kind": "storage",
                 "processes": {
-                    "outflow": {"kind": "outflow:linear", "target": firn_target}
+                    "outflow": {
+                        "kind": "outflow:linear",
+                        "target": self.FIRNMELT_DELAY,
+                    }
+                },
+            }
+            # Right after its reservoir, so still before the groundwater stores.
+            structure[self.FIRNMELT_DELAY] = {
+                "attach_to": "hydro_unit",
+                "kind": "storage",
+                "processes": {
+                    "delay": {"kind": "routing:delay", "target": firn_target}
                 },
             }
 
@@ -232,15 +268,30 @@ class PrevahGlacier(GlacierModule):
         structure[self.RAIN_SNOWMELT_STORAGE] = {
             "attach_to": "sub_basin",
             "kind": "storage",
-            "processes": {"outflow": {"kind": "outflow:linear", "target": "outlet"}},
+            "processes": {
+                "outflow": {
+                    "kind": "outflow:linear",
+                    "target": self.RAIN_SNOWMELT_DELAY,
+                }
+            },
+        }
+        structure[self.RAIN_SNOWMELT_DELAY] = {
+            "attach_to": "sub_basin",
+            "kind": "storage",
+            "processes": {"delay": {"kind": "routing:delay", "target": "outlet"}},
         }
         if ice_names:
             structure[self.ICEMELT_STORAGE] = {
                 "attach_to": "sub_basin",
                 "kind": "storage",
                 "processes": {
-                    "outflow": {"kind": "outflow:linear", "target": "outlet"}
+                    "outflow": {"kind": "outflow:linear", "target": self.ICEMELT_DELAY}
                 },
+            }
+            structure[self.ICEMELT_DELAY] = {
+                "attach_to": "sub_basin",
+                "kind": "storage",
+                "processes": {"delay": {"kind": "routing:delay", "target": "outlet"}},
             }
 
     def land_cover_keys(self, glacier_names: list[str]) -> set[str]:
@@ -252,9 +303,23 @@ class PrevahGlacier(GlacierModule):
     def parameter_aliases(self, glacier_names: list[str]) -> dict[str, list[str]]:
         if not glacier_names:
             return {}
-        aliases = {f"{self.RAIN_SNOWMELT_STORAGE}:response_factor": ["k_snow"]}
+        aliases = {
+            f"{self.RAIN_SNOWMELT_STORAGE}:response_factor": ["k_snow"],
+            f"{self.RAIN_SNOWMELT_DELAY}:delay": ["lag_snow"],
+        }
         if any(not self._is_firn(name) for name in glacier_names):
             aliases[f"{self.ICEMELT_STORAGE}:response_factor"] = ["k_ice"]
+            aliases[f"{self.ICEMELT_DELAY}:delay"] = ["lag_ice"]
         if any(self._is_firn(name) for name in glacier_names):
             aliases[f"{self.FIRNMELT_STORAGE}:response_factor"] = ["k_firn"]
+            aliases[f"{self.FIRNMELT_DELAY}:delay"] = ["lag_firn"]
         return aliases
+
+    def parameter_defaults(self, glacier_names: list[str]) -> dict[str, float]:
+        if not glacier_names:
+            return {}
+        # PREVAH's translation times; the firn one is zero, the process default.
+        defaults = {"lag_snow": self.DEFAULT_LAG_SNOW}
+        if any(not self._is_firn(name) for name in glacier_names):
+            defaults["lag_ice"] = self.DEFAULT_LAG_ICE
+        return defaults

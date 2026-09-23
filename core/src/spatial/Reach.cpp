@@ -9,6 +9,7 @@
 namespace {
 constexpr double kSecondsPerDay = 86400.0;
 constexpr int kMaxSubsteps = 100;
+constexpr int kMaxSubreaches = 50;
 constexpr double kOrdinateTolerance = 1e-6;
 // The celerity is kept in a plausible range for a river: a vanishing discharge would otherwise give a
 // vanishing celerity and an unbounded travel time.
@@ -101,13 +102,17 @@ void Reach::SetChannelRouting(const ChannelRoutingSettings& settings) {
     if (_scheme != Scheme::None && _length <= 0) {
         LogWarning("Subbasin {} has no reach length: its routing is instantaneous.", _subbasin->GetId());
     }
-    // Force the recomputation of the ordinates / coefficients on the next step.
+    // Force the recomputation of the ordinates / coefficients on the next step, and of the sub reach count:
+    // the parameters it is derived from (the reference discharge, the width) may have just changed, as they
+    // do between the runs of a calibration.
     _main.lastTravelTime = -1;
     _main.lastX = -1;
     _main.lastTimeStep = -1;
+    _main.subreachTimeStep = -1;
     _local.lastTravelTime = -1;
     _local.lastX = -1;
     _local.lastTimeStep = -1;
+    _local.subreachTimeStep = -1;
 }
 
 double Reach::GetWidth() const {
@@ -189,6 +194,53 @@ void Reach::ComputeCungeParameters(double dischargeM3s, double length, double& t
     x = std::clamp(x, 0.0, 0.5);
 }
 
+int Reach::ComputeSubreachCount(double length, double timeStepInDays) const {
+    if (_scheme != Scheme::MuskingumCunge || length <= 0 || _slope <= 0 || timeStepInDays <= 0) {
+        return 1;
+    }
+    double discharge = _referenceDischarge ? static_cast<double>(*_referenceDischarge) : 1.0;
+    double width = GetWidth();
+    if (discharge <= kMinDischarge || width <= 0) {
+        return 1;
+    }
+
+    // Ponce and Theurer (1982): the sub reach may not be longer than half the sum of the distance the wave
+    // travels in one time step and the length at which the weighting factor X vanishes. Beyond it the grid is
+    // too coarse for the wave and the scheme diffuses it numerically.
+    double celerity = GetCelerityForDischarge(discharge);
+    double unitDischarge = discharge / width;
+    double maxLength = 0.5 * (celerity * timeStepInDays * kSecondsPerDay + unitDischarge / (_slope * celerity));
+    if (maxLength <= 0 || length <= maxLength) {
+        return 1;
+    }
+
+    int count = static_cast<int>(std::ceil(length / maxLength));
+    if (count > kMaxSubreaches) {
+        LogWarning(
+            "Subbasin {}: the Muskingum-Cunge criterion asks for {} sub reaches of the {:.0f} m reach; "
+            "keeping {}. Consider splitting the subbasin.",
+            _subbasin->GetId(), count, length, kMaxSubreaches);
+        return kMaxSubreaches;
+    }
+
+    return count;
+}
+
+void Reach::SetSubreachCount(RoutingState& state, int count) {
+    count = std::max(1, count);
+    if (state.subreaches == count && static_cast<int>(state.subStorage.size()) == count) {
+        return;
+    }
+
+    double total = state.subStorage.empty() ? state.storage
+                                            : std::accumulate(state.subStorage.begin(), state.subStorage.end(), 0.0);
+    state.subreaches = count;
+    state.subStorage.assign(count, total / count);
+    state.previousInflow.assign(count, 0.0);
+    state.previousOutflow.assign(count, 0.0);
+    state.storage = total;
+}
+
 double Reach::RouteUpstream(double inflowVolume, double timeStepInDays) {
     _inflow = inflowVolume;
     _outflow = RouteBranch(_main, inflowVolume, _length, timeStepInDays);
@@ -219,9 +271,16 @@ double Reach::RouteBranch(RoutingState& state, double volume, double length, dou
     double dischargeM3s = volume / (timeStepInDays * kSecondsPerDay);
 
     if (_scheme == Scheme::MuskingumCunge) {
+        // The wave is resolved on sub reaches short enough for it; K and X are those of one sub reach. The
+        // count is fixed for the run: it depends on the reference discharge and the time step, not on the
+        // discharge of the step, because every sub reach carries state.
+        if (timeStepInDays != state.subreachTimeStep) {
+            SetSubreachCount(state, ComputeSubreachCount(length, timeStepInDays));
+            state.subreachTimeStep = timeStepInDays;
+        }
         double travelTime = 0;
         double x = 0;
-        ComputeCungeParameters(dischargeM3s, length, travelTime, x);
+        ComputeCungeParameters(dischargeM3s, length / state.subreaches, travelTime, x);
         return RouteMuskingum(state, volume, travelTime, x, timeStepInDays);
     }
 
@@ -333,32 +392,43 @@ void Reach::ComputeCoefficients(RoutingState& state, double travelTime, double x
     // the discharge-dependent schemes the coefficients are recomputed at every step, so they must not be
     // dropped each time, or the scheme would lose its memory of the routed wave.
     if (newSubsteps != state.substeps) {
-        state.previousInflow = 0;
-        state.previousOutflow = 0;
+        state.previousInflow.assign(state.previousInflow.size(), 0.0);
+        state.previousOutflow.assign(state.previousOutflow.size(), 0.0);
     }
     state.substeps = newSubsteps;
 }
 
 double Reach::RouteMuskingum(RoutingState& state, double volume, double travelTime, double x, double timeStepInDays) {
+    // The state vectors must exist and match the sub reach count before anything reads them.
+    if (static_cast<int>(state.subStorage.size()) != state.subreaches) {
+        SetSubreachCount(state, state.subreaches);
+    }
     if (travelTime != state.lastTravelTime || x != state.lastX || timeStepInDays != state.lastTimeStep) {
         ComputeCoefficients(state, travelTime, x, timeStepInDays);
     }
     if (state.instantaneous) {
         state.storage = 0;
+        std::fill(state.subStorage.begin(), state.subStorage.end(), 0.0);
         return volume;
     }
 
     double inflow = volume / state.substeps;
     double outflow = 0;
     for (int i = 0; i < state.substeps; ++i) {
-        double out = state.c0 * inflow + state.c1 * state.previousInflow + state.c2 * state.previousOutflow;
-        // Never negative, never more than what the reach holds: the storage stays the exact balance.
-        out = std::max(0.0, std::min(out, state.storage + inflow));
-        state.storage += inflow - out;
-        state.previousInflow = inflow;
-        state.previousOutflow = out;
-        outflow += out;
+        // The sub reaches in series: what leaves one enters the next within the same sub-step.
+        double passing = inflow;
+        for (int r = 0; r < state.subreaches; ++r) {
+            double out = state.c0 * passing + state.c1 * state.previousInflow[r] + state.c2 * state.previousOutflow[r];
+            // Never negative, never more than what the sub reach holds: the storage stays the exact balance.
+            out = std::max(0.0, std::min(out, state.subStorage[r] + passing));
+            state.subStorage[r] += passing - out;
+            state.previousInflow[r] = passing;
+            state.previousOutflow[r] = out;
+            passing = out;
+        }
+        outflow += passing;
     }
+    state.storage = std::accumulate(state.subStorage.begin(), state.subStorage.end(), 0.0);
 
     return outflow;
 }
@@ -375,8 +445,17 @@ void Reach::ResetState(RoutingState& state) {
         state.schedule.back() += dropped;
     }
     state.schedule.resize(state.ordinates.size(), 0.0);
-    state.previousInflow = 0;
-    state.previousOutflow = 0;
+
+    // The sub reach state must stay sized like the sub reach count, whether or not a state was saved on this
+    // discretization: an undersized vector would be written past its end on the next routing.
+    int count = std::max(1, state.subreaches);
+    if (static_cast<int>(state.initialSubStorage.size()) == count) {
+        state.subStorage = state.initialSubStorage;
+    } else {
+        state.subStorage.assign(count, state.initialStorage / count);
+    }
+    state.previousInflow.assign(count, 0.0);
+    state.previousOutflow.assign(count, 0.0);
 }
 
 void Reach::Reset() {
@@ -393,6 +472,8 @@ void Reach::Reset() {
 void Reach::SaveAsInitialState() {
     _main.initialStorage = _main.storage;
     _main.initialSchedule = _main.schedule;
+    _main.initialSubStorage = _main.subStorage;
     _local.initialStorage = _local.storage;
     _local.initialSchedule = _local.schedule;
+    _local.initialSubStorage = _local.subStorage;
 }

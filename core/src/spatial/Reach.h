@@ -16,7 +16,8 @@ struct ChannelRoutingSettings;
  * (which a sub basin property may override reach by reach), optionally varying with the discharge through a
  * power law. Muskingum-Cunge instead derives the celerity and the weighting factor from the channel geometry
  * (length, slope, width and Manning roughness) and the discharge of the step, so its parameters are measured
- * rather than calibrated.
+ * rather than calibrated. A Muskingum-Cunge reach is also divided into sub reaches short enough for the wave
+ * to be resolved (the Ponce and Theurer criterion), the sub reaches being routed in series.
  *
  * The sub basin's own runoff joins at the outlet by default. With 'route_local_runoff' it is routed too,
  * through half the reach: generated uniformly along the reach, it travels half of it on average.
@@ -194,6 +195,16 @@ class Reach {
     [[nodiscard]] double GetTravelTimeInDays() const;
 
     /**
+     * Get the number of sub reaches the main channel is divided into for the routing. Always 1 except with
+     * the Muskingum-Cunge scheme, and only once the first time step has fixed it.
+     *
+     * @return the number of sub reaches.
+     */
+    [[nodiscard]] int GetSubreachCount() const {
+        return _main.subreaches;
+    }
+
+    /**
      * Get the volume that entered the reach in the current time step [m3]: the upstream inflow, plus the sub
      * basin's own runoff when it is routed.
      *
@@ -236,11 +247,18 @@ class Reach {
         // Muskingum schemes: the coefficients of the sub-step, the sub-step count and the previous values.
         int substeps = 1;
         double c0 = 1, c1 = 0, c2 = 0;
-        double previousInflow = 0;   // m3 per sub-step
-        double previousOutflow = 0;  // m3 per sub-step
         bool instantaneous = false;  // the travel time is too short for the step: pass-through
 
-        double storage = 0;  // m3 in transit
+        // The sub reaches routed in series (one, unless the Muskingum-Cunge criterion asks for more), each
+        // with its own memory of the previous sub-step and its own share of the volume in transit.
+        int subreaches = 1;
+        vecDouble previousInflow;   // m3 per sub-step, per sub reach
+        vecDouble previousOutflow;  // m3 per sub-step, per sub reach
+        vecDouble subStorage;       // m3 in transit, per sub reach
+        vecDouble initialSubStorage;
+        double subreachTimeStep = -1;  // the time step the sub reach count was computed for
+
+        double storage = 0;  // m3 in transit, over all the sub reaches
         double initialStorage = 0;
 
         // What the ordinates and coefficients were computed for, to recompute them when it changes.
@@ -301,6 +319,25 @@ class Reach {
      * @param x The resulting weighting factor X [-].
      */
     void ComputeCungeParameters(double dischargeM3s, double length, double& travelTime, double& x) const;
+
+    /**
+     * Compute the number of sub reaches a length must be divided into for the Muskingum-Cunge scheme to
+     * resolve the wave, from the criterion of Ponce and Theurer (1982): a sub reach may not be longer than
+     * (c dt + Q / (B S0 c)) / 2. The celerity and the discharge are those of the reference discharge, not of
+     * the step: the count must stay fixed while the model runs, since the sub reaches carry state.
+     *
+     * @param length The length of the branch [m].
+     * @param timeStepInDays The time step [days].
+     * @return the number of sub reaches (at least 1).
+     */
+    [[nodiscard]] int ComputeSubreachCount(double length, double timeStepInDays) const;
+
+    /**
+     * Set the number of sub reaches of a branch, resizing its state. The volume in transit is spread evenly
+     * over the new sub reaches and the memory of the previous sub-step is dropped: the discretization it was
+     * expressed on no longer exists.
+     */
+    static void SetSubreachCount(RoutingState& state, int count);
 
     /**
      * Recompute the delivery ordinates of the lag scheme for the given travel time and time step.

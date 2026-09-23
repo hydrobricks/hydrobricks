@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 
+#include <algorithm>
 #include <cmath>
 #include <numeric>
 #include <utility>
@@ -42,6 +43,13 @@ struct Fixture {
         settings.SetParameterValue("channel", "x", x);
         reach = std::make_unique<Reach>(&subbasin);
         reach->Initialize();
+        reach->SetChannelRouting(settings.GetChannelRoutingSettings());
+    }
+
+    // The reference discharge sizes the Muskingum-Cunge sub reaches. Set it before the first step: the
+    // count is fixed once the routing has started.
+    void SetReferenceDischarge(float discharge) {
+        settings.SetParameterValue("channel", "reference_discharge", discharge);
         reach->SetChannelRouting(settings.GetChannelRoutingSettings());
     }
 
@@ -377,6 +385,110 @@ TEST(Reach, MuskingumCungeNeedsNoCelerityCalibration) {
     vecDouble outB = b.Pulse(10.0 * 86400.0, 20);
     for (size_t t = 0; t < outA.size(); ++t) {
         EXPECT_NEAR(outB[t], outA[t], 1e-9) << "t=" << t;
+    }
+}
+
+TEST(Reach, MuskingumCungeKeepsOneSubreachWhenTheWaveIsResolved) {
+    // A 20 km reach and a daily step: the wave crosses far more than the reach in one step, so a single
+    // element resolves it and nothing changes.
+    Fixture f("muskingum_cunge", 20000.0, 1.0f, 0.2f, 0.002, 20.0, 0.035);
+    f.Pulse(10.0 * kSecondsPerDay, 2);
+    EXPECT_EQ(f.reach->GetSubreachCount(), 1);
+}
+
+TEST(Reach, MuskingumCungeSplitsAReachTheWaveCannotCrossInAStep) {
+    // The same reach at an hourly step: the wave travels ~2 km per step, so the reach must be divided.
+    constexpr double kHour = 1.0 / 24.0;
+    Fixture f("muskingum_cunge", 20000.0, 1.0f, 0.2f, 0.002, 20.0, 0.035);
+    f.Pulse(10.0 * 3600.0, 2, kHour);
+
+    // Ponce and Theurer: dx <= (c dt + q / (S0 c)) / 2, at the reference discharge (1 m3/s by default).
+    double celerity = f.reach->GetCelerityForDischarge(1.0);
+    double maxLength = 0.5 * (celerity * 3600.0 + (1.0 / 20.0) / (0.002 * celerity));
+    int expected = static_cast<int>(std::ceil(20000.0 / maxLength));
+    EXPECT_GT(expected, 1);
+    EXPECT_EQ(f.reach->GetSubreachCount(), expected);
+}
+
+TEST(Reach, MuskingumCungeSubreachesAttenuateTheWaveTheSingleElementMisses) {
+    // Two identical reaches: only the reference discharge differs, and it only sizes the sub reaches. A
+    // large one leaves a single element, whose weighting factor tends to 0.5 over a long reach, i.e. pure
+    // translation: it misses the diffusion the sub reaches reproduce.
+    constexpr double kHour = 1.0 / 24.0;
+    constexpr double kVolume = 10.0 * 3600.0;
+    Fixture divided("muskingum_cunge", 20000.0, 1.0f, 0.2f, 0.002, 20.0, 0.035);
+    Fixture single("muskingum_cunge", 20000.0, 1.0f, 0.2f, 0.002, 20.0, 0.035);
+    single.SetReferenceDischarge(1.0e5f);
+
+    vecDouble outDivided = divided.Pulse(kVolume, 120, kHour);
+    vecDouble outSingle = single.Pulse(kVolume, 120, kHour);
+    EXPECT_GT(divided.reach->GetSubreachCount(), 1);
+    EXPECT_EQ(single.reach->GetSubreachCount(), 1);
+
+    // Both conserve mass, and neither sends water backwards.
+    EXPECT_NEAR(Sum(outDivided) + divided.reach->GetStorage(), kVolume, 1e-6);
+    EXPECT_NEAR(Sum(outSingle) + single.reach->GetStorage(), kVolume, 1e-6);
+    for (double v : outDivided) {
+        EXPECT_GE(v, 0.0);
+    }
+
+    // The divided reach spreads the wave more: a lower peak.
+    double peakDivided = *std::max_element(outDivided.begin(), outDivided.end());
+    double peakSingle = *std::max_element(outSingle.begin(), outSingle.end());
+    EXPECT_LT(peakDivided, peakSingle);
+}
+
+TEST(Reach, MuskingumCungeSubreachCountIsCapped) {
+    // A very long and very flat reach at an hourly step would ask for thousands of sub reaches.
+    constexpr double kHour = 1.0 / 24.0;
+    Fixture f("muskingum_cunge", 500000.0, 1.0f, 0.2f, 0.0001, 20.0, 0.035);
+    f.Pulse(10.0 * 3600.0, 2, kHour);
+    EXPECT_EQ(f.reach->GetSubreachCount(), 50);
+}
+
+TEST(Reach, MuskingumCungeSubreachCountFollowsNewParameters) {
+    // The reference discharge is calibratable: a new value between two runs must resize the sub reaches,
+    // not keep the count the first run settled on.
+    constexpr double kHour = 1.0 / 24.0;
+    Fixture f("muskingum_cunge", 20000.0, 1.0f, 0.2f, 0.002, 20.0, 0.035);
+    f.Pulse(10.0 * 3600.0, 2, kHour);
+    int divided = f.reach->GetSubreachCount();
+    EXPECT_GT(divided, 1);
+
+    f.SetReferenceDischarge(1.0e5f);
+    f.reach->Reset();
+    f.Pulse(10.0 * 3600.0, 2, kHour);
+    EXPECT_EQ(f.reach->GetSubreachCount(), 1);
+}
+
+TEST(Reach, MuskingumCungeSubreachesSurviveAReset) {
+    // The sub reach state is a vector per branch: it must stay sized like the count across a reset, saved
+    // state or not, or the next routing writes past its end.
+    constexpr double kHour = 1.0 / 24.0;
+    constexpr double kVolume = 10.0 * 3600.0;
+    Fixture f("muskingum_cunge", 20000.0, 1.0f, 0.2f, 0.002, 20.0, 0.035);
+    vecDouble first = f.Pulse(kVolume, 60, kHour);
+    EXPECT_GT(f.reach->GetSubreachCount(), 1);
+
+    // Reset without a saved state: the run starts again from an empty reach.
+    f.reach->Reset();
+    EXPECT_DOUBLE_EQ(f.reach->GetStorage(), 0.0);
+    vecDouble again = f.Pulse(kVolume, 60, kHour);
+    for (size_t t = 0; t < first.size(); ++t) {
+        EXPECT_NEAR(again[t], first[t], 1e-9) << "t=" << t;
+    }
+
+    // And with a state saved mid-wave, the reset restores what the reach held, sub reach by sub reach.
+    f.Pulse(kVolume, 5, kHour);
+    double storage = f.reach->GetStorage();
+    EXPECT_GT(storage, 0.0);
+    f.reach->SaveAsInitialState();
+    vecDouble after = f.Pulse(0.0, 30, kHour);
+    f.reach->Reset();
+    EXPECT_NEAR(f.reach->GetStorage(), storage, 1e-9);
+    vecDouble repeated = f.Pulse(0.0, 30, kHour);
+    for (size_t t = 0; t < after.size(); ++t) {
+        EXPECT_NEAR(repeated[t], after[t], 1e-9) << "t=" << t;
     }
 }
 

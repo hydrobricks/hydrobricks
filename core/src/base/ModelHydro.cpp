@@ -372,6 +372,62 @@ axd ModelHydro::GetSubbasinDrainedAreas() const {
     return _logger.GetSubbasinDrainedAreas();
 }
 
+axd ModelHydro::GetReachLengths() const {
+    return GetReachProperty([](const Reach& reach) { return reach.GetLength(); });
+}
+
+axd ModelHydro::GetReachSlopes() const {
+    return GetReachProperty([](const Reach& reach) { return reach.GetSlope(); });
+}
+
+axd ModelHydro::GetReachTravelTimes() const {
+    return GetReachProperty([](const Reach& reach) { return reach.GetTravelTimeInDays(); });
+}
+
+axd ModelHydro::GetReachProperty(const std::function<double(const Reach&)>& get) const {
+    vecInt ids = GetSubbasinIds();
+    axd values = axd::Zero(static_cast<int>(ids.size()));
+    if (!_network) {
+        return values;
+    }
+    for (int i = 0; i < static_cast<int>(ids.size()); ++i) {
+        SubBasin* subbasin = _network->GetSubbasinById(ids[i]);
+        if (subbasin && subbasin->GetReach()) {
+            values[i] = get(*subbasin->GetReach());
+        }
+    }
+
+    return values;
+}
+
+vecInt ModelHydro::GetReachSubreachCounts() const {
+    vecInt ids = GetSubbasinIds();
+    vecInt counts(ids.size(), 1);
+    if (!_network) {
+        return counts;
+    }
+    for (size_t i = 0; i < ids.size(); ++i) {
+        SubBasin* subbasin = _network->GetSubbasinById(ids[i]);
+        if (subbasin && subbasin->GetReach()) {
+            counts[i] = subbasin->GetReach()->GetSubreachCount();
+        }
+    }
+
+    return counts;
+}
+
+string ModelHydro::GetChannelRoutingScheme() const {
+    if (!_network || _network->GetSubbasinCount() == 0) {
+        return "none";
+    }
+    SubBasin* subbasin = _network->GetSubbasin(0);
+    if (!subbasin || !subbasin->GetReach()) {
+        return "none";
+    }
+
+    return Reach::SchemeToString(subbasin->GetReach()->GetScheme());
+}
+
 HydroUnit* ModelHydro::GetHydroUnitById(int id) const {
     if (_network) {
         return _network->GetHydroUnitById(id);

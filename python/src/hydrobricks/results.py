@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import numpy as np
+import pandas as pd
 
 from hydrobricks._exceptions import DataError, DependencyError
 from hydrobricks._optional import HAS_XARRAY, xr
@@ -192,6 +193,77 @@ class Results:
             data = values[i_label, i_subbasin, :]
 
         return self._select_time(data, start_date, end_date)
+
+    def get_reach_water_balance(self) -> pd.DataFrame:
+        """
+        Get the water balance of every reach over the whole recorded period.
+
+        A reach conserves mass: what entered it either left it or is still in transit.
+        The balance is therefore a closure check of the routing, and the ``balance``
+        column should be zero to the rounding of the results file.
+
+        Returns
+        -------
+        A DataFrame indexed by subbasin id, in m³ over the recorded period, with the
+        columns ``inflow`` (what entered the reach: the upstream subbasins, plus the
+        subbasin's own runoff when it is routed), ``outflow`` (what reached the
+        outlet), ``storage`` (what is still in transit at the end) and ``balance``
+        (inflow - outflow - storage), plus ``relative`` (the balance over the inflow).
+
+        Raises
+        ------
+        DataError
+            If the reach values were not recorded, i.e. the channel routing was off.
+
+        Notes
+        -----
+        The period is the whole run because the reaches start empty: over a shorter
+        window the storage at its start would have to be subtracted too.
+        """
+        labels = self.labels_aggregated
+        labels = [labels] if isinstance(labels, str) else list(labels or [])
+        missing = [
+            c
+            for c in ("reach:inflow", "reach:outflow", "reach:storage")
+            if c not in labels
+        ]
+        if missing:
+            raise DataError(
+                f"The results file has no reach values ({', '.join(missing)}): the "
+                "channel routing was off when the model ran.",
+                data_type="results",
+                reason="Missing component",
+            )
+
+        ids = [int(i) for i in np.atleast_1d(self.subbasin_ids)]
+        rows = []
+        for subbasin_id in ids:
+            # The reach values are logged in mm over the area drained at the outlet.
+            factor = self._drained_area(subbasin_id) / 1000.0
+            inflow = float(
+                np.sum(self.get_subbasin_values("reach:inflow", subbasin_id))
+            )
+            outflow = float(
+                np.sum(self.get_subbasin_values("reach:outflow", subbasin_id))
+            )
+            storage = float(self.get_subbasin_values("reach:storage", subbasin_id)[-1])
+            inflow, outflow, storage = (
+                inflow * factor,
+                outflow * factor,
+                storage * factor,
+            )
+            balance = inflow - outflow - storage
+            rows.append(
+                {
+                    "inflow": inflow,
+                    "outflow": outflow,
+                    "storage": storage,
+                    "balance": balance,
+                    "relative": balance / inflow if inflow > 0 else 0.0,
+                }
+            )
+
+        return pd.DataFrame(rows, index=pd.Index(ids, name="subbasin"))
 
     def get_land_cover_areas(
         self,

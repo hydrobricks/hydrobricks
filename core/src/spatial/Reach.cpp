@@ -41,6 +41,19 @@ Reach::Scheme Reach::SchemeFromString(const string& name) {
         "Unknown channel routing scheme '{}' (expected 'none', 'lag', 'muskingum' or 'muskingum_cunge').", name));
 }
 
+string Reach::SchemeToString(Scheme scheme) {
+    switch (scheme) {
+        case Scheme::Lag:
+            return "lag";
+        case Scheme::Muskingum:
+            return "muskingum";
+        case Scheme::MuskingumCunge:
+            return "muskingum_cunge";
+        default:
+            return "none";
+    }
+}
+
 void Reach::Initialize() {
     if (_subbasin->HasProperty("length")) {
         _length = _subbasin->GetPropertyDouble("length");
@@ -171,7 +184,11 @@ double Reach::GetCelerityForDischarge(double dischargeM3s) const {
 }
 
 double Reach::GetTravelTimeInDays() const {
-    double celerity = GetCelerity();
+    // The celerity AT the reference discharge, not the reference celerity: the two are the same for the
+    // schemes taking the celerity as a parameter, but Muskingum-Cunge derives it from the geometry and
+    // ignores the parameter entirely.
+    double discharge = _referenceDischarge ? static_cast<double>(*_referenceDischarge) : 1.0;
+    double celerity = GetCelerityForDischarge(discharge);
     if (_length <= 0 || celerity <= 0) {
         return 0.0;
     }

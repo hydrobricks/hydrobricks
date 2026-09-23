@@ -425,6 +425,16 @@ PYBIND11_MODULE(_hydrobricks, m) {
              "Get the area of each subbasin's own hydro units [m2].")
         .def("get_subbasin_drained_areas", &ModelHydro::GetSubbasinDrainedAreas,
              "Get the area drained at each subbasin outlet [m2].")
+        .def("get_reach_lengths", &ModelHydro::GetReachLengths,
+             "Get the length of each subbasin's reach [m], in the order of get_subbasin_ids().")
+        .def("get_reach_slopes", &ModelHydro::GetReachSlopes,
+             "Get the slope of each subbasin's reach [m/m], in the order of get_subbasin_ids().")
+        .def("get_reach_travel_times", &ModelHydro::GetReachTravelTimes,
+             "Get the travel time of each subbasin's reach at the reference discharge [days].")
+        .def("get_reach_subreach_counts", &ModelHydro::GetReachSubreachCounts,
+             "Get the number of sub reaches each subbasin's reach is divided into.")
+        .def("get_channel_routing_scheme", &ModelHydro::GetChannelRoutingScheme,
+             "Get the name of the channel routing scheme in use.")
         .def("get_total_outlet_discharge", &ModelHydro::GetTotalOutletDischarge, "Get the outlet discharge total.")
         .def("get_total_et", &ModelHydro::GetTotalET, "Get the total amount of water lost by evapotranspiration.")
         .def("get_total_water_storage_changes", &ModelHydro::GetTotalWaterStorageChanges,

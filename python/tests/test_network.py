@@ -798,3 +798,116 @@ def test_discharge_available_in_cubic_meters_per_second(runs):
         )
         with pytest.raises(hb.DataError):
             results.get_discharge(units="furlongs")
+
+
+# ---- Network diagnostics ------------------------------------------------------------
+
+
+def test_network_graph_describes_the_subbasin_tree(tmp_path):
+    """The graph reports what the routing uses: the tree, the reaches, the times."""
+    hydro_units = _split_units_with_geometry()
+    model = _run_scheme(
+        tmp_path / "graph",
+        hydro_units,
+        "muskingum",
+        channel_celerity=1,
+        muskingum_x=0.2,
+    )
+    graph = model.get_network_graph()
+
+    assert graph.scheme == "muskingum"
+    assert [s.id for s in graph.subbasins] == [2, 1]  # processing order, outlet last
+    upstream = graph.get_subbasin(2)
+    downstream = graph.get_subbasin(1)
+    assert upstream.downstream == 1
+    assert downstream.downstream == 0
+    assert downstream.length == pytest.approx(86400.0)
+    assert upstream.length == pytest.approx(3000.0)
+    assert downstream.slope == pytest.approx(0.004)
+
+    # K = length / celerity: 86400 m at 1 m/s is exactly one day.
+    assert downstream.travel_time == pytest.approx(1.0)
+    assert upstream.travel_time == pytest.approx(3000.0 / 86400.0)
+
+    # A subbasin's own reach routes what comes from upstream, so the water it sends
+    # down crosses the reaches *below* it: one day, here.
+    times = graph.get_time_to_outlet()
+    assert times[1] == pytest.approx(0.0)
+    assert times[2] == pytest.approx(1.0)
+
+    assert [s.id for s in graph.get_headwaters()] == [2]
+    path, slowest = graph.get_longest_path()
+    assert [s.id for s in path] == [2, 1]
+    assert slowest == pytest.approx(1.0)
+
+    # The areas are the ones the model computes, and the table carries them.
+    table = graph.to_dataframe()
+    assert list(table.index) == [2, 1]
+    assert table.at[1, "area_drained"] > table.at[2, "area_drained"]
+    assert table.at[1, "time_to_outlet"] == pytest.approx(0.0)
+    assert graph.to_dict()["channel_routing"] == "muskingum"
+
+
+def test_network_summary_reports_the_reaches(tmp_path):
+    hydro_units = _split_units_with_geometry()
+    model = _run_scheme(
+        tmp_path / "text", hydro_units, "muskingum", channel_celerity=1, muskingum_x=0.2
+    )
+    text = model.network_summary()
+
+    assert "river network" in text
+    assert "muskingum" in text
+    assert "subbasin 1" in text and "subbasin 2" in text
+    assert "Headwaters: 1" in text
+    assert "Slowest path" in text
+
+
+def test_network_graph_reports_the_muskingum_cunge_sub_reaches(tmp_path):
+    """The criterion divides the long reach, and the report says so."""
+    hydro_units = _split_units_with_geometry()
+    model = _run_scheme(tmp_path / "cunge", hydro_units, "muskingum_cunge")
+    graph = model.get_network_graph()
+
+    assert graph.get_subbasin(1).subreaches > 1
+    assert graph.get_subbasin(2).subreaches == 1
+    assert graph.get_subbasin(1).travel_time > 0
+
+
+def test_network_graph_needs_a_model_that_is_set_up():
+    model = models.Socont(surface_runoff="linear_storage", channel_routing="lag")
+    with pytest.raises(hb.ModelError):
+        model.get_network_graph()
+
+
+def test_reach_water_balance_closes(tmp_path):
+    """Nothing is lost in a reach: what entered it left it or is still in transit."""
+    hydro_units = _split_units_with_geometry()
+    out = tmp_path / "balance"
+    model = _run_scheme(
+        out, hydro_units, "muskingum", channel_celerity=1, muskingum_x=0.2
+    )
+    model.dump_outputs(str(out))
+
+    with hb.Results(str(out / "results.nc")) as results:
+        balance = results.get_reach_water_balance()
+
+    assert list(balance.index) == [2, 1]
+    # The downstream reach receives the upstream subbasin, the headwater reach nothing.
+    assert balance.at[1, "inflow"] > 0
+    assert balance.at[2, "inflow"] == pytest.approx(0.0)
+    # A one-day travel time leaves water in transit at the end of the run.
+    assert balance.at[1, "storage"] > 0
+    for subbasin_id in (1, 2):
+        assert balance.at[subbasin_id, "balance"] == pytest.approx(0.0, abs=1.0)
+        assert abs(balance.at[subbasin_id, "relative"]) < 1e-6
+
+
+def test_reach_water_balance_needs_the_reach_values(tmp_path):
+    hydro_units = _split_units_with_geometry()
+    out = tmp_path / "no_routing"
+    model = _run_scheme(out, hydro_units, "none")
+    model.dump_outputs(str(out))
+
+    with hb.Results(str(out / "results.nc")) as results:
+        with pytest.raises(hb.DataError):
+            results.get_reach_water_balance()

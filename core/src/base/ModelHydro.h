@@ -1,6 +1,7 @@
 #ifndef HYDROBRICKS_MODEL_HYDRO_H
 #define HYDROBRICKS_MODEL_HYDRO_H
 
+#include <functional>
 #include <memory>
 
 #include "ActionsManager.h"
@@ -115,6 +116,43 @@ class ModelHydro {
     [[nodiscard]] axd GetSubbasinLocalAreas() const;
 
     [[nodiscard]] axd GetSubbasinDrainedAreas() const;
+
+    /**
+     * Get the length of the reach of every sub basin [m], in the order of GetSubbasinIds().
+     *
+     * @return the reach lengths.
+     */
+    [[nodiscard]] axd GetReachLengths() const;
+
+    /**
+     * Get the slope of the reach of every sub basin [m/m], in the order of GetSubbasinIds().
+     *
+     * @return the reach slopes.
+     */
+    [[nodiscard]] axd GetReachSlopes() const;
+
+    /**
+     * Get the travel time of the reach of every sub basin [days], at the reference discharge, in the order of
+     * GetSubbasinIds(). With the discharge-dependent schemes the travel time of a step differs from it.
+     *
+     * @return the reach travel times.
+     */
+    [[nodiscard]] axd GetReachTravelTimes() const;
+
+    /**
+     * Get the number of sub reaches the reach of every sub basin is divided into, in the order of
+     * GetSubbasinIds(). Always 1 except with Muskingum-Cunge, and only once the model has run a step.
+     *
+     * @return the sub reach counts.
+     */
+    [[nodiscard]] vecInt GetReachSubreachCounts() const;
+
+    /**
+     * Get the name of the channel routing scheme in use.
+     *
+     * @return the scheme name ('none' without a river network).
+     */
+    [[nodiscard]] string GetChannelRoutingScheme() const;
 
     /**
      * Get a hydro unit by ID, in any sub basin.
@@ -348,6 +386,15 @@ class ModelHydro {
     int _spinupSteps = 0;                                  // time steps replayed as spin-up at the start of each run
 
   private:
+    /**
+     * Get a property of the reach of every sub basin, in the order of GetSubbasinIds(). Sub basins without a
+     * reach (no network) give 0.
+     *
+     * @param get The property of a reach to read.
+     * @return the values.
+     */
+    [[nodiscard]] axd GetReachProperty(const std::function<double(const Reach&)>& get) const;
+
     /**
      * Get the sub basins to process, upstream first: the network's order, or the single external sub basin.
      */

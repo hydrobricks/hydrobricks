@@ -52,6 +52,14 @@ class Reach {
     static Scheme SchemeFromString(const string& name);
 
     /**
+     * Get the canonical name of a routing scheme.
+     *
+     * @param scheme The scheme.
+     * @return its name ('none', 'lag', 'muskingum' or 'muskingum_cunge').
+     */
+    static string SchemeToString(Scheme scheme);
+
+    /**
      * Read the reach geometry from the sub basin properties ('length' [m], 'slope' [-], 'width' [m] and
      * 'manning' [s/m^(1/3)]) when present, as well as the reach-specific routing parameters ('celerity' [m/s]
      * and 'muskingum_x' [-]) overriding the model-wide ones.
@@ -188,7 +196,8 @@ class Reach {
 
     /**
      * Get the travel time of the reach at the reference discharge [days]: length / celerity (0 without a
-     * length).
+     * length). With Muskingum-Cunge the celerity is the one the geometry gives at that discharge; with the
+     * other schemes it is the celerity parameter, which is defined at that same discharge.
      *
      * @return the travel time.
      */

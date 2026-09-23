@@ -17,6 +17,7 @@ from hydrobricks.forcing import Forcing
 from hydrobricks.hydro_units import HydroUnits
 from hydrobricks.land_covers import GENERIC_COVER_ALIASES, GENERIC_SOIL_COVER_TYPES
 from hydrobricks.models.model_settings import ModelSettings
+from hydrobricks.network import RiverNetworkGraph
 from hydrobricks.parameters import ParameterSet
 from hydrobricks.periods import Period, spinup_to_days
 from hydrobricks.structure import StructureGraph
@@ -962,6 +963,63 @@ class Model(ABC):
     def summary(self, structure_id: int = 1) -> str:
         """Return a compact textual summary of the model structure."""
         return self.get_structure_graph(structure_id).to_text()
+
+    def get_network_graph(self) -> RiverNetworkGraph:
+        """
+        Build the river network graph: the subbasin tree, its reaches and its travel
+        times.
+
+        The reach properties are read from the model, so they are the ones the routing
+        uses, the per-subbasin overrides included. The model must have been set up; the
+        sub reach counts of the Muskingum-Cunge scheme are known only after the first
+        time step has been run.
+
+        Returns
+        -------
+        RiverNetworkGraph
+            The network graph object, which can be tabulated
+            (:meth:`~hydrobricks.network.RiverNetworkGraph.to_dataframe`), summarized
+            (:meth:`~hydrobricks.network.RiverNetworkGraph.to_text`) and plotted
+            (:meth:`~hydrobricks.network.RiverNetworkGraph.plot`).
+
+        Raises
+        ------
+        ModelError
+            If the model has not been set up.
+        """
+        if not self._is_initialized:
+            raise ModelError(
+                "The model must be set up before its river network can be inspected: "
+                "call setup() first.",
+                is_initialized=False,
+            )
+        return RiverNetworkGraph.from_model(self)
+
+    def network_summary(self) -> str:
+        """Return a textual report of the river network and its travel times."""
+        return self.get_network_graph().to_text()
+
+    def print_network(self) -> None:
+        """Print a textual report of the river network and its travel times."""
+        print(self.network_summary())
+
+    def plot_network(self, path: str | None = None, **kwargs):
+        """Plot the subbasin tree with its travel times (requires ``graphviz``).
+
+        Parameters
+        ----------
+        path
+            Output file path without extension; if None, the graph object is returned
+            without writing a file.
+        kwargs
+            Passed to :meth:`~hydrobricks.network.RiverNetworkGraph.plot` (``fmt``,
+            ``view``, ``legend``, ``nodesep``, ``ranksep``, ``dpi``).
+
+        Returns
+        -------
+        The ``graphviz.Digraph`` object.
+        """
+        return self.get_network_graph().plot(path, **kwargs)
 
     def print_structure(self, structure_id: int = 1) -> None:
         """Print a compact textual summary of the model structure."""

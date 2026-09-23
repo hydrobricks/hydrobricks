@@ -388,6 +388,20 @@ TEST(Reach, MuskingumCungeNeedsNoCelerityCalibration) {
     }
 }
 
+TEST(Reach, MuskingumCungeTravelTimeIgnoresTheCelerityParameter) {
+    // The reported travel time must be the one the geometry gives, not length / celerity: the celerity
+    // parameter is meaningless for this scheme, and a report built on it would be quietly wrong.
+    Fixture f("muskingum_cunge", 20000.0, 1.0f, 0.2f, 0.002, 20.0, 0.035);
+    double celerity = f.reach->GetCelerityForDischarge(1.0);
+    EXPECT_NE(celerity, 1.0);
+    EXPECT_NEAR(f.reach->GetTravelTimeInDays(), 20000.0 / (celerity * kSecondsPerDay), 1e-12);
+
+    // The schemes taking the celerity as a parameter define it at the reference discharge, so they are
+    // unaffected.
+    Fixture lag("lag", 20000.0, 2.0f);
+    EXPECT_NEAR(lag.reach->GetTravelTimeInDays(), 20000.0 / (2.0 * kSecondsPerDay), 1e-12);
+}
+
 TEST(Reach, MuskingumCungeKeepsOneSubreachWhenTheWaveIsResolved) {
     // A 20 km reach and a daily step: the wave crosses far more than the reach in one step, so a single
     // element resolves it and nothing changes.

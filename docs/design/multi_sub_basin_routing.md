@@ -166,7 +166,11 @@ too (used only if local runoff routing is enabled later).
 | `none` | – | Instantaneous pass-through. Default. |
 | `lag` | `celerity` [m/s] | Pure translation by `length / celerity`, with the delivery schedule of `ProcessRoutingDelay` moved into a shared helper. |
 | `muskingum` | `celerity` [m/s], `x` [-] | `K = length / celerity`; `S = K[X·I + (1−X)·O]`, integrated per step with the standard Muskingum coefficients (exact for the linear scheme, no ODE solver needed); outflow clamped at 0. |
-| `muskingum_cunge` (later) | `manning_n`, `width` | `K`, `X` derived from slope, width, celerity and discharge each step. |
+| `muskingum_cunge` | `width` [m], `manning` | DONE. `K`, `X` recomputed each step from slope, width, Manning and the discharge (Manning depth, kinematic celerity 5/3·v, Cunge's X). Needs no calibration. |
+
+All schemes but `muskingum_cunge` accept a discharge-dependent celerity through `celerity_exponent`
+and `reference_discharge`; every celerity is clamped to [0.05, 10] m/s. The local runoff of a subbasin
+is routed through half the reach when `route_local_runoff` is set (a second routing branch, D6).
 
 - **State**: reach storage (and the schedule for `lag`), reset and saved with the
   model state like brick containers (`Reset`, `SaveAsInitialState`).

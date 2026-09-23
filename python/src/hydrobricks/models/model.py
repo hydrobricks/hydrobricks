@@ -30,6 +30,25 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+#: The unit strings understood as a volumetric discharge by the discharge getters.
+VOLUMETRIC_UNITS = ("m3/s", "m^3/s", "m³/s", "cms", "cumecs")
+
+
+def _is_volumetric(units: str) -> bool:
+    """Whether a discharge unit string asks for m³/s rather than mm per time step."""
+    key = str(units).replace(" ", "").lower()
+    if key in VOLUMETRIC_UNITS:
+        return True
+    if key in ("mm", "mm/step", "mm/d", "mm/day", "mm/h", "mm/hour"):
+        return False
+    raise ConfigurationError(
+        f"Unknown discharge units '{units}': expected 'mm' (per time step) or 'm3/s'.",
+        item_name="units",
+        item_value=units,
+        reason="Unknown units",
+    )
+
+
 # Name of the netCDF file written by dump_outputs() into the output directory.
 RESULTS_FILENAME = "results.nc"
 
@@ -48,8 +67,8 @@ class Model(ABC):
             Name identifier for the model instance. Default: None
         **kwargs
             Additional keyword arguments for model configuration.
-            Allowed keys: 'solver', 'record_all', 'channel_routing', 'land_cover_types',
-            'land_cover_names'
+            Allowed keys: 'solver', 'record_all', 'channel_routing',
+            'route_local_runoff', 'land_cover_types', 'land_cover_names'
 
         Raises
         ------
@@ -70,6 +89,7 @@ class Model(ABC):
             "solver",
             "record_all",
             "channel_routing",
+            "route_local_runoff",
             "land_cover_types",
             "land_cover_names",
         }
@@ -83,6 +103,8 @@ class Model(ABC):
         # 'muskingum'); irrelevant for a catchment without a declared network. Not to be
         # confused with the in-catchment 'routing:*' processes of a model structure.
         self.channel_routing: str = "none"
+        # Whether a subbasin's own runoff travels through half of its reach.
+        self.route_local_runoff: bool = False
         self.land_cover_types: list[str] = ["open"]
         self.land_cover_names: list[str] = ["open"]
         self.allowed_land_cover_types: list[str] = ["open"]
@@ -108,6 +130,7 @@ class Model(ABC):
             solver=self.solver,
             record_all=self.record_all,
             channel_routing=self.channel_routing,
+            route_local_runoff=self.route_local_runoff,
         )
 
     def __del__(self) -> None:
@@ -510,6 +533,7 @@ class Model(ABC):
             "base": self.name,
             "solver": self.solver,
             "channel_routing": self.channel_routing,
+            "route_local_runoff": self.route_local_runoff,
             "options": self.options,
             "land_covers": {
                 "names": self.land_cover_names,
@@ -519,13 +543,23 @@ class Model(ABC):
         }
         dump_config_file(settings, directory, name, file_type)
 
-    def get_outlet_discharge(self) -> np.ndarray:
+    def get_outlet_discharge(self, units: str = "mm") -> np.ndarray:
         """
-        Get the computed outlet discharge (mm per time step over the catchment area).
-        """
-        return self.model.get_outlet_discharge()
+        Get the computed outlet discharge.
 
-    def get_subbasin_discharge(self, subbasin_id: int) -> np.ndarray:
+        Parameters
+        ----------
+        units
+            ``"mm"`` (default) for mm per time step over the catchment area, as the
+            model computes it, or ``"m3/s"`` for the volumetric discharge a gauge
+            records.
+        """
+        discharge = self.model.get_outlet_discharge()
+        if _is_volumetric(units):
+            return discharge * self._volumetric_factor(self.get_subbasin_ids()[-1])
+        return discharge
+
+    def get_subbasin_discharge(self, subbasin_id: int, units: str = "mm") -> np.ndarray:
         """
         Get the computed discharge at the outlet of a subbasin.
 
@@ -533,14 +567,35 @@ class Model(ABC):
         ----------
         subbasin_id
             The ID of the subbasin (see :meth:`get_subbasin_ids`).
+        units
+            ``"mm"`` (default) for mm per time step over the area drained at the
+            subbasin outlet, or ``"m3/s"`` for the volumetric discharge.
 
         Returns
         -------
-        The discharge time series, in mm per time step over the area drained at the
-        subbasin outlet (its own hydro units plus every upstream subbasin). For the
-        terminal subbasin this is :meth:`get_outlet_discharge`.
+        The discharge time series. In mm, it is expressed over the area drained at
+        the subbasin outlet (its own hydro units plus every upstream subbasin). For
+        the terminal subbasin this is :meth:`get_outlet_discharge`.
         """
-        return self.model.get_subbasin_discharge(int(subbasin_id))
+        discharge = self.model.get_subbasin_discharge(int(subbasin_id))
+        if _is_volumetric(units):
+            return discharge * self._volumetric_factor(int(subbasin_id))
+        return discharge
+
+    def _volumetric_factor(self, subbasin_id: int) -> float:
+        """The factor turning mm per time step at a subbasin outlet into m³/s."""
+        areas = self.get_subbasin_areas()
+        if subbasin_id not in areas.index:
+            raise ConfigurationError(
+                f"Unknown subbasin {subbasin_id}; declared: {list(areas.index)}.",
+                item_name="subbasin_id",
+                item_value=subbasin_id,
+                reason="Unknown subbasin",
+            )
+        drained_area = float(areas.at[subbasin_id, "drained"])
+        step_seconds = self.time_step_in_days * 86400.0
+
+        return drained_area / 1000.0 / step_seconds
 
     def get_subbasin_ids(self) -> list[int]:
         """
@@ -1009,6 +1064,7 @@ class Model(ABC):
             self.options[key] = value
         # The channel routing is a basic option, but the parameter generation reads it.
         self.options["channel_routing"] = self.channel_routing
+        self.options["route_local_runoff"] = self.route_local_runoff
 
         self._set_specific_options(kwargs)
         self._check_cover_types()
@@ -1110,6 +1166,7 @@ class Model(ABC):
         - 'solver': Numerical solver name
         - 'record_all': Whether to record all state/flux values
         - 'channel_routing': Channel routing scheme between subbasins
+        - 'route_local_runoff': Whether the local runoff travels through the reach
         - 'land_cover_types': List of land cover types
         - 'land_cover_names': List of land cover names
 
@@ -1124,6 +1181,8 @@ class Model(ABC):
             self.record_all = kwargs["record_all"]
         if "channel_routing" in kwargs:
             self.channel_routing = str(kwargs["channel_routing"])
+        if "route_local_runoff" in kwargs:
+            self.route_local_runoff = bool(kwargs["route_local_runoff"])
         if "land_cover_types" in kwargs:
             self.land_cover_types = kwargs["land_cover_types"]
         if "land_cover_names" in kwargs:

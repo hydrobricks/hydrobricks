@@ -28,13 +28,18 @@ void SettingsModel::SetSolver(const string& solverName) {
     _solver.name = solverName;
 }
 
-void SettingsModel::SetChannelRouting(const string& scheme) {
+void SettingsModel::SetChannelRouting(const string& scheme, bool routeLocalRunoff) {
     _channelRouting.scheme = scheme;
+    _channelRouting.routeLocalRunoff = routeLocalRunoff;
     if (_channelRouting.parameters.empty()) {
         // Created once and never reallocated: the reaches keep pointers to these values.
-        _channelRouting.parameters.reserve(2);
+        _channelRouting.parameters.reserve(6);
         _channelRouting.parameters.emplace_back("celerity", 1.0f);
+        _channelRouting.parameters.emplace_back("celerity_exponent", 0.0f);
+        _channelRouting.parameters.emplace_back("reference_discharge", 1.0f);
         _channelRouting.parameters.emplace_back("x", 0.2f);
+        _channelRouting.parameters.emplace_back("width", 10.0f);
+        _channelRouting.parameters.emplace_back("manning", 0.035f);
     }
 }
 

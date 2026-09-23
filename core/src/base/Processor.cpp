@@ -325,7 +325,7 @@ bool Processor::ProcessTimeStep(double timeStepInDays) {
         return false;
     }
 
-    if (!basin->ComputeOutletDischarge()) {
+    if (!basin->ComputeOutletDischarge(timeStepInDays)) {
         return false;
     }
 

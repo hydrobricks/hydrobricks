@@ -10,6 +10,12 @@ namespace {
 constexpr double kSecondsPerDay = 86400.0;
 constexpr int kMaxSubsteps = 100;
 constexpr double kOrdinateTolerance = 1e-6;
+// The celerity is kept in a plausible range for a river: a vanishing discharge would otherwise give a
+// vanishing celerity and an unbounded travel time.
+constexpr double kMinCelerity = 0.05;  // m/s
+constexpr double kMaxCelerity = 10.0;  // m/s
+// Below this discharge the geometry says nothing about the wave speed (a dry channel).
+constexpr double kMinDischarge = 1e-9;  // m3/s
 }  // namespace
 
 Reach::Reach(SubBasin* subbasin)
@@ -27,8 +33,11 @@ Reach::Scheme Reach::SchemeFromString(const string& name) {
     if (name == "muskingum") {
         return Scheme::Muskingum;
     }
-    throw ModelConfigError(
-        std::format("Unknown channel routing scheme '{}' (expected 'none', 'lag' or 'muskingum').", name));
+    if (name == "muskingum_cunge" || name == "muskingum-cunge" || name == "cunge") {
+        return Scheme::MuskingumCunge;
+    }
+    throw ModelConfigError(std::format(
+        "Unknown channel routing scheme '{}' (expected 'none', 'lag', 'muskingum' or 'muskingum_cunge').", name));
 }
 
 void Reach::Initialize() {
@@ -44,17 +53,37 @@ void Reach::Initialize() {
     if (_subbasin->HasProperty("muskingum_x")) {
         _xOverride = _subbasin->GetPropertyDouble("muskingum_x");
     }
+    if (_subbasin->HasProperty("width")) {
+        _widthOverride = _subbasin->GetPropertyDouble("width");
+    }
+    if (_subbasin->HasProperty("manning")) {
+        _manningOverride = _subbasin->GetPropertyDouble("manning");
+    }
 }
 
 void Reach::SetChannelRouting(const ChannelRoutingSettings& settings) {
     _scheme = SchemeFromString(settings.scheme);
+    _routeLocal = settings.routeLocalRunoff;
     _celerity = nullptr;
+    _celerityExponent = nullptr;
+    _referenceDischarge = nullptr;
     _x = nullptr;
+    _width = nullptr;
+    _manning = nullptr;
     for (const auto& parameter : settings.parameters) {
-        if (parameter.GetName() == "celerity") {
+        const string& name = parameter.GetName();
+        if (name == "celerity") {
             _celerity = parameter.GetValuePointer();
-        } else if (parameter.GetName() == "x") {
+        } else if (name == "celerity_exponent") {
+            _celerityExponent = parameter.GetValuePointer();
+        } else if (name == "reference_discharge") {
+            _referenceDischarge = parameter.GetValuePointer();
+        } else if (name == "x") {
             _x = parameter.GetValuePointer();
+        } else if (name == "width") {
+            _width = parameter.GetValuePointer();
+        } else if (name == "manning") {
+            _manning = parameter.GetValuePointer();
         }
     }
     if (_scheme != Scheme::None && _celerity == nullptr && std::isnan(_celerityOverride)) {
@@ -63,13 +92,36 @@ void Reach::SetChannelRouting(const ChannelRoutingSettings& settings) {
     if (_scheme == Scheme::Muskingum && _x == nullptr && std::isnan(_xOverride)) {
         throw ModelConfigError("The Muskingum channel routing scheme needs the 'x' parameter.");
     }
+    if (_scheme == Scheme::MuskingumCunge && _length > 0 && _slope <= 0) {
+        throw ModelConfigError(
+            std::format("The Muskingum-Cunge channel routing needs the slope of the reach of subbasin {}. The "
+                        "subbasin delineation provides it ('slope', in m/m); add it to the subbasin table.",
+                        _subbasin->GetId()));
+    }
     if (_scheme != Scheme::None && _length <= 0) {
         LogWarning("Subbasin {} has no reach length: its routing is instantaneous.", _subbasin->GetId());
     }
     // Force the recomputation of the ordinates / coefficients on the next step.
-    _lastTravelTime = -1;
-    _lastX = -1;
-    _lastTimeStep = -1;
+    _main.lastTravelTime = -1;
+    _main.lastX = -1;
+    _main.lastTimeStep = -1;
+    _local.lastTravelTime = -1;
+    _local.lastX = -1;
+    _local.lastTimeStep = -1;
+}
+
+double Reach::GetWidth() const {
+    if (!std::isnan(_widthOverride)) {
+        return _widthOverride;
+    }
+    return _width ? static_cast<double>(*_width) : 10.0;
+}
+
+double Reach::GetManning() const {
+    if (!std::isnan(_manningOverride)) {
+        return _manningOverride;
+    }
+    return _manning ? static_cast<double>(*_manning) : 0.035;
 }
 
 double Reach::GetCelerity() const {
@@ -86,6 +138,33 @@ double Reach::GetMuskingumX() const {
     return _x ? static_cast<double>(*_x) : 0.2;
 }
 
+double Reach::GetCelerityForDischarge(double dischargeM3s) const {
+    if (_scheme == Scheme::MuskingumCunge) {
+        double width = GetWidth();
+        double manning = GetManning();
+        if (dischargeM3s <= kMinDischarge || width <= 0 || manning <= 0 || _slope <= 0) {
+            return GetCelerity();
+        }
+        // Manning for a wide rectangular channel: the depth from the discharge, then the kinematic wave
+        // celerity, 5/3 of the mean velocity (dQ/dA of the Manning relation).
+        double depth = std::pow(dischargeM3s * manning / (width * std::sqrt(_slope)), 0.6);
+        double velocity = dischargeM3s / (width * depth);
+        return std::clamp(5.0 * velocity / 3.0, kMinCelerity, kMaxCelerity);
+    }
+
+    double celerity = GetCelerity();
+    double exponent = _celerityExponent ? static_cast<double>(*_celerityExponent) : 0.0;
+    if (exponent == 0.0 || dischargeM3s <= kMinDischarge) {
+        return celerity;
+    }
+    double reference = _referenceDischarge ? static_cast<double>(*_referenceDischarge) : 1.0;
+    if (reference <= 0) {
+        return celerity;
+    }
+
+    return std::clamp(celerity * std::pow(dischargeM3s / reference, exponent), kMinCelerity, kMaxCelerity);
+}
+
 double Reach::GetTravelTimeInDays() const {
     double celerity = GetCelerity();
     if (_length <= 0 || celerity <= 0) {
@@ -94,30 +173,70 @@ double Reach::GetTravelTimeInDays() const {
     return _length / (celerity * kSecondsPerDay);
 }
 
-double Reach::Route(double inflowVolume, double timeStepInDays) {
-    _inflow = inflowVolume;
+void Reach::ComputeCungeParameters(double dischargeM3s, double length, double& travelTime, double& x) const {
+    double celerity = GetCelerityForDischarge(dischargeM3s);
+    travelTime = length / (celerity * kSecondsPerDay);
 
-    switch (_scheme) {
-        case Scheme::None:
-            // Instantaneous: what comes in leaves in the same step, nothing stays in transit.
-            _outflow = _inflow;
-            _storage = 0;
-            break;
-        case Scheme::Lag:
-            _outflow = RouteLag(inflowVolume, timeStepInDays);
-            break;
-        case Scheme::Muskingum:
-            _outflow = RouteMuskingum(inflowVolume, timeStepInDays);
-            break;
+    // Cunge's weighting factor: the numerical diffusion of the scheme matches the physical diffusion of the
+    // diffusive wave, X = 0.5 (1 - Q / (B S0 c L)). A dry channel gives no information: keep the parameter.
+    double width = GetWidth();
+    if (dischargeM3s <= kMinDischarge || width <= 0 || _slope <= 0 || length <= 0) {
+        x = GetMuskingumX();
+        return;
     }
+    double unitDischarge = dischargeM3s / width;
+    x = 0.5 * (1.0 - unitDischarge / (_slope * celerity * length));
+    x = std::clamp(x, 0.0, 0.5);
+}
+
+double Reach::RouteUpstream(double inflowVolume, double timeStepInDays) {
+    _inflow = inflowVolume;
+    _outflow = RouteBranch(_main, inflowVolume, _length, timeStepInDays);
 
     return _outflow;
 }
 
-void Reach::ComputeOrdinates(double timeStepInDays) {
-    double travelTime = GetTravelTimeInDays();
-    _lastTravelTime = travelTime;
-    _lastTimeStep = timeStepInDays;
+double Reach::RouteLocal(double localVolume, double timeStepInDays) {
+    if (!RoutesLocalRunoff()) {
+        return localVolume;
+    }
+
+    // Generated uniformly along the reach, the local runoff travels half of it on average.
+    double routed = RouteBranch(_local, localVolume, 0.5 * _length, timeStepInDays);
+    _inflow += localVolume;
+    _outflow += routed;
+
+    return routed;
+}
+
+double Reach::RouteBranch(RoutingState& state, double volume, double length, double timeStepInDays) {
+    if (_scheme == Scheme::None || length <= 0) {
+        state.storage = 0;
+        return volume;
+    }
+
+    // The discharge of the step drives the celerity of the discharge-dependent schemes.
+    double dischargeM3s = volume / (timeStepInDays * kSecondsPerDay);
+
+    if (_scheme == Scheme::MuskingumCunge) {
+        double travelTime = 0;
+        double x = 0;
+        ComputeCungeParameters(dischargeM3s, length, travelTime, x);
+        return RouteMuskingum(state, volume, travelTime, x, timeStepInDays);
+    }
+
+    double celerity = GetCelerityForDischarge(dischargeM3s);
+    double travelTime = celerity > 0 ? length / (celerity * kSecondsPerDay) : 0.0;
+    if (_scheme == Scheme::Lag) {
+        return RouteLag(state, volume, travelTime, timeStepInDays);
+    }
+
+    return RouteMuskingum(state, volume, travelTime, GetMuskingumX(), timeStepInDays);
+}
+
+void Reach::ComputeOrdinates(RoutingState& state, double travelTime, double timeStepInDays) {
+    state.lastTravelTime = travelTime;
+    state.lastTimeStep = timeStepInDays;
 
     // The travel time on the grid of steps: n whole steps and a fraction f of the next one. The water
     // received during a step is a block one step long; shifting it by n + f steps puts a share 1 - f of it in
@@ -133,51 +252,49 @@ void Reach::ComputeOrdinates(double timeStepInDays) {
     }
 
     int size = whole + (fraction > 0.0 ? 2 : 1);
-    _ordinates.assign(size, 0.0);
-    _ordinates[whole] = 1.0 - fraction;
+    state.ordinates.assign(size, 0.0);
+    state.ordinates[whole] = 1.0 - fraction;
     if (fraction > 0.0) {
-        _ordinates[whole + 1] = fraction;
+        state.ordinates[whole + 1] = fraction;
     }
 
     // Resize the schedule, keeping what is already in transit: a shorter travel time folds the water of the
     // dropped slots into the last one rather than losing it.
-    if (static_cast<int>(_schedule.size()) > size) {
-        double dropped = std::accumulate(_schedule.begin() + size, _schedule.end(), 0.0);
-        _schedule.resize(size);
-        _schedule.back() += dropped;
+    if (static_cast<int>(state.schedule.size()) > size) {
+        double dropped = std::accumulate(state.schedule.begin() + size, state.schedule.end(), 0.0);
+        state.schedule.resize(size);
+        state.schedule.back() += dropped;
     } else {
-        _schedule.resize(size, 0.0);
+        state.schedule.resize(size, 0.0);
     }
 }
 
-double Reach::RouteLag(double inflowVolume, double timeStepInDays) {
-    if (GetTravelTimeInDays() != _lastTravelTime || timeStepInDays != _lastTimeStep) {
-        ComputeOrdinates(timeStepInDays);
+double Reach::RouteLag(RoutingState& state, double volume, double travelTime, double timeStepInDays) {
+    if (travelTime != state.lastTravelTime || timeStepInDays != state.lastTimeStep) {
+        ComputeOrdinates(state, travelTime, timeStepInDays);
     }
 
-    for (size_t j = 0; j < _ordinates.size(); ++j) {
-        _schedule[j] += _ordinates[j] * inflowVolume;
+    for (size_t j = 0; j < state.ordinates.size(); ++j) {
+        state.schedule[j] += state.ordinates[j] * volume;
     }
-    double outflow = _schedule[0];
-    for (size_t j = 0; j + 1 < _schedule.size(); ++j) {
-        _schedule[j] = _schedule[j + 1];
+    double outflow = state.schedule[0];
+    for (size_t j = 0; j + 1 < state.schedule.size(); ++j) {
+        state.schedule[j] = state.schedule[j + 1];
     }
-    _schedule.back() = 0.0;
-    _storage = std::accumulate(_schedule.begin(), _schedule.end(), 0.0);
+    state.schedule.back() = 0.0;
+    state.storage = std::accumulate(state.schedule.begin(), state.schedule.end(), 0.0);
 
     return outflow;
 }
 
-void Reach::ComputeCoefficients(double timeStepInDays) {
-    double k = GetTravelTimeInDays();
-    double x = GetMuskingumX();
-    _lastTravelTime = k;
-    _lastX = x;
-    _lastTimeStep = timeStepInDays;
-    _instantaneous = false;
+void Reach::ComputeCoefficients(RoutingState& state, double travelTime, double x, double timeStepInDays) const {
+    state.lastTravelTime = travelTime;
+    state.lastX = x;
+    state.lastTimeStep = timeStepInDays;
+    state.instantaneous = false;
 
-    if (k <= 0) {
-        _instantaneous = true;
+    if (travelTime <= 0) {
+        state.instantaneous = true;
         return;
     }
     if (x < 0 || x > 0.5) {
@@ -186,80 +303,96 @@ void Reach::ComputeCoefficients(double timeStepInDays) {
 
     // The scheme is stable and free of negative outflows when 2KX <= dt <= 2K(1-X). The upper bound is met by
     // sub-stepping (n sub-steps of dt/n); a reach far shorter than one step is treated as instantaneous.
-    double upper = 2.0 * k * (1.0 - x);
+    double upper = 2.0 * travelTime * (1.0 - x);
     double substeps = std::ceil(timeStepInDays / upper);
     if (substeps > kMaxSubsteps) {
         LogDebug(
             "Subbasin {}: the reach travel time ({:.3g} d) is far shorter than the time step; its routing "
             "is instantaneous.",
-            _subbasin->GetId(), k);
-        _instantaneous = true;
+            _subbasin->GetId(), travelTime);
+        state.instantaneous = true;
         return;
     }
-    _substeps = std::max(1, static_cast<int>(substeps));
-    double dt = timeStepInDays / _substeps;
-    double denominator = 2.0 * k * (1.0 - x) + dt;
-    _c0 = (dt - 2.0 * k * x) / denominator;
-    _c1 = (dt + 2.0 * k * x) / denominator;
-    _c2 = (2.0 * k * (1.0 - x) - dt) / denominator;
+    int newSubsteps = std::max(1, static_cast<int>(substeps));
+    double dt = timeStepInDays / newSubsteps;
+    double denominator = 2.0 * travelTime * (1.0 - x) + dt;
+    state.c0 = (dt - 2.0 * travelTime * x) / denominator;
+    state.c1 = (dt + 2.0 * travelTime * x) / denominator;
+    state.c2 = (2.0 * travelTime * (1.0 - x) - dt) / denominator;
 
-    if (_c0 < 0) {
+    if (state.c0 < 0) {
         // dt < 2KX: the response to a rising inflow starts negative and is clamped at zero, which delays the
         // first outflow slightly. Mass is conserved (the storage keeps the difference).
         LogDebug(
             "Subbasin {}: the time step ({:.3g} d) is shorter than 2KX ({:.3g} d); the first Muskingum "
             "response is clamped at zero.",
-            _subbasin->GetId(), dt, 2.0 * k * x);
+            _subbasin->GetId(), dt, 2.0 * travelTime * x);
     }
 
-    // The previous sub-step values refer to the former sub-step length; start afresh.
-    _previousInflow = 0;
-    _previousOutflow = 0;
+    // The previous values are per sub-step: they only carry over while the sub-step length is unchanged. With
+    // the discharge-dependent schemes the coefficients are recomputed at every step, so they must not be
+    // dropped each time, or the scheme would lose its memory of the routed wave.
+    if (newSubsteps != state.substeps) {
+        state.previousInflow = 0;
+        state.previousOutflow = 0;
+    }
+    state.substeps = newSubsteps;
 }
 
-double Reach::RouteMuskingum(double inflowVolume, double timeStepInDays) {
-    if (GetTravelTimeInDays() != _lastTravelTime || GetMuskingumX() != _lastX || timeStepInDays != _lastTimeStep) {
-        ComputeCoefficients(timeStepInDays);
+double Reach::RouteMuskingum(RoutingState& state, double volume, double travelTime, double x, double timeStepInDays) {
+    if (travelTime != state.lastTravelTime || x != state.lastX || timeStepInDays != state.lastTimeStep) {
+        ComputeCoefficients(state, travelTime, x, timeStepInDays);
     }
-    if (_instantaneous) {
-        _storage = 0;
-        return inflowVolume;
+    if (state.instantaneous) {
+        state.storage = 0;
+        return volume;
     }
 
-    double inflow = inflowVolume / _substeps;
+    double inflow = volume / state.substeps;
     double outflow = 0;
-    for (int i = 0; i < _substeps; ++i) {
-        double out = _c0 * inflow + _c1 * _previousInflow + _c2 * _previousOutflow;
+    for (int i = 0; i < state.substeps; ++i) {
+        double out = state.c0 * inflow + state.c1 * state.previousInflow + state.c2 * state.previousOutflow;
         // Never negative, never more than what the reach holds: the storage stays the exact balance.
-        out = std::max(0.0, std::min(out, _storage + inflow));
-        _storage += inflow - out;
-        _previousInflow = inflow;
-        _previousOutflow = out;
+        out = std::max(0.0, std::min(out, state.storage + inflow));
+        state.storage += inflow - out;
+        state.previousInflow = inflow;
+        state.previousOutflow = out;
         outflow += out;
     }
 
     return outflow;
 }
 
+void Reach::ResetState(RoutingState& state) {
+    state.schedule = state.initialSchedule;
+    // The schedule must stay aligned with the ordinates: no state may have been saved (empty initial
+    // schedule), or the travel time may have changed since. Fold any excess into the last slot, pad with
+    // zeros otherwise.
+    if (!state.ordinates.empty() && state.schedule.size() > state.ordinates.size()) {
+        double dropped = std::accumulate(state.schedule.begin() + static_cast<long>(state.ordinates.size()),
+                                         state.schedule.end(), 0.0);
+        state.schedule.resize(state.ordinates.size());
+        state.schedule.back() += dropped;
+    }
+    state.schedule.resize(state.ordinates.size(), 0.0);
+    state.previousInflow = 0;
+    state.previousOutflow = 0;
+}
+
 void Reach::Reset() {
     _inflow = 0;
     _outflow = 0;
-    _schedule = _initialSchedule;
-    // The schedule must stay aligned with the ordinates: no state may have been saved (empty initial schedule),
-    // or the travel time may have changed since. Fold any excess into the last slot, pad with zeros otherwise.
-    if (!_ordinates.empty() && _schedule.size() > _ordinates.size()) {
-        double dropped = std::accumulate(_schedule.begin() + static_cast<long>(_ordinates.size()), _schedule.end(),
-                                         0.0);
-        _schedule.resize(_ordinates.size());
-        _schedule.back() += dropped;
-    }
-    _schedule.resize(_ordinates.size(), 0.0);
-    _storage = _scheme == Scheme::Lag ? std::accumulate(_schedule.begin(), _schedule.end(), 0.0) : _initialStorage;
-    _previousInflow = 0;
-    _previousOutflow = 0;
+    ResetState(_main);
+    ResetState(_local);
+    bool isLag = _scheme == Scheme::Lag;
+    _main.storage = isLag ? std::accumulate(_main.schedule.begin(), _main.schedule.end(), 0.0) : _main.initialStorage;
+    _local.storage = isLag ? std::accumulate(_local.schedule.begin(), _local.schedule.end(), 0.0)
+                           : _local.initialStorage;
 }
 
 void Reach::SaveAsInitialState() {
-    _initialStorage = _storage;
-    _initialSchedule = _schedule;
+    _main.initialStorage = _main.storage;
+    _main.initialSchedule = _main.schedule;
+    _local.initialStorage = _local.storage;
+    _local.initialSchedule = _local.schedule;
 }

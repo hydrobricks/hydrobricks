@@ -187,7 +187,9 @@ PYBIND11_MODULE(_hydrobricks, m) {
              "Add a new (empty) model-structure variant and select it. Returns its id.")
         .def("set_solver", &SettingsModel::SetSolver, "Set the solver.", "name"_a)
         .def("set_channel_routing", &SettingsModel::SetChannelRouting,
-             "Set the channel routing scheme between the subbasins ('none', 'lag' or 'muskingum').", "scheme"_a)
+             "Set the channel routing scheme between the subbasins ('none', 'lag', 'muskingum' or "
+             "'muskingum_cunge') and whether the local runoff is routed too.",
+             "scheme"_a, "route_local_runoff"_a = false)
         .def("set_timer", &SettingsModel::SetTimer, "Set the modelling time properties.", "start_date"_a, "end_date"_a,
              "time_step"_a, "time_step_unit"_a)
         .def("set_spinup_days", &SettingsModel::SetSpinupDays,

@@ -22,6 +22,7 @@ struct SolverSettings {
  */
 struct ChannelRoutingSettings {
     string scheme = "none";
+    bool routeLocalRunoff = false;
     vector<Parameter> parameters;
 };
 
@@ -96,12 +97,15 @@ class SettingsModel {
     void SetSolver(const string& solverName);
 
     /**
-     * Set the channel routing scheme between the subbasins ('none', 'lag' or 'muskingum') and create its
-     * parameters with their default values (celerity 1 m/s, x 0.2).
+     * Set the channel routing scheme between the subbasins ('none', 'lag', 'muskingum' or 'muskingum_cunge')
+     * and create its parameters with their default values (celerity 1 m/s, celerity exponent 0, reference
+     * discharge 1 m3/s, x 0.2, width 10 m, Manning roughness 0.035).
      *
      * @param scheme name of the routing scheme.
+     * @param routeLocalRunoff whether the sub basin's own runoff is routed through half of its reach, instead
+     * of joining at the outlet.
      */
-    void SetChannelRouting(const string& scheme);
+    void SetChannelRouting(const string& scheme, bool routeLocalRunoff = false);
 
     /**
      * Set the timer settings.

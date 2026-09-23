@@ -395,19 +395,27 @@ double* SubBasin::GetValuePointer(std::string_view name) {
     return nullptr;
 }
 
-bool SubBasin::ComputeOutletDischarge() {
+bool SubBasin::ComputeOutletDischarge(double timeStepInDays) {
     // Own runoff, in mm over the local area (the outlet fluxes are pre-weighted by unit area / local area).
     _outletTotal = 0;
     for (auto flux : _outletFluxes) {
         _outletTotal += flux->GetAmount();
     }
 
+    // The own runoff travels through half the reach when the channel routing routes it (it is generated
+    // along the reach), else it joins the outlet directly.
+    double localVolume = _outletTotal * _area;
+    bool routesLocal = _reach != nullptr && _reach->RoutesLocalRunoff();
+    if (routesLocal) {
+        localVolume = _reach->RouteLocal(localVolume, timeStepInDays);
+    }
+
     // At the outlet, the own runoff joins the volume routed from upstream (set by the river network before
     // this sub basin is processed). The discharge reported at the outlet is expressed over the drained area,
-    // which is what a gauge normalized by its catchment area shows. Without upstream inflow it is the local
-    // total itself (assigned, not recomputed, so single-sub basin runs stay bit-identical).
-    _outletVolume = _outletTotal * _area + _inflowVolume;
-    _outletDischarge = _hasUpstream ? _outletVolume / _drainedArea : _outletTotal;
+    // which is what a gauge normalized by its catchment area shows. Without upstream inflow nor local routing
+    // it is the local total itself (assigned, not recomputed, so single-sub basin runs stay bit-identical).
+    _outletVolume = localVolume + _inflowVolume;
+    _outletDischarge = (_hasUpstream || routesLocal) ? _outletVolume / _drainedArea : _outletTotal;
 
     // The reach values, logged in the same unit as the outlet (mm over the drained area).
     if (_reach != nullptr && _hasUpstream) {

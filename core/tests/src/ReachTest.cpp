@@ -2,6 +2,7 @@
 
 #include <cmath>
 #include <numeric>
+#include <utility>
 
 #include "Reach.h"
 #include "SettingsBasin.h"
@@ -21,12 +22,22 @@ struct Fixture {
     SettingsModel settings;
     std::unique_ptr<Reach> reach;
 
-    Fixture(const string& scheme, double lengthM, float celerity, float x = 0.2f) {
+    Fixture(const string& scheme, double lengthM, float celerity, float x = 0.2f, double slope = 0, double width = 0,
+            double manning = 0, bool routeLocal = false) {
         SubbasinSettings subbasinSettings;
         subbasinSettings.id = 1;
         subbasinSettings.propertiesDouble.push_back({"length", lengthM, "m"});
+        if (slope > 0) {
+            subbasinSettings.propertiesDouble.push_back({"slope", slope, "m/m"});
+        }
+        if (width > 0) {
+            subbasinSettings.propertiesDouble.push_back({"width", width, "m"});
+        }
+        if (manning > 0) {
+            subbasinSettings.propertiesDouble.push_back({"manning", manning, ""});
+        }
         subbasin.SetNetworkProperties(subbasinSettings);
-        settings.SetChannelRouting(scheme);
+        settings.SetChannelRouting(scheme, routeLocal);
         settings.SetParameterValue("channel", "celerity", celerity);
         settings.SetParameterValue("channel", "x", x);
         reach = std::make_unique<Reach>(&subbasin);
@@ -34,11 +45,18 @@ struct Fixture {
         reach->SetChannelRouting(settings.GetChannelRoutingSettings());
     }
 
+    // One time step of the real loop: the upstream branch first, then the local runoff.
+    std::pair<double, double> Step(double upstream, double local, double dt = kDay) const {
+        double routedUpstream = reach->RouteUpstream(upstream, dt);
+        double routedLocal = reach->RouteLocal(local, dt);
+        return {routedUpstream, routedLocal};
+    }
+
     // Route a pulse of the given volume at step 0, then zeros; returns the outflow series.
     vecDouble Pulse(double volume, int steps, double dt = kDay) const {
         vecDouble out;
         for (int t = 0; t < steps; ++t) {
-            out.push_back(reach->Route(t == 0 ? volume : 0.0, dt));
+            out.push_back(reach->RouteUpstream(t == 0 ? volume : 0.0, dt));
         }
         return out;
     }
@@ -110,13 +128,13 @@ TEST(Reach, LagHourlyStepGivesTheSameDailyArrival) {
 
 TEST(Reach, LagStorageTracksWaterInTransit) {
     Fixture f("lag", 3.0 * kSecondsPerDay, 1.0f);
-    f.reach->Route(100.0, kDay);
+    f.reach->RouteUpstream(100.0, kDay);
     EXPECT_NEAR(f.reach->GetStorage(), 100.0, 1e-12);
-    f.reach->Route(50.0, kDay);
+    f.reach->RouteUpstream(50.0, kDay);
     EXPECT_NEAR(f.reach->GetStorage(), 150.0, 1e-12);
-    f.reach->Route(0.0, kDay);
+    f.reach->RouteUpstream(0.0, kDay);
     EXPECT_NEAR(f.reach->GetStorage(), 150.0, 1e-12);
-    EXPECT_NEAR(f.reach->Route(0.0, kDay), 100.0, 1e-12);
+    EXPECT_NEAR(f.reach->RouteUpstream(0.0, kDay), 100.0, 1e-12);
     EXPECT_NEAR(f.reach->GetStorage(), 50.0, 1e-12);
 }
 
@@ -174,7 +192,7 @@ TEST(Reach, MuskingumNeverGoesNegativeWhenTheStepIsShort) {
 
 TEST(Reach, MuskingumRejectsAnInvalidWeightingFactor) {
     Fixture f("muskingum", 2.0 * kSecondsPerDay, 1.0f, 0.7f);
-    EXPECT_THROW(f.reach->Route(1.0, kDay), ModelConfigError);
+    EXPECT_THROW(f.reach->RouteUpstream(1.0, kDay), ModelConfigError);
 }
 
 TEST(Reach, SubbasinPropertiesOverrideTheParameters) {
@@ -209,16 +227,16 @@ TEST(Reach, ParameterChangeIsPickedUpBetweenRuns) {
 
 TEST(Reach, ResetRestoresTheSavedState) {
     Fixture f("lag", 2.0 * kSecondsPerDay, 1.0f);
-    f.reach->Route(100.0, kDay);
+    f.reach->RouteUpstream(100.0, kDay);
     f.reach->SaveAsInitialState();
-    f.reach->Route(0.0, kDay);
-    f.reach->Route(0.0, kDay);
+    f.reach->RouteUpstream(0.0, kDay);
+    f.reach->RouteUpstream(0.0, kDay);
     EXPECT_NEAR(f.reach->GetStorage(), 0.0, 1e-12);
     f.reach->Reset();
     EXPECT_NEAR(f.reach->GetStorage(), 100.0, 1e-12);
     // The saved water was due two steps after its arrival: one step remains.
-    EXPECT_NEAR(f.reach->Route(0.0, kDay), 0.0, 1e-12);
-    EXPECT_NEAR(f.reach->Route(0.0, kDay), 100.0, 1e-12);
+    EXPECT_NEAR(f.reach->RouteUpstream(0.0, kDay), 0.0, 1e-12);
+    EXPECT_NEAR(f.reach->RouteUpstream(0.0, kDay), 100.0, 1e-12);
 }
 
 TEST(SettingsModel, ChannelRoutingParametersAreSettable) {
@@ -226,11 +244,18 @@ TEST(SettingsModel, ChannelRoutingParametersAreSettable) {
     EXPECT_FALSE(settings.SetParameterValue("channel", "celerity", 2.0f));  // no scheme yet
     settings.SetChannelRouting("lag");
     EXPECT_TRUE(settings.SetParameterValue("channel", "celerity", 2.0f));
-    EXPECT_FALSE(settings.SetParameterValue("channel", "manning", 0.03f));
+    EXPECT_TRUE(settings.SetParameterValue("channel", "manning", 0.03f));
+    EXPECT_FALSE(settings.SetParameterValue("channel", "no_such_parameter", 1.0f));
     const ChannelRoutingSettings& routing = settings.GetChannelRoutingSettings();
     EXPECT_EQ(routing.scheme, "lag");
-    ASSERT_EQ(routing.parameters.size(), 2);
+    EXPECT_FALSE(routing.routeLocalRunoff);
+    ASSERT_EQ(routing.parameters.size(), 6);
     EXPECT_FLOAT_EQ(routing.parameters[0].GetValue(), 2.0f);
+
+    settings.SetChannelRouting("muskingum_cunge", true);
+    EXPECT_TRUE(settings.GetChannelRoutingSettings().routeLocalRunoff);
+    // The parameters are created once: the reaches keep pointers into them.
+    EXPECT_EQ(settings.GetChannelRoutingSettings().parameters.size(), 6);
 }
 
 TEST(Reach, ResetWithoutSavedStateKeepsTheScheduleAligned) {
@@ -255,4 +280,152 @@ TEST(Reach, ResetWithoutSavedStateKeepsTheScheduleAligned) {
     for (int t = 0; t < 5; ++t) {
         EXPECT_NEAR(b[t], a[t], 1e-12) << "t=" << t;
     }
+}
+
+// ---- Discharge-dependent celerity --------------------------------------------------------------
+
+TEST(Reach, CelerityIsConstantByDefault) {
+    Fixture f("lag", 2.0 * kSecondsPerDay, 1.0f);
+    EXPECT_DOUBLE_EQ(f.reach->GetCelerityForDischarge(0.5), 1.0);
+    EXPECT_DOUBLE_EQ(f.reach->GetCelerityForDischarge(50.0), 1.0);
+}
+
+TEST(Reach, CelerityFollowsThePowerLawWhenAnExponentIsSet) {
+    Fixture f("lag", 2.0 * kSecondsPerDay, 1.0f);
+    f.settings.SetParameterValue("channel", "celerity_exponent", 0.4f);
+    f.settings.SetParameterValue("channel", "reference_discharge", 10.0f);
+    // c = c_ref (Q / Q_ref)^0.4: the reference discharge gives the reference celerity.
+    // The parameters are floats, hence the tolerance.
+    EXPECT_NEAR(f.reach->GetCelerityForDischarge(10.0), 1.0, 1e-6);
+    EXPECT_NEAR(f.reach->GetCelerityForDischarge(40.0), std::pow(4.0, 0.4), 1e-6);
+    // A vanishing discharge keeps the reference celerity rather than a vanishing one.
+    EXPECT_DOUBLE_EQ(f.reach->GetCelerityForDischarge(0.0), 1.0);
+    // The celerity stays in a plausible range for a river.
+    EXPECT_LE(f.reach->GetCelerityForDischarge(1e12), 10.0);
+    EXPECT_GE(f.reach->GetCelerityForDischarge(1e-6), 0.05);
+}
+
+TEST(Reach, ADischargeDependentCelerityRoutesABigPulseFaster) {
+    // 2 days of travel at the reference discharge; a pulse ten times larger travels faster.
+    auto arrival = [](double volume) {
+        Fixture f("lag", 2.0 * kSecondsPerDay, 1.0f);
+        f.settings.SetParameterValue("channel", "celerity_exponent", 0.4f);
+        f.settings.SetParameterValue("channel", "reference_discharge", 1.0f);
+        vecDouble out = f.Pulse(volume, 6);
+        double total = Sum(out);
+        double weighted = 0;
+        for (int t = 0; t < static_cast<int>(out.size()); ++t) {
+            weighted += t * out[t];
+        }
+        return weighted / total;  // the mean arrival step
+    };
+    double small = arrival(86400.0);         // 1 m3/s
+    double large = arrival(10.0 * 86400.0);  // 10 m3/s
+    EXPECT_LT(large, small);
+}
+
+// ---- Muskingum-Cunge ---------------------------------------------------------------------------
+
+TEST(Reach, MuskingumCungeNeedsTheReachSlope) {
+    // The scheme is physically based: without the slope it cannot compute the wave celerity.
+    EXPECT_THROW(Fixture("muskingum_cunge", 10000.0, 1.0f, 0.2f), ModelConfigError);
+    EXPECT_NO_THROW(Fixture("muskingum_cunge", 10000.0, 1.0f, 0.2f, 0.005, 20.0, 0.035));
+}
+
+TEST(Reach, MuskingumCungeCelerityFollowsTheManningRelation) {
+    Fixture f("muskingum_cunge", 10000.0, 1.0f, 0.2f, 0.005, 20.0, 0.035);
+    EXPECT_EQ(f.reach->GetScheme(), Reach::Scheme::MuskingumCunge);
+    EXPECT_DOUBLE_EQ(f.reach->GetWidth(), 20.0);
+    EXPECT_DOUBLE_EQ(f.reach->GetManning(), 0.035);
+
+    // Under Manning, the depth scales as Q^0.6 and the velocity (hence the celerity) as Q^0.4.
+    double c1 = f.reach->GetCelerityForDischarge(10.0);
+    double c4 = f.reach->GetCelerityForDischarge(40.0);
+    EXPECT_NEAR(c4 / c1, std::pow(4.0, 0.4), 1e-6);
+    // A plausible mountain-river wave speed, and faster than the mean velocity.
+    EXPECT_GT(c1, 1.0);
+    EXPECT_LT(c1, 4.0);
+
+    // A gentler slope and a rougher bed both slow the wave down.
+    Fixture gentle("muskingum_cunge", 10000.0, 1.0f, 0.2f, 0.0005, 20.0, 0.035);
+    EXPECT_LT(gentle.reach->GetCelerityForDischarge(10.0), c1);
+    Fixture rough("muskingum_cunge", 10000.0, 1.0f, 0.2f, 0.005, 20.0, 0.08);
+    EXPECT_LT(rough.reach->GetCelerityForDischarge(10.0), c1);
+
+    // A dry channel gives no information: the reference celerity is kept.
+    EXPECT_DOUBLE_EQ(f.reach->GetCelerityForDischarge(0.0), 1.0);
+}
+
+TEST(Reach, MuskingumCungeConservesMassAndAttenuates) {
+    Fixture f("muskingum_cunge", 20000.0, 1.0f, 0.2f, 0.002, 20.0, 0.035);
+    vecDouble out = f.Pulse(10.0 * 86400.0, 40);
+    for (double v : out) {
+        EXPECT_GE(v, 0.0);
+    }
+    EXPECT_NEAR(Sum(out) + f.reach->GetStorage(), 10.0 * 86400.0, 1e-6);
+    // The wave is delayed and spread: the first step carries less than the whole pulse.
+    EXPECT_LT(out[0], 10.0 * 86400.0);
+    EXPECT_GT(Sum(out), 0.0);
+}
+
+TEST(Reach, MuskingumCungeNeedsNoCelerityCalibration) {
+    // The celerity parameter is irrelevant once the geometry drives the scheme: two reaches differing only
+    // by it route the same pulse identically.
+    Fixture a("muskingum_cunge", 20000.0, 1.0f, 0.2f, 0.002, 20.0, 0.035);
+    Fixture b("muskingum_cunge", 20000.0, 5.0f, 0.4f, 0.002, 20.0, 0.035);
+    vecDouble outA = a.Pulse(10.0 * 86400.0, 20);
+    vecDouble outB = b.Pulse(10.0 * 86400.0, 20);
+    for (size_t t = 0; t < outA.size(); ++t) {
+        EXPECT_NEAR(outB[t], outA[t], 1e-9) << "t=" << t;
+    }
+}
+
+// ---- Local runoff ------------------------------------------------------------------------------
+
+TEST(Reach, LocalRunoffJoinsAtTheOutletByDefault) {
+    Fixture f("lag", 2.0 * kSecondsPerDay, 1.0f);
+    EXPECT_FALSE(f.reach->RoutesLocalRunoff());
+    auto [upstream, local] = f.Step(0.0, 100.0);
+    EXPECT_DOUBLE_EQ(local, 100.0);  // unchanged, no travel time
+    EXPECT_DOUBLE_EQ(upstream, 0.0);
+    EXPECT_DOUBLE_EQ(f.reach->GetInflow(), 0.0);  // the local runoff never enters the reach
+}
+
+TEST(Reach, LocalRunoffTravelsHalfTheReach) {
+    // Two days of travel over the whole reach, so one day over the half the local runoff sees.
+    Fixture f("lag", 2.0 * kSecondsPerDay, 1.0f, 0.2f, 0, 0, 0, true);
+    EXPECT_TRUE(f.reach->RoutesLocalRunoff());
+
+    vecDouble local;
+    vecDouble upstream;
+    for (int t = 0; t < 5; ++t) {
+        auto [up, loc] = f.Step(t == 0 ? 100.0 : 0.0, t == 0 ? 50.0 : 0.0);
+        upstream.push_back(up);
+        local.push_back(loc);
+    }
+    // The upstream pulse arrives after two steps, the local one after a single step.
+    EXPECT_DOUBLE_EQ(upstream[2], 100.0);
+    EXPECT_DOUBLE_EQ(local[1], 50.0);
+    EXPECT_DOUBLE_EQ(local[0], 0.0);
+    EXPECT_NEAR(Sum(local), 50.0, 1e-12);
+    EXPECT_NEAR(Sum(upstream), 100.0, 1e-12);
+}
+
+TEST(Reach, LocalRunoffIsPartOfTheReachWaterBalance) {
+    Fixture f("lag", 2.0 * kSecondsPerDay, 1.0f, 0.2f, 0, 0, 0, true);
+    f.Step(100.0, 50.0);
+    // Both branches entered the reach and are still in transit.
+    EXPECT_DOUBLE_EQ(f.reach->GetInflow(), 150.0);
+    EXPECT_DOUBLE_EQ(f.reach->GetOutflow(), 0.0);
+    EXPECT_NEAR(f.reach->GetStorage(), 150.0, 1e-12);
+    f.Step(0.0, 0.0);
+    EXPECT_NEAR(f.reach->GetStorage(), 100.0, 1e-12);  // the local half delivered
+}
+
+TEST(Reach, LocalRunoffRoutingIsIgnoredWithoutAScheme) {
+    Fixture f("none", 2.0 * kSecondsPerDay, 1.0f, 0.2f, 0, 0, 0, true);
+    EXPECT_FALSE(f.reach->RoutesLocalRunoff());
+    auto [upstream, local] = f.Step(100.0, 50.0);
+    EXPECT_DOUBLE_EQ(upstream, 100.0);
+    EXPECT_DOUBLE_EQ(local, 50.0);
 }

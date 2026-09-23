@@ -17,6 +17,7 @@ class ModelSettings:
         solver: str = "crank_nicolson",
         record_all: bool = False,
         channel_routing: str = "none",
+        route_local_runoff: bool = False,
         **kwargs: Any,
     ) -> None:
         """
@@ -51,15 +52,20 @@ class ModelSettings:
         channel_routing
             Channel routing scheme between the subbasins of a river network (see
             :meth:`set_channel_routing`). Default: ``"none"``
+        route_local_runoff
+            Whether a subbasin's own runoff travels through half of its reach
+            instead of joining at its outlet. Default: False
         kwargs
             Keyword arguments
         """
         self.settings: SettingsModel = SettingsModel()
         self.settings.log_all(record_all)
         self.settings.set_solver(solver)
-        self.settings.set_channel_routing(channel_routing)
+        self.settings.set_channel_routing(channel_routing, route_local_runoff)
 
-    def set_channel_routing(self, scheme: str) -> None:
+    def set_channel_routing(
+        self, scheme: str, route_local_runoff: bool = False
+    ) -> None:
         """
         Set the channel routing scheme between the subbasins of a river network.
 
@@ -77,12 +83,25 @@ class ModelSettings:
               of each reach.
             - ``"muskingum"`` -- the Muskingum method with ``K = length / celerity``
               and the weighting factor ``x``.
+            - ``"muskingum_cunge"`` -- the Muskingum method with ``K`` and ``x``
+              derived at every time step from the channel geometry (reach length,
+              slope, width and Manning roughness) and the discharge, so nothing has
+              to be calibrated.
 
-            The reach ``length`` [m] is a subbasin property; ``celerity`` [m/s] and
-            ``x`` [-] are model parameters (component ``channel``), which a
-            subbasin's ``celerity`` / ``muskingum_x`` properties override.
+            The reach ``length`` [m] and ``slope`` [m/m] are subbasin properties;
+            ``celerity`` [m/s], ``x`` [-], ``width`` [m] and ``manning``
+            [s/m^(1/3)] are model parameters (component ``channel``), which the
+            subbasin properties ``celerity``, ``muskingum_x``, ``width`` and
+            ``manning`` override reach by reach. With ``lag`` and ``muskingum``,
+            a non-zero ``celerity_exponent`` makes the celerity vary with the
+            discharge, as ``celerity (Q / reference_discharge) ** exponent``.
+
+        route_local_runoff
+            Whether a subbasin's own runoff travels through half of its reach
+            (it is generated along the reach, so it travels half of it on average)
+            instead of joining at its outlet with no delay. Default: False
         """
-        self.settings.set_channel_routing(scheme)
+        self.settings.set_channel_routing(scheme, route_local_runoff)
 
     def set_solver(self, solver: str) -> None:
         """

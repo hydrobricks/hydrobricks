@@ -70,8 +70,55 @@ _ROUTING_CELERITY = ParamSpec(
     default=1.0,
 )
 
+# Optional: a non-zero exponent makes the celerity vary with the discharge, as
+# celerity (Q / reference_discharge) ** exponent. Manning gives about 0.4 for a wide
+# channel. Zero (the default) keeps the celerity constant.
+_ROUTING_CELERITY_VARIATION = [
+    ParamSpec(
+        name="celerity_exponent",
+        unit="-",
+        aliases=["channel_celerity_exponent"],
+        min=0.0,
+        max=0.8,
+        default=0.0,
+        mandatory=False,
+    ),
+    ParamSpec(
+        name="reference_discharge",
+        unit="m3/s",
+        aliases=["channel_reference_discharge"],
+        min=0.001,
+        max=1000.0,
+        default=1.0,
+        mandatory=False,
+    ),
+]
+
+# Muskingum-Cunge: the channel geometry replaces the calibrated celerity. The reach
+# length and slope come from the subbasin table (the delineation provides them).
+_ROUTING_GEOMETRY = [
+    ParamSpec(
+        name="width",
+        unit="m",
+        aliases=["channel_width"],
+        min=0.5,
+        max=500.0,
+        default=10.0,
+        mandatory=False,
+    ),
+    ParamSpec(
+        name="manning",
+        unit="s/m^(1/3)",
+        aliases=["channel_manning"],
+        min=0.01,
+        max=0.15,
+        default=0.035,
+        mandatory=False,
+    ),
+]
+
 CHANNEL_ROUTING_PARAM_SPECS: dict[str, list[ParamSpec]] = {
-    "lag": [_ROUTING_CELERITY],
+    "lag": [_ROUTING_CELERITY, *_ROUTING_CELERITY_VARIATION],
     "muskingum": [
         _ROUTING_CELERITY,
         ParamSpec(
@@ -82,7 +129,11 @@ CHANNEL_ROUTING_PARAM_SPECS: dict[str, list[ParamSpec]] = {
             max=0.5,
             default=0.2,
         ),
+        *_ROUTING_CELERITY_VARIATION,
     ],
+    # Muskingum-Cunge needs no celerity: it is computed from the geometry and the
+    # discharge at every time step.
+    "muskingum_cunge": list(_ROUTING_GEOMETRY),
 }
 
 # -----------------------------------------------------------------------------

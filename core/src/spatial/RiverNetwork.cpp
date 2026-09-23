@@ -112,7 +112,7 @@ void RiverNetwork::TransferInflow(SubBasin* subbasin, double timeStepInDays) {
     for (const SubBasin* upstream : _upstream.at(subbasin)) {
         inflowVolume += upstream->GetOutletVolume();
     }
-    subbasin->SetInflowVolume(subbasin->GetReach()->Route(inflowVolume, timeStepInDays));
+    subbasin->SetInflowVolume(subbasin->GetReach()->RouteUpstream(inflowVolume, timeStepInDays));
 }
 
 void RiverNetwork::SetChannelRouting(const ChannelRoutingSettings& settings) {

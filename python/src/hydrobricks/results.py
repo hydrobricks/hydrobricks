@@ -238,6 +238,73 @@ class Results:
 
         return self._select_time(areas, start_date, end_date)
 
+    def get_discharge(
+        self,
+        subbasin_id: int | None = None,
+        units: str = "m3/s",
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> np.ndarray:
+        """
+        Get the discharge at a subbasin outlet, in mm per time step or in m³/s.
+
+        Parameters
+        ----------
+        subbasin_id
+            The subbasin to read. None (default) reads the catchment outlet.
+        units
+            ``"m3/s"`` (default) for the volumetric discharge a gauge records, or
+            ``"mm"`` for mm per time step over the area drained at that outlet, as
+            the model computes it.
+        start_date, end_date
+            Optional bounds of the period to extract (``YYYY-MM-DD``).
+
+        Returns
+        -------
+        The discharge over time.
+
+        Raises
+        ------
+        DataError
+            If the subbasin does not exist, or the units are not recognized.
+        """
+        values = self.get_subbasin_values("outlet", subbasin_id, start_date, end_date)
+        key = str(units).replace(" ", "").lower()
+        if key in ("mm", "mm/step", "mm/d", "mm/day", "mm/h", "mm/hour"):
+            return values
+        if key not in ("m3/s", "m^3/s", "m³/s", "cms", "cumecs"):
+            raise DataError(
+                f"Unknown discharge units '{units}': expected 'mm' or 'm3/s'.",
+                data_type="results",
+                reason="Unknown units",
+            )
+
+        return values * self._drained_area(subbasin_id) / 1000.0 / self._step_seconds()
+
+    def _drained_area(self, subbasin_id: int | None) -> float:
+        """The area drained at a subbasin outlet [m²], from the results file."""
+        if "subbasin_drained_areas" in self.results:
+            areas = self.results.subbasin_drained_areas.to_numpy()
+            ids = list(self.subbasin_ids)
+            index = len(ids) - 1 if subbasin_id is None else ids.index(int(subbasin_id))
+            return float(areas[index])
+        # Written before the river network: the single subbasin is the catchment.
+        return float(self.results.hydro_units_areas.to_numpy().sum())
+
+    def _step_seconds(self) -> float:
+        """The computation time step [s], from the recorded time axis."""
+        time = self.results.time.to_numpy()
+        if len(time) < 2:
+            raise DataError(
+                "The results hold a single time step; the time step cannot be "
+                "derived to convert the discharge to m3/s.",
+                data_type="results",
+                reason="Single time step",
+            )
+        step = np.median(np.diff(time))
+
+        return float(step / np.timedelta64(1, "s"))
+
     def get_subbasin_structure_ids(self) -> np.ndarray:
         """
         Get the model structure variant used by each subbasin's catchment-level

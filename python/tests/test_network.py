@@ -608,3 +608,193 @@ def test_glacier_free_subbasin_carries_no_glacier_reservoir(tmp_path):
         assert np.all(np.isfinite(results.get_subbasin_values("outlet", 1)))
     assert socont.get_total_outlet_discharge() > 0
     assert np.isfinite(socont.get_total_water_storage_changes())
+
+
+# ---- Muskingum-Cunge, variable celerity, local runoff, discharge in m3/s -------------
+
+
+def _split_units_with_geometry(length_m: float = 86400.0) -> hb.HydroUnits:
+    """The split Sitter with the full reach geometry the physical schemes need."""
+    hydro_units = _load_units(STGALLEN_HUS)
+    ids = hydro_units.hydro_units["id"].iloc[:, 0].to_numpy()
+    hydro_units.add_property(("subbasin", "-"), np.where(ids >= _UPSTREAM_MIN_ID, 2, 1))
+    hydro_units.set_subbasins(
+        pd.DataFrame(
+            {
+                "id": [1, 2],
+                "downstream": [0, 1],
+                "length": [length_m, 3000.0],
+                "slope": [0.004, 0.02],
+                "width": [15.0, 6.0],
+                "manning": [0.035, 0.05],
+            }
+        )
+    )
+    return hydro_units
+
+
+def _run_scheme(out: Path, hydro_units, scheme: str, **params) -> models.Socont:
+    model = models.Socont(
+        soil_storage_nb=2,
+        surface_runoff="linear_storage",
+        channel_routing=scheme,
+        route_local_runoff=params.pop("route_local_runoff", False),
+    )
+    parameters = model.generate_parameters()
+    parameters.set_values(
+        {
+            "A": 2000,
+            "a_snow": 3,
+            "k_slow_1": 0.9,
+            "k_slow_2": 0.8,
+            "k_quick": 1,
+            "percol": 9.8,
+            **params,
+        }
+    )
+    out.mkdir(parents=True, exist_ok=True)
+    model.setup(
+        spatial_structure=hydro_units,
+        output_path=str(out),
+        start_date=_START,
+        end_date="1981-06-30",
+    )
+    model.run(parameters=parameters, forcing=_forcing(hydro_units))
+    return model
+
+
+def test_muskingum_cunge_parameters_replace_the_celerity():
+    """The geometry drives the scheme, so there is no celerity to calibrate."""
+    params = models.Socont(
+        surface_runoff="linear_storage", channel_routing="muskingum_cunge"
+    ).generate_parameters()
+    assert params.has("channel_width")
+    assert params.has("channel_manning")
+    assert not params.has("channel_celerity")
+    assert not params.has("muskingum_x")
+    # The geometry has defaults, so nothing has to be set for the model to run.
+    assert params.get("channel_width") == 10.0
+    assert params.get("channel_manning") == 0.035
+    undefined = params.get_undefined()
+    assert "width" not in undefined and "manning" not in undefined
+
+    # The lag and Muskingum schemes keep the celerity, plus its optional variation.
+    lag = models.Socont(
+        surface_runoff="linear_storage", channel_routing="lag"
+    ).generate_parameters()
+    assert lag.has("channel_celerity")
+    assert lag.has("channel_celerity_exponent")
+    assert lag.has("channel_reference_discharge")
+
+
+def test_muskingum_cunge_needs_the_reach_slope(tmp_path):
+    hydro_units = _split_units_with_reaches(86400.0)  # length but no slope
+    model = models.Socont(
+        soil_storage_nb=2,
+        surface_runoff="linear_storage",
+        channel_routing="muskingum_cunge",
+    )
+    with pytest.raises(hb.ConfigurationError, match="slope"):
+        model.setup(
+            spatial_structure=hydro_units,
+            output_path=str(tmp_path),
+            start_date=_START,
+            end_date="1981-03-31",
+        )
+
+
+def test_muskingum_cunge_runs_and_conserves_mass(tmp_path):
+    hydro_units = _split_units_with_geometry()
+    model = _run_scheme(tmp_path / "mc", hydro_units, "muskingum_cunge")
+    model.dump_outputs(str(tmp_path / "mc"))
+
+    outlet = model.get_outlet_discharge()
+    assert np.all(outlet >= 0)
+    assert np.all(np.isfinite(outlet))
+    assert model.get_total_outlet_discharge() > 0
+
+    with hb.Results(str(tmp_path / "mc" / "results.nc")) as results:
+        storage = results.get_subbasin_values("reach:storage", 1)
+        assert np.all(storage >= 0)
+        # The reach holds water in transit at least once.
+        assert storage.max() > 0
+
+    # The same catchment routed instantaneously carries the same total, up to what is
+    # still in the reach at the end.
+    none = _run_scheme(tmp_path / "none", _split_units_with_geometry(), "none")
+    assert model.get_total_outlet_discharge() < none.get_total_outlet_discharge()
+    assert model.get_total_outlet_discharge() == pytest.approx(
+        none.get_total_outlet_discharge(), rel=0.02
+    )
+
+
+def test_variable_celerity_speeds_up_the_routing(tmp_path):
+    """A positive exponent makes the wave faster than the reference celerity as soon as
+    the discharge exceeds the reference."""
+    slow = _run_scheme(
+        tmp_path / "const", _split_units_with_geometry(), "lag", channel_celerity=0.5
+    )
+    fast = _run_scheme(
+        tmp_path / "var",
+        _split_units_with_geometry(),
+        "lag",
+        channel_celerity=0.5,
+        channel_celerity_exponent=0.4,
+        channel_reference_discharge=0.5,
+    )
+    # Same water, delivered earlier: more of it has left the reach by the end.
+    assert fast.get_total_outlet_discharge() > slow.get_total_outlet_discharge()
+
+
+def test_local_runoff_can_travel_through_the_reach(tmp_path):
+    direct = _run_scheme(
+        tmp_path / "direct", _split_units_with_geometry(), "lag", channel_celerity=0.5
+    )
+    routed = _run_scheme(
+        tmp_path / "routed",
+        _split_units_with_geometry(),
+        "lag",
+        channel_celerity=0.5,
+        route_local_runoff=True,
+    )
+    assert direct.route_local_runoff is False
+    assert routed.route_local_runoff is True
+    # The local runoff is delayed too, so less water has reached the outlet by the end
+    # and the peak is not earlier than before.
+    assert routed.get_total_outlet_discharge() < direct.get_total_outlet_discharge()
+    assert np.argmax(routed.get_outlet_discharge()) >= np.argmax(
+        direct.get_outlet_discharge()
+    )
+    assert np.all(routed.get_outlet_discharge() >= 0)
+
+
+def test_discharge_available_in_cubic_meters_per_second(runs):
+    network = runs["network"]
+    areas = network.get_subbasin_areas()
+    outlet_mm = network.get_outlet_discharge()
+    outlet_m3s = network.get_outlet_discharge(units="m3/s")
+    expected = outlet_mm * areas.loc[1, "drained"] / 1000.0 / 86400.0
+    np.testing.assert_allclose(outlet_m3s, expected, rtol=1e-12)
+
+    upstream_m3s = network.get_subbasin_discharge(2, units="m3/s")
+    np.testing.assert_allclose(
+        upstream_m3s,
+        network.get_subbasin_discharge(2) * areas.loc[2, "drained"] / 1000.0 / 86400.0,
+        rtol=1e-12,
+    )
+    # The upstream subbasin carries less water than the whole catchment.
+    assert upstream_m3s.sum() < outlet_m3s.sum()
+    # The default is unchanged.
+    np.testing.assert_allclose(network.get_outlet_discharge("mm"), outlet_mm, rtol=0)
+    with pytest.raises(hb.ConfigurationError):
+        network.get_outlet_discharge(units="gallons")
+
+    # The same conversion from the results file.
+    with hb.Results(str(runs["results"])) as results:
+        np.testing.assert_allclose(results.get_discharge(), expected, rtol=1e-9)
+        np.testing.assert_allclose(results.get_discharge(2), upstream_m3s, rtol=1e-9)
+        np.testing.assert_allclose(
+            results.get_discharge(units="mm"), outlet_mm, rtol=1e-9
+        )
+        with pytest.raises(hb.DataError):
+            results.get_discharge(units="furlongs")

@@ -494,11 +494,13 @@ class SubBasin {
     double* GetValuePointer(std::string_view name);
 
     /**
-     * Compute the outlet discharge for the sub-basin.
+     * Compute the outlet discharge of the current time step: the sub basin's own runoff, routed through half
+     * of its reach when the channel routing does so, plus the volume already routed from upstream.
      *
-     * @return True if the computation was successful, false otherwise.
+     * @param timeStepInDays The time step [days].
+     * @return true on success.
      */
-    [[nodiscard]] bool ComputeOutletDischarge();
+    [[nodiscard]] bool ComputeOutletDischarge(double timeStepInDays);
 
     /**
      * Get the area of the sub-basin.

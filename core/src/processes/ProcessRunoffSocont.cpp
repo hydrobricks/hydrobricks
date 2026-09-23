@@ -52,5 +52,7 @@ const vecDouble& ProcessRunoffSocont::GetRates() {
     double dh = qQuick * storageShape * dt;                                     // [m]
     double runoff = (dh / storageShape) * 1000;                                 // [mm]
 
-    return StoreRates({std::min(runoff, _container->GetContentWithChanges())});
+    // runoff is a rate [mm/d] (qQuick over a day); it cannot exceed the rate that
+    // empties the store over one step.
+    return StoreRates({std::min(runoff, _container->GetContentWithChanges() / GetTimeStepInDays())});
 }

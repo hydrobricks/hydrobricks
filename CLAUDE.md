@@ -50,7 +50,9 @@ cp -R ../core/tests/files/ tests/
 tests/hydrobricks-tests.exe      # Windows
 ```
 
-CMake options: `BUILD_TESTS` (ON), `BUILD_CLI` (ON), `BUILD_PYBINDINGS` (ON), `USE_SANITIZERS` (OFF).
+CMake options: `BUILD_TESTS` (ON), `BUILD_CLI` (ON), `BUILD_PYBINDINGS` (ON), `USE_SANITIZERS` (OFF),
+`USE_LTO` (ON, link-time optimization for the optimized configurations), `USE_PGO` (off, profile-guided
+optimization; see the sequence in `ci/pgo_training.py`).
 
 ## Architecture
 

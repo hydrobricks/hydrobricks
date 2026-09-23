@@ -24,6 +24,11 @@ bool TimeSeriesUniform::AdvanceOneTimeStep() {
     return true;
 }
 
+double TimeSeriesUniform::GetTimeStepInDays() const {
+    assert(_data);
+    return _data->GetTimeStepInDays();
+}
+
 double TimeSeriesUniform::GetStart() const {
     assert(_data);
     return _data->GetStart();

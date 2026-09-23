@@ -1,0 +1,1225 @@
+from __future__ import annotations
+
+import logging
+from typing import Any
+
+import numpy as np
+
+from hydrobricks._exceptions import ConfigurationError, ModelError
+from hydrobricks.land_covers import (
+    PREVAH_LAND_USE_COVER_TYPES,
+    PREVAH_LAND_USE_FIELD_CAPACITY_FIXED,
+    PREVAH_LAND_USE_FIELD_CAPACITY_MIN,
+    PREVAH_LAND_USE_FIELD_CAPACITY_MIN_DEF,
+    PREVAH_LAND_USE_ROOT_DEPTH,
+    PREVAH_LAND_USE_SI_MAX,
+    PREVAH_LAND_USE_VEG_COV,
+)
+from hydrobricks.models.model import Model
+from hydrobricks.modules.glacier import GlacierModule
+
+logger = logging.getLogger(__name__)
+
+
+class PrevahUniBE(Model):
+    """PREVAH-UniBE hydrological model (Viviroli et al., 2007; Gurtz et al., 1999).
+
+    PREVAH (Precipitation-Runoff-EVApotranspiration HRU model) is an HBV-type
+    conceptual model developed for mountainous (Alpine) catchments. This
+    implementation follows the University of Bern lineage of the model (the
+    xPREVAH code base), hence the name PREVAH-UniBE. Each hydro
+    unit splits precipitation into rain and snow (linear transition); snow melts
+    by a degree-day routine with a seasonally varying melt factor, liquid water
+    retention and refreezing. The incoming water is split by the HBV beta
+    function between the soil moisture storage (plant-available water, ET
+    limited by the CU fraction) and the upper zone (SUZ), which produces:
+
+      - surface runoff above a storage threshold: Q0 = k0 × (SUZ − SGRLUZ),
+      - interflow: Q1 = k1 × SUZ,
+      - a percolation gated by the soil moisture state (PREVAH's SSM-dependent
+        percolation): PERC = cperc × clamp((SM/FC − cu)/(1 − cu), 0, 1).
+
+    The groundwater follows the SLOWCOMP scheme (Schwarze et al., 1999): a fast
+    baseflow store SLZ1 (capacity SLZ1MAX, factor k_gw1) is filled first; its
+    overflow splits 8/9 into the slow store SLZ2 (k_gw2) and 1/9 into the very
+    slow store SLZ3 (k_gw3; PREVAH ties its storage time to 9× that of SLZ1).
+    Baseflow is the sum of the three outflows. As in the PREVAH core, there is
+    no channel routing: the catchment discharge aggregates the unit outflows.
+
+    On glacierized areas the PREVAH glacier module distinguishes ice and firn
+    covers (split at the equilibrium line in preprocessing), melting only when
+    snow-free and draining through linear reservoirs; the firn melt reaches the
+    groundwater (SLZ1). See
+    :class:`~hydrobricks.modules.glacier.PrevahGlacier`.
+
+    The response factors [1/d] relate to PREVAH's storage times in hours as
+    k = 24 / K_h (e.g. K0H = 20 h → k0 = 1.2 1/d). That mapping is exact rather
+    than approximate: PREVAH's own storage coefficients are already exponential
+    decay factors (the Fortran computes k = 1 − exp(−Δt/K_h) once at
+    initialization, then applies it as a plain multiplier), and a linear
+    reservoir integrated analytically decays over a day by exactly
+    exp(−24 / K_h). This is why the model defaults to the ``analytic_linear``
+    solver, which integrates the reservoirs exactly as PREVAH does; the other
+    solvers approximate them. The remaining difference is the sub-step
+    structure: PREVAH adds the inflow at the start of each of its sub-steps
+    (6 per day; 1 h in the gridded version), where the solver spreads it over
+    the whole step.
+
+    Parameters (literature names as aliases)
+    ----------------------------------------
+    prec_t_start, prec_t_end : float
+        Rain/snow transition bounds [°C] (PREVAH: TGR − TTRANS and TGR + TTRANS).
+    rfcf, sfcf : float
+        Rain and snow correction factors [-] (PREVAH cf_rain/cf_snow).
+    melt_factor, r_snow : float
+        Melt factor [mm/d/°C] and radiation coefficient of the radiation-corrected
+        (Hock) snow melt, (melt_factor + r_snow · R_pot) · (T − T0) (PREVAH CSNOMF
+        and CASNO; with the default 'melt:temperature_index').
+    a_snow_min (crmfmin), a_snow_max (crmfmax) : float
+        Winter minimum and summer maximum of the seasonal snow melt degree-day
+        factor [mm/d/°C] (with 'melt:degree_day_seasonal' instead).
+    melt_t_snow : float
+        Snow melting temperature [°C] (PREVAH T0).
+    cwh : float
+        Snowpack liquid water holding capacity, fraction of the SWE [-].
+    holding_melt_t, cexliq : float
+        Temperature above which the liquid retention collapses, and the exponent of
+        the graded release of the fresh melt (PREVAH CEXLIQ).
+    cfr : float
+        Refreezing coefficient [-] (PREVAH CRFR).
+    cfr_ddf_min, cfr_ddf_max, cfr_melt_t : float
+        Seasonal degree-day factor and melting temperature of the refreezing (PREVAH
+        TMFMIN, TMFMAX, T0).
+    fc : float
+        Soil moisture storage capacity (plant-available field capacity) [mm].
+    beta : float
+        Shape coefficient of the beta-function recharge [-] (PREVAH CBETA).
+    lp (cu) : float
+        Soil moisture fraction above which ET reaches the potential rate [-]
+        (PREVAH CU).
+    k0 : float
+        Surface runoff response factor [1/d] (= 24 / K0H).
+    sgrluz : float
+        Upper zone storage threshold for surface runoff [mm] (PREVAH SGRLUZ).
+    k1 : float
+        Interflow response factor [1/d] (= 24 / K1H).
+    cperc : float
+        Maximum percolation rate [mm/d] (PREVAH CPERC).
+    cu_perc : float
+        Soil moisture fraction below which percolation stops [-] (PREVAH uses the
+        same CU for the ET limit and the percolation gating; fix both to the same
+        value for strict PREVAH behavior).
+    slz1max : float
+        Capacity of the fast baseflow store SLZ1 [mm] (PREVAH SLZ1MAX).
+    k_gw1, k_gw2, k_gw3 : float
+        Response factors of the three groundwater stores [1/d] (= 24 / CG1H,
+        24 / K2H and 24 / CG3H; PREVAH convention: CG3H = 9 × CG1H).
+    k_snow, k_ice, k_firn : float
+        Response factors of the glacier snowmelt, ice melt and firn melt
+        reservoirs [1/d] (= 24 / KICSH, 24 / KICEH, 24 / KICFH).
+    wet_fraction : float
+        Fraction of a ``wetland`` cover's input routed directly to the
+        groundwater store SLZ1 [-] (PREVAH's wet-surface fraction: 0.7 for
+        wetlands, 0.9 for open water); the rest goes through the usual
+        beta-function soil routine.
+    a_ice_min, a_ice_max : float
+        Seasonal ice melt degree-day factors [mm/d/°C] (with the default melt
+        process; with 'melt:temperature_index', PREVAH's Hock melt
+        (CICEMF + CAICE·R_pot)·T, the parameters are melt_factor and r_ice).
+    ic : float
+        Forest canopy interception capacity [mm] (with forest_interception).
+
+    Options
+    -------
+    snow_melt_process : str
+        Snowmelt method (default: 'melt:temperature_index', PREVAH's
+        radiation-corrected (Hock) melt). It requires a potential clear-sky
+        radiation forcing ('solar_radiation'), e.g. computed from a DEM with
+        ``catchment.calculate_daily_potential_radiation()``; running without one
+        raises an error. The melt factor is calibrated against the radiation it
+        multiplies, so a radiation computed differently needs its own coefficient.
+        'melt:degree_day_seasonal' gives PREVAH's seasonal sine between CRMFMIN and
+        CRMFMAX, with no radiation needed.
+    snow_water_retention_process : str or None
+        Outflow process of the snowpack liquid water storage (default:
+        'outflow:snow_holding_prevah', the CWH holding capacity collapsing on melt
+        days, with the CEXLIQ graded release). 'outflow:snow_holding' keeps the plain
+        CWH holding capacity.
+    snow_refreezing_process : str or None
+        Refreezing process of the retained liquid water (default:
+        'refreeze:degree_day_seasonal', the CRFR coefficient with its own seasonal
+        degree-day factor, so it works with any melt process). 'refreeze:degree_day'
+        reads the factor of the melt process and requires a degree-day melt.
+    rain_to_snowpack : bool
+        Route the rain to the snowpack liquid water storage (default: True, as
+        in the PREVAH snow routine).
+    snow_sublimation_process : str or None
+        Snow evaporation process (default: 'sublimation:prevah', which evaporates
+        snow at the albedo-reduced potential rate, PET (1 - albedo)/0.8 with the
+        snowpack's age-dependent albedo, as PREVAH does). It has no parameter, so it
+        relies on a PET of the right magnitude (PREVAH's vapour-density Hamon).
+        'sublimation:pet' applies a fixed ``sublimation_pet_factor`` of the PET.
+    snow_rain_process : str or None
+        Rain/snow partitioning method (default: None, i.e. 'snow_rain:linear',
+        PREVAH's linear transition over TGR ± TTRANS).
+    snow_redistribution : str or None
+        Optional snow redistribution process (e.g. 'transport:snow_slide').
+    share_soil : bool
+        Share a single soil moisture store across the soil-bearing land covers
+        (default: True). A PREVAH hydrotope carries one land use and one soil, so a
+        shared store is the right model when each hydro unit is dominated by one
+        cover. Set it to False when a unit mixes covers and you want PREVAH's
+        per-land-use soil parameterization: each cover then gets its own store with
+        its own ``fc_<cover>`` and ``lp_<cover>``, and the percolation is gated by
+        their area-weighted mean saturation. Note that a per-cover store is fed by
+        its land cover, whose outgoing fluxes already carry the cover area fraction,
+        so ``fc_<cover>`` is expressed over the whole hydro unit rather than over the
+        cover itself (as for the per-class soils of
+        :class:`~hydrobricks.models.hbv.HBV`): the capacities of the covers add up to
+        the unit's soil storage. It is therefore only meaningful when every cover
+        holds a share of every unit: a cover with no area in a unit still contributes
+        its capacity to that unit's percolation gate while its store stays empty,
+        which would hold the gate shut. Keep the shared store for a discretization
+        that gives each unit a single land use (a PREVAH hydrotope).
+    forest_interception : bool
+        Enable the canopy interception (default: True). ``False`` disables it
+        unless ``interception_covers`` names covers explicitly.
+    interception_covers : list[str] | None
+        Names of the land covers to equip with a canopy interception store
+        (default None: every cover but the glaciers, as PREVAH runs its
+        interception module, Menzel filling with evaporation at et_pot * veg_cov,
+        on every hydrotope). With canopy_et_process='et:open_water_prevah', each
+        canopy gets an ``et_factor`` parameter (alias
+        ``canopy_et_factor[_<cover>]``) for the monthly PREVAH veg_cov fraction.
+        A cover named after a PREVAH land use (e.g. ``pasture``) gets its monthly
+        tables from :meth:`generate_parameters`; for a generic name (``open``,
+        ``forest``), call :meth:`apply_land_use` with the land use it stands for,
+        or the capacity and the factor stay constant.
+    canopy_interception_process : str
+        Throughfall process of the forest canopy (default: 'interception:menzel',
+        PREVAH's Menzel (1997) asymptotic filling). Use 'outflow:threshold' for a
+        simpler fill-then-spill store.
+    soil_et_process : str
+        Soil evapotranspiration process (default: 'et:prevah', the HBV limitation
+        with PREVAH's snow-albedo reduction of the potential rate, (1 - albedo)/0.8
+        from the unit's snow-covered fraction, which suppresses the soil ET under
+        snow). The snow albedo is age-dependent (0.4 + 0.45 exp(-0.15 age), ~0.85
+        fresh to 0.4 old); ``albedo_land`` (default 0.2) is the snow-free ground
+        albedo (neutral). 'et:hbv' is the plain HBV limitation.
+    canopy_et_process : str
+        Canopy evaporation process (default: 'et:open_water_prevah', the potential
+        rate with the same age-dependent snow-albedo reduction). 'et:open_water'
+        evaporates at the plain potential rate.
+    wet_et_from_groundwater : bool
+        Add PREVAH's wet-surface evaporation (default: True). The SLZ1 groundwater
+        store evaporates at et_pot times the wet share of the unit, which is the sum
+        over its ``wetland`` covers of their area fraction times their
+        ``wet_fraction`` (process 'et:wet_surface_prevah' named ``wet_et``; optional
+        overall scaling alias ``wet_et_factor``). The same share routes the wetland
+        input to SLZ1, as PREVAH's wet_surface does for both. Without a wetland cover
+        no such process is added.
+    glacier_infinite_storage : bool
+        Treat the glacier ice as an infinite storage (default: True).
+    glacier_module : str
+        Glacier formulation to plug in (default: 'prevah'; see
+        :class:`~hydrobricks.modules.glacier.PrevahGlacier`).
+    firn_to_groundwater : bool
+        Route the firn melt reservoir into the groundwater store SLZ1 (default:
+        True, as in PREVAH); False routes it to the outlet.
+
+    Land covers
+    -----------
+    Besides the soil-bearing ``open`` and ``forest`` covers (the latter with an
+    optional canopy) and the ``glacier`` covers (ice/firn), a ``wetland`` cover
+    implements PREVAH's wet-surface behavior: a fraction of its input
+    (``wet_fraction``, PREVAH: 0.7 for wetlands, 0.9 for open water) recharges
+    the groundwater store SLZ1 directly, the rest passing through the soil
+    routine.
+
+    The original PREVAH also carries a fixed table of land uses (coniferous /
+    deciduous / mixed forest, pasture, cereals, alpine meadow, grapes, ...), but only
+    the six above behave differently: every other land use runs the same routines and
+    differs only through monthly vegetation tables. They are therefore ordinary land
+    covers, declared under their own name and typed ``open`` or ``forest``:
+
+    .. code-block:: python
+
+        from hydrobricks.land_covers import PREVAH_LAND_USE_COVER_TYPES
+
+        covers = ["coniferous_forest", "pasture", "wetland"]
+        model = PrevahUniBE(
+            land_cover_names=covers,
+            land_cover_types=[PREVAH_LAND_USE_COVER_TYPES[c] for c in covers],
+            interception_covers=covers,
+            canopy_et_process="et:open_water_prevah",
+        )
+        parameters = model.generate_parameters()
+        ...
+        for cover in covers:
+            model.apply_land_use(parameters, cover)
+
+    :meth:`apply_land_use` sets the monthly canopy parameters of a cover from
+    PREVAH's land-use tables (``PREVAH_LAND_USE_*`` in :mod:`hydrobricks.land_covers`);
+    :meth:`land_use_field_capacity` gives the soil moisture capacity PREVAH derives
+    from a soil map, and :meth:`apply_land_use_field_capacity` sets it per hydro unit
+    and per month in one call.
+
+    PREVAH processes by default
+    ---------------------------
+    The defaults are PREVAH's own processes: the ``"analytic_linear"`` solver,
+    which integrates the linear reservoirs exactly as PREVAH does, the
+    radiation-corrected (Hock) snow melt with the seasonal refreezing, the PREVAH
+    snow water release, the albedo-reduced soil, canopy and snow evaporation, a
+    canopy on every non-glacier cover and the wet-surface evaporation. They expect
+    the inputs PREVAH works with:
+
+    - a potential clear-sky radiation forcing ('solar_radiation') for the melt;
+    - a vapour-density Hamon PET (``forcing.compute_pet(method=
+      "Hamon_vapor_density")``): the snow evaporation has no parameter to absorb a
+      PET of another magnitude (pyet's default Hamon runs ~1.5 times hotter);
+    - the monthly vegetation tables of the land uses (``apply_land_use``, applied
+      automatically to the covers named after a PREVAH land use).
+
+    Any of them can be swapped for a simpler process through the options above
+    (e.g. ``snow_melt_process='melt:degree_day_seasonal'`` without a radiation
+    forcing).
+
+    Deviations from the original PREVAH
+    -----------------------------------
+    - The runoff cascade is integrated over the whole time step instead of
+      PREVAH's 6 explicit sub-steps per day. The default ``"analytic_linear"``
+      solver integrates the linear reservoirs exactly, as PREVAH does, but the
+      inflow is spread over the step rather than added at the start of each
+      sub-step.
+    - No dynamic contributing-area (soil-topographic-index) surface runoff
+      store; the SGRLUZ threshold carries the surface runoff response. That
+      store (SSZ/CRSZ) is present in the PREVAH code lineages (both xPREVAH and
+      the gridded FORHYCS) but in none of the published model descriptions, and
+      both codes disable it for catchments above 100 km².
+    - No runoff concentration or flood routing (PREVAH's single linear storage
+      and translation elements): the unit outflows aggregate directly at the
+      outlet, as in the PREVAH model core.
+    - The glacier translation times (``lag_*``) keep their meaning in hours at
+      any time step; daily xPREVAH runs its hourly glacier routing once a day, so
+      there its storage and translation times act as days.
+    - No karst outflow (the optional fourth upper-zone outflow Q3 = k3 · SUZ of
+      the gridded PREVAH). It is a plain linear reservoir outflow, so it can be
+      added to the upper zone through a custom structure if needed.
+    - The percolation rate at saturation holds for the whole step; xPREVAH keeps,
+      within a day, the rate of the previous sub-step once the soil saturates.
+    - PET is computed in preprocessing instead of in-model.
+    """
+
+    def __init__(self, name: str = "prevah_unibe", **kwargs: Any) -> None:
+        # PREVAH integrates its reservoirs analytically (an exact exponential decay
+        # per sub-step), so the analytic solver is the faithful default here; any
+        # other solver can still be requested explicitly.
+        kwargs.setdefault("solver", "analytic_linear")
+        super().__init__(name=name, **kwargs)
+
+        # Default options
+        self.options["snow_melt_process"] = "melt:temperature_index"
+        self.options["snow_water_retention_process"] = "outflow:snow_holding_prevah"
+        self.options["snow_refreezing_process"] = "refreeze:degree_day_seasonal"
+        self.options["rain_to_snowpack"] = True
+        self.options["snow_rain_process"] = None
+        self.options["snow_redistribution"] = None
+        self.options["snow_sublimation_process"] = "sublimation:prevah"
+        self.options["share_soil"] = True
+        self.options["forest_interception"] = True
+        self.options["interception_covers"] = None
+        self.options["canopy_interception_process"] = "interception:menzel"
+        self.options["soil_et_process"] = "et:prevah"
+        self.options["canopy_et_process"] = "et:open_water_prevah"
+        self.options["wet_et_from_groundwater"] = True
+        self.options["glacier_infinite_storage"] = True
+        self.options["glacier_module"] = "prevah"
+        self.options["firn_to_groundwater"] = True
+        self.allowed_land_cover_types = ["open", "forest", "wetland", "glacier"]
+
+        self._set_options(kwargs)
+        self._resolve_interception_covers()
+
+        try:
+            self._define_structure()
+            self._generate_structure()
+            self._define_parameter_aliases()
+            self._define_parameter_constraints()
+            self._define_parameter_transforms()
+
+        except RuntimeError as err:
+            raise ModelError(
+                f"PREVAH-UniBE model initialization raised an exception: {err}"
+            )
+
+    def _define_structure(self) -> None:
+        """Define the PREVAH model structure.
+
+        The brick declaration order matters (the solver applies the bricks in
+        order, so every brick-to-brick flux must flow toward a later brick):
+        soil covers → glacier bricks (their firn reservoir feeds the groundwater)
+        → soil moisture → upper zone → SLOWCOMP groundwater (slz1 → split →
+        slz2/slz3). PREVAH has no capillary flux, so the soil moisture store
+        receives water only from the covers.
+
+        A single soil moisture store is shared by the soil covers by default (a
+        PREVAH hydrotope carries one land use and one soil); ``share_soil=False``
+        gives each cover its own store and its own field capacity, as PREVAH
+        parameterizes the soil per land-use class. The soil store(s) also gate the
+        soil-moisture-dependent percolation: with several, the percolation reads
+        their area-weighted mean saturation.
+        """
+        self._glacier_cover_names = [
+            name
+            for name, cover_type in zip(self.land_cover_names, self.land_cover_types)
+            if cover_type == "glacier"
+        ]
+        self._wetland_cover_names = [
+            name
+            for name, cover_type in zip(self.land_cover_names, self.land_cover_types)
+            if cover_type == "wetland"
+        ]
+        soil_cover_names = [
+            name
+            for name, cover_type in zip(self.land_cover_names, self.land_cover_types)
+            if cover_type not in ("glacier", "wetland")
+        ]
+        if not soil_cover_names:
+            raise ConfigurationError(
+                "The PREVAH model requires at least one soil-bearing land cover "
+                "(open or forest).",
+                item_name="land_cover_types",
+                reason="Only glacier/wetland covers provided",
+            )
+        multi_cover = len(soil_cover_names) + len(self._wetland_cover_names) > 1
+
+        # Soil naming: a single shared store by default (the PREVAH hydrotope), or one
+        # soil moisture store per soil-bearing cover when share_soil is disabled. The
+        # wetland covers route their dry fraction through their own pass-through brick,
+        # which feeds the soil of that cover.
+        # Brick feeding a soil store -> the land cover that owns it. A wetland feeds
+        # its soil through its own pass-through brick, but the store (and its
+        # parameters) belong to the cover itself.
+        soil_sources = {name: name for name in soil_cover_names}
+        soil_sources.update({f"{n}_dry": n for n in self._wetland_cover_names})
+        self._shared_soil = (
+            bool(self.options.get("share_soil")) or len(soil_sources) == 1
+        )
+        if self._shared_soil:
+            self._soil_names = {src: "soil_moisture" for src in soil_sources}
+        else:
+            self._soil_names = {
+                src: f"{cover}_soil_moisture" for src, cover in soil_sources.items()
+            }
+        # Soil store -> the cover naming its parameters (fc_<cover>, lp_<cover>).
+        self._soil_covers = {
+            self._soil_names[src]: cover for src, cover in soil_sources.items()
+        }
+
+        # Beta-function split of rain and snowpack outflow per soil cover. The
+        # recharge (outflow:rest) is the complement of the infiltration and must be
+        # declared after it.
+        for cover_name in soil_cover_names:
+            brick = {
+                "attach_to": "hydro_unit",
+                "kind": "land_cover",
+                "processes": {
+                    "infiltration": {
+                        "kind": "infiltration:hbv",
+                        "target": self._soil_names[cover_name],
+                    },
+                    "recharge": {"kind": "outflow:rest", "target": "upper_zone"},
+                },
+            }
+            if multi_cover:
+                brick["alias_suffix"] = f"_{cover_name}"
+            self.structure[cover_name] = brick
+
+        # Wetland covers (PREVAH wet-surface): a fixed fraction of the input
+        # (rain + snowpack outflow) recharges the groundwater store directly
+        # (PREVAH's ri_w on wet surfaces); the rest goes through the usual
+        # beta-function soil routine via a per-cover pass-through brick.
+        for cover_name in self._wetland_cover_names:
+            self.structure[cover_name] = {
+                "attach_to": "hydro_unit",
+                "kind": "land_cover",
+                "processes": {
+                    "split": {
+                        "kind": "outflow:split",
+                        "targets": ["slz1", f"{cover_name}_dry"],
+                    },
+                },
+            }
+            dry = {
+                "attach_to": "hydro_unit",
+                "kind": "storage",
+                "processes": {
+                    "infiltration": {
+                        "kind": "infiltration:hbv",
+                        "target": self._soil_names[f"{cover_name}_dry"],
+                    },
+                    "recharge": {"kind": "outflow:rest", "target": "upper_zone"},
+                },
+            }
+            if multi_cover:
+                dry["alias_suffix"] = f"_{cover_name}"
+            self.structure[f"{cover_name}_dry"] = dry
+
+        # Glacier bricks (pluggable module). Called before the groundwater stores so
+        # the firn melt reservoir can feed slz1 with a forward flux.
+        self._glacier_module = GlacierModule.get_module(self.options["glacier_module"])
+        self._glacier_module.add_bricks(
+            self.structure,
+            self._glacier_cover_names,
+            melt_process=self.options["snow_melt_process"],
+            options=self.options,
+        )
+
+        # Soil moisture storage (plant-available field capacity FC): ET limited by
+        # the CU fraction (lp = CU). The overflow is a numerical safety only (the
+        # infiltration vanishes at FC). With soil_et_process='et:prevah' the potential
+        # rate additionally carries the PREVAH snow-albedo reduction (1 - albedo)/0.8,
+        # driven by the unit's snow-covered fraction (ET-under-snow suppression).
+        soil_et = self.options["soil_et_process"]
+        if soil_et not in ("et:hbv", "et:prevah"):
+            raise ConfigurationError(
+                f"Unknown soil ET process: '{soil_et}'. "
+                "Expected 'et:hbv' or 'et:prevah'.",
+                item_name="soil_et_process",
+                item_value=soil_et,
+                reason="Unknown process type",
+            )
+        canopy_et = self.options["canopy_et_process"]
+        if canopy_et not in ("et:open_water", "et:open_water_prevah"):
+            raise ConfigurationError(
+                f"Unknown canopy ET process: '{canopy_et}'. "
+                "Expected 'et:open_water' or 'et:open_water_prevah'.",
+                item_name="canopy_et_process",
+                item_value=canopy_et,
+                reason="Unknown process type",
+            )
+        for soil_name, cover_name in self._soil_covers.items():
+            if soil_name in self.structure:
+                continue  # shared store already declared
+            soil = {
+                "attach_to": "hydro_unit",
+                "kind": "storage",
+                "parameters": {"capacity": 250},
+                "processes": {
+                    "et": {"kind": soil_et},
+                    "overflow": {"kind": "overflow", "target": "upper_zone"},
+                },
+            }
+            if not self._shared_soil and multi_cover:
+                soil["alias_suffix"] = f"_{cover_name}"
+            self.structure[soil_name] = soil
+
+        # Upper zone (SUZ): threshold surface runoff, interflow and the
+        # soil-moisture-gated percolation to the groundwater.
+        self.structure["upper_zone"] = {
+            "attach_to": "hydro_unit",
+            "kind": "storage",
+            "processes": {
+                "q0": {"kind": "outflow:linear_threshold", "target": "outlet"},
+                "q1": {"kind": "outflow:linear", "target": "outlet"},
+                "percolation": {
+                    "kind": "percolation:prevah",
+                    "target": "slz1",
+                    # With one soil store per cover, the percolation is gated by their
+                    # area-weighted mean saturation (the contents already carry the
+                    # cover area fractions).
+                    "gate": self._gate_bricks(),
+                },
+            },
+        }
+
+        # SLOWCOMP groundwater (Schwarze et al., 1999): the fast store SLZ1 is
+        # filled first (capacity SLZ1MAX); its overflow splits 8/9 : 1/9 into the
+        # slow stores SLZ2 and SLZ3.
+        # The fast baseflow store SLZ1 uses the PREVAH SLOWCOMP fill: it fills
+        # asymptotically toward its maximum (slz1max) with the baseflow time constant
+        # and overflows the excess inflow to the slow stores (outflow:slowcomp), rather
+        # than a bucket that spills only when full. This diverts the high-percolation
+        # (snow-melt) events to the slow stores, sustaining the recession. The store
+        # therefore carries no hard capacity (the asymptotic fill bounds it).
+        self.structure["slz1"] = {
+            "attach_to": "hydro_unit",
+            "kind": "storage",
+            "processes": {
+                "baseflow1": {"kind": "outflow:linear", "target": "outlet"},
+                "overflow": {"kind": "outflow:slowcomp", "target": "slz_split"},
+            },
+        }
+        # PREVAH wet-surface evaporation (EWET = wet_surface * et_pot, drawn from the
+        # SLOWCOMP stores). Implemented on SLZ1 with the albedo-aware open-water ET,
+        # the wet share of the unit being read from its wetland covers (the gates):
+        # their live area fraction times their wet fraction, the same share that
+        # routes their input to SLZ1. Without a wetland cover there is no wet surface.
+        if self.options["wet_et_from_groundwater"] and self._wetland_cover_names:
+            self.structure["slz1"]["processes"]["wet_et"] = {
+                "kind": "et:wet_surface_prevah",
+                "gate": list(self._wetland_cover_names),
+            }
+        self.structure["slz_split"] = {
+            "attach_to": "hydro_unit",
+            "kind": "storage",
+            "processes": {
+                "split": {"kind": "outflow:split", "targets": ["slz2", "slz3"]},
+            },
+        }
+        self.structure["slz2"] = {
+            "attach_to": "hydro_unit",
+            "kind": "storage",
+            "processes": {
+                "baseflow2": {"kind": "outflow:linear", "target": "outlet"},
+            },
+        }
+        self.structure["slz3"] = {
+            "attach_to": "hydro_unit",
+            "kind": "storage",
+            "processes": {
+                "baseflow3": {"kind": "outflow:linear", "target": "outlet"},
+            },
+        }
+
+    @staticmethod
+    def land_use_interception_capacity(land_use: str) -> list[float]:
+        """
+        Monthly canopy interception capacity of a PREVAH land use.
+
+        PREVAH fills its interception store up to ``si_max * veg_cov``: the maximal
+        storage scaled by the fraction of the surface actually covered by vegetation.
+
+        Parameters
+        ----------
+        land_use
+            Name of the land use (e.g. ``'pasture'``); see
+            :data:`~hydrobricks.land_covers.PREVAH_LAND_USE_COVER_TYPES`.
+
+        Returns
+        -------
+        The 12 monthly capacities [mm], from January to December.
+        """
+        PrevahUniBE._check_land_use(land_use)
+
+        return [
+            s * v
+            for s, v in zip(
+                PREVAH_LAND_USE_SI_MAX[land_use], PREVAH_LAND_USE_VEG_COV[land_use]
+            )
+        ]
+
+    @staticmethod
+    def land_use_field_capacity(
+        land_use: str,
+        available_water_content: float,
+        soil_depth: float | None = None,
+    ) -> list[float]:
+        """
+        Monthly soil moisture storage capacity of a PREVAH land use.
+
+        PREVAH derives the plant-available storage from the soil's available water
+        content and the monthly rooting depth of the land use::
+
+            fc(month) = awc * min(root_depth(month) + 0.05, soil_depth) * 10
+
+        with the available water content in [Vol-%] and the depths in [m], giving a
+        capacity in [mm]. The 0.05 m added to the rooting depth accounts for the
+        capillary rise below the roots, and the soil depth caps the whole thing: the
+        roots cannot draw from below the soil. Alpine soils are thin, so the resulting
+        capacities are typically small (a few mm to a few tens of mm).
+
+        The land cover then overrides the result, as in the original: a fixed capacity
+        on the covers carrying no real soil (5 mm built-up, 3 mm rock, 0.1 mm glacier)
+        and a minimum elsewhere (2500 mm open water, 10 mm on the vegetated covers).
+
+        The capping is the clean reading of the original rather than a transcription:
+        xPREVAH tests the rooting depth it has scaled by the soil class and the
+        altitude, but then assigns the capacity from the unscaled table depth, so its
+        capacity can exceed the soil column. That inconsistency is not reproduced.
+
+        Parameters
+        ----------
+        land_use
+            Name of the land use; see
+            :data:`~hydrobricks.land_covers.PREVAH_LAND_USE_COVER_TYPES`.
+        available_water_content
+            Available water content of the soil [Vol-%], from a soil map (the ``NFC``
+            column of a PREVAH hydrotope table).
+        soil_depth
+            Depth of the soil [m], capping the rooting depth. Without it the rooting
+            depth is not capped.
+
+        Returns
+        -------
+        The 12 monthly capacities [mm], from January to December.
+        """
+        PrevahUniBE._check_land_use(land_use)
+
+        cover = PREVAH_LAND_USE_COVER_TYPES[land_use]
+        if cover in PREVAH_LAND_USE_FIELD_CAPACITY_FIXED:
+            return [PREVAH_LAND_USE_FIELD_CAPACITY_FIXED[cover]] * 12
+
+        minimum = PREVAH_LAND_USE_FIELD_CAPACITY_MIN.get(
+            cover, PREVAH_LAND_USE_FIELD_CAPACITY_MIN_DEF
+        )
+        values = []
+        for depth in PREVAH_LAND_USE_ROOT_DEPTH[land_use]:
+            thickness = depth + 0.05
+            if soil_depth is not None:
+                thickness = min(thickness, soil_depth)
+            values.append(max(available_water_content * thickness * 10.0, minimum))
+
+        return values
+
+    def apply_land_use_field_capacity(
+        self,
+        parameters: Any,
+        hydro_units: Any,
+        land_use: Any,
+        available_water_content: Any,
+        soil_depth: Any = None,
+        cover_name: str | None = None,
+    ) -> list[str]:
+        """
+        Set the soil moisture capacity per hydro unit *and* per month, as PREVAH does.
+
+        PREVAH's capacity varies in space (through the soil map) and through the year
+        (through the rooting depth of the land use), and the two do not separate into
+        a per-unit value times a shared monthly shape, because each unit's own soil
+        depth caps its rooting depth. This method builds the full per-unit monthly
+        table with :meth:`land_use_field_capacity`, stores it as 12 hydro-unit
+        properties and binds the parameter to them with
+        ``ParameterSet.set_spatial_monthly``.
+
+        Parameters
+        ----------
+        parameters
+            The :class:`~hydrobricks.parameters.ParameterSet` to fill.
+        hydro_units
+            The :class:`~hydrobricks.hydro_units.HydroUnits` to add the properties to.
+        land_use
+            Name of the land use (e.g. ``'pasture'``); see
+            :data:`~hydrobricks.land_covers.PREVAH_LAND_USE_COVER_TYPES`.
+            A PREVAH hydrotope carries a single land use, so a sequence of names is
+            accepted too, one per hydro unit.
+        available_water_content
+            Available water content of the soil [Vol-%], one value per hydro unit.
+        soil_depth
+            Depth of the soil [m], one value per hydro unit. Without it the rooting
+            depth is not capped.
+        cover_name
+            Name of the land cover to parameterize. Defaults to the land-use name, and
+            is required when the land uses are given per unit. Only meaningful with
+            ``share_soil=False``, a shared soil store carrying a single capacity for
+            the whole unit.
+
+        Returns
+        -------
+        The names of the 12 hydro-unit properties that were added.
+        """
+        awc = np.atleast_1d(np.asarray(available_water_content, dtype=float))
+
+        per_unit = not isinstance(land_use, str)
+        if per_unit:
+            land_uses = [str(name) for name in land_use]
+            if len(land_uses) != len(awc):
+                raise ConfigurationError(
+                    f"The land use has {len(land_uses)} values and the available "
+                    f"water content {len(awc)}; they must match (one per hydro unit).",
+                    item_name="land_use",
+                    item_value=len(land_uses),
+                    reason="Length mismatch",
+                )
+        else:
+            land_uses = [land_use] * len(awc)
+            if cover_name is None:
+                cover_name = land_use
+        for name in set(land_uses):
+            self._check_land_use(name)
+
+        # A model with a shared soil store exposes the alias without a cover suffix,
+        # and then needs no cover name: the single store holds the whole unit's soil.
+        if cover_name is None:
+            if not parameters.has("fc"):
+                raise ConfigurationError(
+                    "The land uses are given per hydro unit and the soil stores are "
+                    "per cover, so the one to parameterize cannot be inferred: pass "
+                    "cover_name.",
+                    item_name="cover_name",
+                    reason="Missing cover name",
+                )
+            suffix = ""
+        else:
+            suffix = f"_{cover_name}" if parameters.has(f"fc_{cover_name}") else ""
+        if not parameters.has(f"fc{suffix}"):
+            raise ConfigurationError(
+                f'No soil moisture capacity "fc{suffix}" in the parameter set.',
+                item_name=f"fc{suffix}",
+                item_value=cover_name,
+                reason="Missing soil parameter",
+            )
+
+        if soil_depth is None:
+            depths: Any = [None] * len(awc)
+        else:
+            depths = np.atleast_1d(np.asarray(soil_depth, dtype=float))
+            if len(depths) != len(awc):
+                raise ConfigurationError(
+                    f"The soil depth has {len(depths)} values and the available water "
+                    f"content {len(awc)}; they must match (one per hydro unit).",
+                    item_name="soil_depth",
+                    item_value=len(depths),
+                    reason="Length mismatch",
+                )
+
+        # (n_units, 12), each unit's own series.
+        table = np.array(
+            [
+                self.land_use_field_capacity(unit_land_use, unit_awc, unit_depth)
+                for unit_land_use, unit_awc, unit_depth in zip(land_uses, awc, depths)
+            ]
+        )
+
+        names = [f"fc{suffix}_{month:02d}" for month in range(1, 13)]
+        for month, name in enumerate(names):
+            hydro_units.add_property((name, "mm"), table[:, month])
+        parameters.set_spatial_monthly(f"fc{suffix}", names)
+
+        return names
+
+    @staticmethod
+    def conductivity_factor(conductivity: Any, areas: Any) -> np.ndarray:
+        """
+        PREVAH's percolation factor KWPER, one value per hydro unit.
+
+        PREVAH scales the percolation rate by the soil hydraulic conductivity k of
+        each hydrotope, relative to the catchment::
+
+            kwper = max((ln k - kwminl) / (kwmitl - kwminl), 0.05)
+
+        kwminl and kwmitl being the minimum and the area-weighted mean of the shifted
+        logs ln k - min(ln k) + 1. This is a transcription of xPREVAH, quirks
+        included: the unit's own log is not shifted, so kwminl is always 1; and as
+        soon as one hydrotope has no (or a negative) conductivity, the factor is 1
+        everywhere.
+
+        Parameters
+        ----------
+        conductivity
+            Soil hydraulic conductivity of each hydro unit, in the unit of the
+            hydrotope table (only the logs relative to the catchment matter).
+        areas
+            Area of each hydro unit, the weights of the mean.
+
+        Returns
+        -------
+        The factor of each hydro unit.
+        """
+        k = np.maximum(np.atleast_1d(np.asarray(conductivity, dtype=float)), 0.0)
+        areas = np.atleast_1d(np.asarray(areas, dtype=float))
+        if len(k) != len(areas):
+            raise ConfigurationError(
+                f"The conductivity has {len(k)} values and the areas {len(areas)}; "
+                f"they must match (one per hydro unit).",
+                item_name="conductivity",
+                item_value=len(k),
+                reason="Length mismatch",
+            )
+        factor = np.ones(len(k))
+        if k.min() <= 0 or np.average(k, weights=areas) <= 0:
+            return factor
+
+        logs = np.log(k)
+        shifted = logs - logs.min() + 1.0
+        kwminl = shifted.min()
+        kwmitl = np.average(shifted, weights=areas)
+        if kwmitl > kwminl:
+            factor = np.maximum((logs - kwminl) / (kwmitl - kwminl), 0.05)
+
+        return factor
+
+    def apply_land_use_percolation(
+        self,
+        parameters: Any,
+        hydro_units: Any,
+        land_use: Any,
+        available_water_content: Any,
+        soil_depth: Any = None,
+        conductivity: Any = None,
+    ) -> list[str]:
+        """
+        Set PREVAH's per-unit percolation factors from the soil and the land use.
+
+        Two things vary per hydro unit in PREVAH's percolation:
+
+        - the hydraulic-conductivity factor KWPER (``kwper``), from the soil
+          conductivity (see :meth:`conductivity_factor`); without a conductivity it
+          stays 1;
+        - the constant-rate branch (``perc_const``): the hydrotope percolates at
+          ``cperc * kwper`` whatever its soil moisture when its ET limit is at least
+          its soil capacity. PREVAH takes the ET limit (``cu`` times the capacity)
+          from the soil map *before* the land cover forces its capacity, so this
+          happens on built-up and rock hydrotopes whose soil promises more than their
+          fixed 5 mm or 3 mm. The rooting depth making that capacity monthly, the
+          branch is set per unit and per month. It is off under snow.
+
+        The branch depends on ``cu_perc``, read from ``parameters``: set it first,
+        and apply this again if it changes.
+
+        Parameters
+        ----------
+        parameters
+            The :class:`~hydrobricks.parameters.ParameterSet` to fill.
+        hydro_units
+            The :class:`~hydrobricks.hydro_units.HydroUnits` to add the properties to.
+        land_use
+            Land use of each hydro unit (or a single name for all).
+        available_water_content
+            Available water content of the soil [Vol-%], one value per hydro unit.
+        soil_depth
+            Depth of the soil [m], one value per hydro unit.
+        conductivity
+            Soil hydraulic conductivity, one value per hydro unit.
+
+        Returns
+        -------
+        The names of the hydro-unit properties that were added.
+        """
+        awc = np.atleast_1d(np.asarray(available_water_content, dtype=float))
+        n_units = len(awc)
+        if isinstance(land_use, str):
+            land_uses = [land_use] * n_units
+        else:
+            land_uses = [str(name) for name in land_use]
+        if soil_depth is None:
+            depths: Any = [None] * n_units
+        else:
+            depths = np.atleast_1d(np.asarray(soil_depth, dtype=float))
+        if len(land_uses) != n_units or len(depths) != n_units:
+            raise ConfigurationError(
+                "The land use, the available water content and the soil depth must "
+                "have one value per hydro unit.",
+                item_name="land_use",
+                item_value=len(land_uses),
+                reason="Length mismatch",
+            )
+        for name in set(land_uses):
+            self._check_land_use(name)
+        for name in ("perc_const", "kwper", "cu_perc"):
+            if not parameters.has(name):
+                raise ConfigurationError(
+                    f'No "{name}" in the parameter set.',
+                    item_name=name,
+                    reason="Missing percolation parameter",
+                )
+
+        # The constant branch: ET limit from the soil map >= the forced capacity.
+        cu = parameters.get("cu_perc")
+        table = np.zeros((n_units, 12))
+        for i, (unit_land_use, unit_awc, unit_depth) in enumerate(
+            zip(land_uses, awc, depths)
+        ):
+            cover = PREVAH_LAND_USE_COVER_TYPES[unit_land_use]
+            if cover not in PREVAH_LAND_USE_FIELD_CAPACITY_FIXED or cover == "glacier":
+                continue
+            forced = PREVAH_LAND_USE_FIELD_CAPACITY_FIXED[cover]
+            for month, depth in enumerate(PREVAH_LAND_USE_ROOT_DEPTH[unit_land_use]):
+                thickness = depth + 0.05
+                if unit_depth is not None:
+                    thickness = min(thickness, unit_depth)
+                table[i, month] = float(cu * unit_awc * thickness * 10.0 >= forced)
+
+        names = [f"perc_const_{month:02d}" for month in range(1, 13)]
+        for month, name in enumerate(names):
+            hydro_units.add_property((name, "-"), table[:, month])
+        parameters.set_spatial_monthly("perc_const", names)
+
+        if conductivity is not None:
+            areas = hydro_units.hydro_units["area"].to_numpy().flatten()
+            factor = self.conductivity_factor(conductivity, areas)
+            hydro_units.add_property(("kwper", "-"), factor)
+            parameters.set_spatial("kwper", "kwper")
+            names.append("kwper")
+
+        return names
+
+    def apply_land_use(
+        self,
+        parameters: Any,
+        land_use: str,
+        cover_name: str | None = None,
+    ) -> None:
+        """
+        Set the monthly vegetation parameters of a land cover from a PREVAH land use.
+
+        Sets the canopy interception capacity (``ic``, to ``si_max * veg_cov``) and,
+        when the canopy exposes it, the canopy evaporation factor
+        (``canopy_et_factor``, to ``veg_cov``) as monthly values. The latter only
+        exists with ``canopy_et_process='et:open_water_prevah'``; it is skipped
+        otherwise.
+
+        Parameters
+        ----------
+        parameters
+            The :class:`~hydrobricks.parameters.ParameterSet` to fill.
+        land_use
+            Name of the land use (e.g. ``'pasture'``); see
+            :data:`~hydrobricks.land_covers.PREVAH_LAND_USE_COVER_TYPES`.
+        cover_name
+            Name of the land cover to parameterize. Defaults to the land-use name.
+
+        Raises
+        ------
+        ConfigurationError
+            If the land use is unknown, or the cover carries no canopy.
+        """
+        self._check_land_use(land_use)
+        if cover_name is None:
+            cover_name = land_use
+
+        # A model with a single canopy exposes the aliases without a cover suffix.
+        suffix = f"_{cover_name}" if parameters.has(f"ic_{cover_name}") else ""
+        if not parameters.has(f"ic{suffix}"):
+            raise ConfigurationError(
+                f'No interception capacity "ic{suffix}" in the parameter set. Add '
+                f'"{cover_name}" to the interception_covers option first.',
+                item_name=f"ic{suffix}",
+                item_value=cover_name,
+                reason="Missing canopy parameter",
+            )
+
+        parameters.set_monthly_values(
+            f"ic{suffix}", self.land_use_interception_capacity(land_use)
+        )
+        if parameters.has(f"canopy_et_factor{suffix}"):
+            parameters.set_monthly_values(
+                f"canopy_et_factor{suffix}", PREVAH_LAND_USE_VEG_COV[land_use]
+            )
+
+    @staticmethod
+    def _check_land_use(land_use: str) -> None:
+        """Reject an unknown land-use name."""
+        if land_use not in PREVAH_LAND_USE_COVER_TYPES:
+            raise ConfigurationError(
+                f'Unknown PREVAH land use "{land_use}". Available: '
+                f"{', '.join(sorted(PREVAH_LAND_USE_COVER_TYPES))}.",
+                item_name="land_use",
+                item_value=land_use,
+                reason="Unknown land use",
+            )
+
+    def _resolve_interception_covers(self) -> None:
+        """Give every non-glacier cover a canopy by default, as PREVAH does.
+
+        PREVAH runs its interception module on every hydrotope. When
+        ``interception_covers`` is not given, all covers except the glaciers get a
+        canopy; ``forest_interception=False`` disables the interception altogether.
+        """
+        if self.options.get("interception_covers") is not None:
+            return
+        if not self.options.get("forest_interception"):
+            return
+        self.options["interception_covers"] = [
+            name
+            for name, cover_type in zip(self.land_cover_names, self.land_cover_types)
+            if cover_type != "glacier"
+        ]
+
+    def generate_parameters(self) -> Any:
+        """
+        Generate the parameter set, with PREVAH's vegetation tables where known.
+
+        Every canopy whose land cover is named after a PREVAH land use (e.g.
+        ``pasture``, ``coniferous_forest``; see
+        :data:`~hydrobricks.land_covers.PREVAH_LAND_USE_COVER_TYPES`) gets the
+        monthly interception capacity and canopy evaporation factor of that land use
+        (see :meth:`apply_land_use`). Covers with a generic name (``open``,
+        ``forest``) keep the constant defaults: call :meth:`apply_land_use` with the
+        land use they stand for.
+
+        Returns
+        -------
+        ParameterSet
+            The parameter set of the model.
+        """
+        parameters = super().generate_parameters()
+
+        canopy_covers = self.options.get("interception_covers") or []
+        generic = []
+        for cover_name in canopy_covers:
+            if cover_name in PREVAH_LAND_USE_SI_MAX:
+                self.apply_land_use(parameters, cover_name, cover_name=cover_name)
+            else:
+                generic.append(cover_name)
+        if generic:
+            logger.info(
+                f"The canopy of the land cover(s) {generic} is not named after a "
+                f"PREVAH land use, so it keeps constant interception parameters. "
+                f"Call apply_land_use(parameters, <land use>, cover_name=<cover>) to "
+                f"use the monthly vegetation tables."
+            )
+
+        return parameters
+
+    def set_forcing(self, forcing: Any) -> None:
+        """
+        Set the forcing data, checking the radiation needed by the Hock melt.
+
+        Parameters
+        ----------
+        forcing
+            The forcing data.
+
+        Raises
+        ------
+        ConfigurationError
+            If the snow melt is the radiation-corrected 'melt:temperature_index'
+            (the default) and the forcing has no solar radiation.
+        """
+        if self.options.get(
+            "snow_melt_process"
+        ) == "melt:temperature_index" and not self._has_radiation(forcing):
+            raise ConfigurationError(
+                "The PREVAH-UniBE snow melt ('melt:temperature_index', the "
+                "radiation-corrected Hock melt) needs a potential solar radiation "
+                "forcing, which was not provided. Compute it from a DEM with "
+                "catchment.calculate_daily_potential_radiation() and add it to the "
+                "forcing with forcing.spatialize_from_gridded_data("
+                "variable='solar_radiation', ...), or load a per-unit table with "
+                "forcing.load_spatialized_data_from_csv(); otherwise select "
+                "another melt process (e.g. "
+                "snow_melt_process='melt:degree_day_seasonal').",
+                item_name="snow_melt_process",
+                item_value="melt:temperature_index",
+                reason="Missing solar radiation forcing",
+            )
+        super().set_forcing(forcing)
+
+    @staticmethod
+    def _has_radiation(forcing: Any) -> bool:
+        names = getattr(forcing.data2D, "data_name", None) or []
+        solar = forcing.Variable.R_SOLAR
+        return any(
+            name == solar or str(name) in (str(solar), "solar_radiation")
+            for name in names
+        )
+
+    def _gate_bricks(self) -> str | list[str]:
+        """The bricks gating the percolation.
+
+        The soil moisture store(s): a single one with a shared store (the usual
+        PREVAH hydrotope), otherwise the per-cover stores, whose saturations the
+        process averages. Then the snowpacks of the glacier-free covers (present in
+        every unit), which switch the constant-rate branch off under snow.
+        """
+        names = list(dict.fromkeys(self._soil_names.values()))
+        if self.options.get("with_snow", True):
+            names += [
+                f"{name}_snowpack"
+                for name, cover_type in zip(
+                    self.land_cover_names, self.land_cover_types
+                )
+                if cover_type != "glacier"
+            ]
+
+        return names[0] if len(names) == 1 else names
+
+    def _define_structure_variants(
+        self,
+    ) -> list[tuple[list[str], list[str], dict[str, Any]]]:
+        """Make the glacier-free structure the base, adding a with-glacier variant.
+
+        As in Socont/HBV: glacier-free units use the base structure (no glacier
+        brick at all), glacierized units the with-glacier variant. The split is
+        handled by the shared glacier machinery.
+        """
+        return self._split_glacier_variants(
+            self.land_cover_names, self.land_cover_types, self.structure
+        )
+
+    def _define_parameter_aliases(self) -> None:
+        """Define PREVAH parameter aliases (literature names).
+
+        The process parameter specs already provide beta (CBETA), lp (the CU
+        ET limit), cwh, cexliq, cfr, cperc, cu_perc and the melt factors
+        (melt_factor/r_snow, or a_snow_min/crmfmin and a_snow_max/crmfmax with the
+        seasonal melt); the glacier reservoir factors come from the glacier module.
+        """
+        self.parameter_aliases = {
+            "upper_zone:response_factor_threshold": ["k0"],
+            "upper_zone:threshold": ["sgrluz"],
+            "upper_zone:response_factor": ["k1"],
+            "slz1:response_factor": ["k_gw1"],
+            "slz2:response_factor": ["k_gw2"],
+            "slz3:response_factor": ["k_gw3"],
+        }
+        if self._shared_soil:
+            self.parameter_aliases["soil_moisture:capacity"] = ["fc"]
+            self.parameter_aliases["soil_moisture:lp"] = ["cu"]
+        else:
+            for soil_name, cover_name in self._soil_covers.items():
+                self.parameter_aliases[f"{soil_name}:capacity"] = [f"fc_{cover_name}"]
+        single_wetland = len(self._wetland_cover_names) == 1
+        for cover_name in self._wetland_cover_names:
+            alias = "wet_fraction" if single_wetland else f"wet_fraction_{cover_name}"
+            self.parameter_aliases[f"{cover_name}:split_fraction"] = [alias]
+        if self._glacier_module is not None:
+            self.parameter_aliases.update(
+                self._glacier_module.parameter_aliases(self._glacier_cover_names)
+            )
+            self.parameter_defaults.update(
+                self._glacier_module.parameter_defaults(self._glacier_cover_names)
+            )
+
+    def _define_parameter_constraints(self) -> None:
+        """Define parameter constraints for the PREVAH model.
+
+        The response cascade must slow down with depth: surface runoff faster
+        than interflow, interflow faster than the fast baseflow, and the three
+        groundwater stores in decreasing order (PREVAH convention:
+        CG3H = 9 × CG1H, i.e. k_gw3 ≈ k_gw1 / 9).
+        """
+        self.parameter_constraints = [
+            ["k1", "<", "k0"],
+            ["k_gw1", "<", "k1"],
+            ["k_gw2", "<", "k_gw1"],
+            ["k_gw3", "<", "k_gw2"],
+        ]
+
+    def _set_specific_options(self, kwargs: dict[str, Any]) -> None:
+        """Validate PREVAH-specific option combinations."""
+        retention = self.options.get("snow_water_retention_process")
+        refreezing = self.options.get("snow_refreezing_process")
+
+        if self.options.get("rain_to_snowpack") and retention is None:
+            raise ConfigurationError(
+                "Routing the rain to the snowpacks requires a snow water "
+                "retention process.",
+                item_name="rain_to_snowpack",
+                item_value=True,
+                reason="Missing snow water retention process",
+            )
+
+        if refreezing is not None:
+            if retention is None:
+                raise ConfigurationError(
+                    "Snow refreezing requires a snow water retention process.",
+                    item_name="snow_refreezing_process",
+                    item_value=refreezing,
+                    reason="Missing snow water retention process",
+                )
+            melt = self.options.get("snow_melt_process")
+            if refreezing == "refreeze:degree_day" and melt not in (
+                "melt:degree_day",
+                "melt:degree_day_seasonal",
+            ):
+                raise ConfigurationError(
+                    "The refreeze:degree_day process requires a degree-day snow "
+                    "melt process (melt:degree_day or melt:degree_day_seasonal). "
+                    "Use 'refreeze:degree_day_seasonal' (own seasonal factor, "
+                    "PREVAH) with other melt processes.",
+                    item_name="snow_melt_process",
+                    item_value=melt,
+                    reason="Incompatible option",
+                )

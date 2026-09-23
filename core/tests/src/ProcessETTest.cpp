@@ -3,6 +3,7 @@
 #include <memory>
 #include <string>
 
+#include "Forcing.h"
 #include "ModelHydro.h"
 #include "SettingsModel.h"
 #include "TimeSeriesUniform.h"
@@ -144,4 +145,30 @@ TEST(ProcessET, PowerLawWithExponentOneMatchesLinear) {
 
     EXPECT_NEAR(rPowerLaw.et, rLinear.et, 1e-8);
     EXPECT_NEAR(rPowerLaw.discharge, rLinear.discharge, 1e-8);
+}
+
+/**
+ * Only a forcing that accumulates over the time step may be turned into a rate by
+ * dividing it by the step length. Temperature and radiation are values that do not
+ * depend on how long the step is, so scaling them would be meaningless; the forcing's
+ * own type is what decides, so that a caller cannot get it wrong.
+ */
+TEST(Forcing, CumulativeVariablesAreTheAccumulatedDepths) {
+    EXPECT_TRUE(Forcing(VariableType::Precipitation).IsCumulative());
+    EXPECT_TRUE(Forcing(VariableType::PET).IsCumulative());
+}
+
+TEST(Forcing, InstantaneousVariablesAreNotCumulative) {
+    EXPECT_FALSE(Forcing(VariableType::Temperature).IsCumulative());
+    EXPECT_FALSE(Forcing(VariableType::TemperatureMin).IsCumulative());
+    EXPECT_FALSE(Forcing(VariableType::TemperatureMax).IsCumulative());
+    EXPECT_FALSE(Forcing(VariableType::Radiation).IsCumulative());
+}
+
+TEST(Forcing, CustomVariablesAreNotScaled) {
+    // Their meaning belongs to the user: scaling one that was not meant to be scaled
+    // would corrupt it silently, so they are left alone.
+    EXPECT_FALSE(Forcing(VariableType::Custom1).IsCumulative());
+    EXPECT_FALSE(Forcing(VariableType::Custom2).IsCumulative());
+    EXPECT_FALSE(Forcing(VariableType::Custom3).IsCumulative());
 }

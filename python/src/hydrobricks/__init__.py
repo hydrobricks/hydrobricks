@@ -11,6 +11,7 @@ from hydrobricks._exceptions import (
 from hydrobricks._optional import (  # Availability flags; Lazy-loaded modules
     HAS_GEOPANDAS,
     HAS_GRAPHVIZ,
+    HAS_MATPLOTLIB,
     HAS_NETCDF,
     HAS_PYARROW,
     HAS_PYET,
@@ -118,6 +119,7 @@ __all__ = (
     "HAS_PYARROW",
     "HAS_XRSPATIAL",
     "HAS_GRAPHVIZ",
+    "HAS_MATPLOTLIB",
     # Lazy-loaded optional modules
     "Dataset",
     "rasterio",

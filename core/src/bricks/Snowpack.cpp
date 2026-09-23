@@ -7,13 +7,18 @@ Snowpack::Snowpack()
 }
 
 void Snowpack::Reset() {
-    _water->Reset();
+    // Brick::Reset restores the water container and the processes' internal state
+    // (e.g. the CemaNeige cold content or the Frey & Holzmann snow density).
+    Brick::Reset();
     _snow->Reset();
+    _snowAge = _initialSnowAge;
+    _snowfallInput = 0;
 }
 
 void Snowpack::SaveAsInitialState() {
     _water->SaveAsInitialState();
     _snow->SaveAsInitialState();
+    _initialSnowAge = _snowAge;
 }
 
 void Snowpack::SetParameters(const BrickSettings& brickSettings) {
@@ -106,9 +111,28 @@ void Snowpack::UpdateContent(double value, ContentType type) {
     }
 }
 
-void Snowpack::UpdateContentFromInputs() {
-    _snow->AddAmountToStaticContentChange(_snow->SumIncomingFluxes());
-    _water->AddAmountToDynamicContentChange(_water->SumIncomingFluxes());
+void Snowpack::UpdateContentFromInputs(double timeStepInDays) {
+    // Update the snow-surface age at the start of the step, before any process reads the
+    // albedo, so all consumers (the snow evaporation and the albedo-reduced ET) see a
+    // consistent age: reset to 0 on a fresh snowfall, otherwise age while the snow
+    // persists (reset when the snowpack is empty). The content here is still the
+    // previous step's committed value. The age is counted in days.
+    _snowfallInput = _snow->BookIncomingFluxes(true);
+    double snowfallRate = timeStepInDays > 0 ? _snowfallInput / timeStepInDays : _snowfallInput;
+    if (snowfallRate >= kFreshSnowfallRate) {
+        _snowAge = 0;
+    } else if (_snow->GetContentWithoutChanges() > kEmptySnowContent) {
+        _snowAge += timeStepInDays;
+    } else {
+        _snowAge = 0;
+    }
+
+    _water->BookIncomingFluxes();
+}
+
+void Snowpack::ResetInputBooking() {
+    _snow->ResetInputBooking();
+    _water->ResetInputBooking();
 }
 
 void Snowpack::ApplyConstraints(double timeStep) {
@@ -132,10 +156,17 @@ double* Snowpack::GetValuePointer(std::string_view name) {
     if (name == "snow" || name == "snow_content") {
         return _snow->GetContentPointer();
     }
+    if (name == "snow_age") {
+        return &_snowAge;
+    }
 
     return nullptr;
 }
 
 bool Snowpack::HasSnow() const {
     return _snow->IsNotEmpty();
+}
+
+double Snowpack::GetSnowAge() const {
+    return _snowAge;
 }

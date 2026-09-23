@@ -6,7 +6,8 @@ authors = [
 ]
 maintainers = [
     { name = "Pascal Horton" },
-    { name = "Anne-Laure Argentin" }
+    { name = "Anne-Laure Argentin" },
+    { name = "Jan Schwanbeck" }
 ]
 description = "A modular hydrological modelling framework"
 readme = "python/README.md"

@@ -15,6 +15,7 @@ from hydrobricks._utils import Timer, date_as_mjd, dump_config_file, validate_kw
 from hydrobricks.actions.action import Action
 from hydrobricks.forcing import Forcing
 from hydrobricks.hydro_units import HydroUnits
+from hydrobricks.land_covers import GENERIC_COVER_ALIASES, GENERIC_SOIL_COVER_TYPES
 from hydrobricks.models.model_settings import ModelSettings
 from hydrobricks.parameters import ParameterSet
 from hydrobricks.periods import Period, spinup_to_days
@@ -28,11 +29,6 @@ if TYPE_CHECKING:
     from hydrobricks.results import Results
 
 logger = logging.getLogger(__name__)
-
-# Generic (soil-bearing) land cover aliases. ``open`` is the canonical name (the HBV
-# "open areas" class); ``ground`` and the ``generic*`` names are kept as accepted
-# aliases for backward compatibility.
-GENERIC_COVER_ALIASES = frozenset({"open", "ground", "generic", "generic_land_cover"})
 
 # Name of the netCDF file written by dump_outputs() into the output directory.
 RESULTS_FILENAME = "results.nc"
@@ -66,6 +62,8 @@ class Model(ABC):
         self.end_date: str | None = None
         self.period: Period | None = None
         self.spinup_days: int = 0
+        self.time_step: int = 1
+        self.time_step_unit: str = "day"
         self.output_path: str | None = None
         self.allowed_kwargs: set[str] = {
             "solver",
@@ -95,6 +93,9 @@ class Model(ABC):
         self.parameter_constraints: list[tuple[str, ...]] = []
         self.parameter_transforms: dict[str, tuple[Any, Any]] = dict()
         self.parameter_ranges: dict[str, tuple[float, float]] = dict()
+        # Initial values that differ from the default of the process kind, for a
+        # parameter the model wants to start elsewhere (keyed by name or alias).
+        self.parameter_defaults: dict[str, float] = dict()
 
         # Setting base settings
         self.settings: ModelSettings = ModelSettings(
@@ -123,6 +124,8 @@ class Model(ABC):
         end_date: str | None = None,
         period: Period | tuple | None = None,
         spinup: int | str = 0,
+        time_step: int = 1,
+        time_step_unit: str = "day",
     ) -> None:
         """
         Setup and initialize the model for simulation.
@@ -149,6 +152,12 @@ class Model(ABC):
             restarts at the period start with the warmed-up states. Either a number
             of days (int) or a string like ``'4y'`` (calendar years). A spin-up
             longer than the period is clamped to it. Default: 0 (no spin-up)
+        time_step
+            Length of the computation time step, in ``time_step_unit``. Default: 1
+        time_step_unit
+            Unit of the computation time step: ``'day'``, ``'hour'`` or
+            ``'minute'``. The forcing must be provided at the same resolution.
+            Default: ``'day'``
 
         Raises
         ------
@@ -165,6 +174,8 @@ class Model(ABC):
         >>> model.setup(hydro_units, './output', '2020-01-01', '2020-12-31')
         >>> model.setup(hydro_units, './output', period=periods.calibration,
         ...             spinup='4y')
+        >>> model.setup(hydro_units, './output', '2020-01-01', '2020-12-31',
+        ...             time_step=1, time_step_unit='hour')
         """
         if self._is_initialized:
             raise ModelError(
@@ -206,7 +217,9 @@ class Model(ABC):
             init_log(str(output_path))
 
             # Modelling period
-            self.settings.set_timer(start_date, end_date, 1, "day")
+            self.time_step = int(time_step)
+            self.time_step_unit = time_step_unit
+            self.settings.set_timer(start_date, end_date, time_step, time_step_unit)
 
             # Spin-up (replays the first days of the period, unlogged, on every run)
             self.spinup_days = spinup_to_days(spinup, start_date)
@@ -367,6 +380,7 @@ class Model(ABC):
                 is_initialized=False,
             )
         self.model.clear_time_series()
+        self._check_forcing_resolution(forcing)
         time = forcing.data2D.time.to_numpy()
         time = date_as_mjd(time)
         ids = self.spatial_structure.get_ids().to_numpy().flatten()
@@ -382,6 +396,55 @@ class Model(ABC):
 
         if not self.model.attach_time_series_to_hydro_units():
             raise ModelError("Attaching time series failed.")
+
+    @property
+    def time_step_in_days(self) -> float:
+        """The computation time step, in days."""
+        per_day = {"day": 1.0, "hour": 24.0, "minute": 1440.0}
+        divisor = per_day.get(str(self.time_step_unit).lower())
+        if divisor is None:
+            return float(self.time_step)
+
+        return float(self.time_step) / divisor
+
+    def _check_forcing_resolution(self, forcing: Forcing) -> None:
+        """
+        Check that the forcing spacing is the computation time step.
+
+        The forcing is advanced one record per time step, so the two must agree: a daily
+        series on an hourly model runs out of records after a day, and an hourly series
+        on a daily model reads one value in twenty-four and drops the rest of the water
+        without saying anything.
+
+        Parameters
+        ----------
+        forcing
+            The forcing data about to be attached.
+
+        Raises
+        ------
+        ConfigurationError
+            If the forcing spacing differs from the computation time step.
+        """
+        time = getattr(forcing.data2D, "time", None)
+        if time is None or len(time) < 2:
+            return
+
+        spacing = pd.Timestamp(time[1]) - pd.Timestamp(time[0])
+        data_step = spacing.total_seconds() / 86400.0
+        model_step = self.time_step_in_days
+        if data_step <= 0 or abs(data_step - model_step) < 1e-9:
+            return
+
+        raise ConfigurationError(
+            f"The forcing is provided every {data_step:g} day(s) but the model runs on "
+            f"a time step of {model_step:g} day(s); they have to match. Provide the "
+            f"forcing at the resolution of the computation time step, or set the time "
+            f"step of the model to the resolution of the forcing.",
+            item_name="forcing",
+            item_value=data_step,
+            reason="Forcing resolution differs from the time step",
+        )
 
     def add_action(self, action: Action) -> bool:
         """
@@ -733,6 +796,11 @@ class Model(ABC):
             if ps.has(key):
                 ps.change_range(key, min_val, max_val)
 
+        # Then the model's own starting values, inside the (possibly widened) ranges.
+        for key, value in self.parameter_defaults.items():
+            if ps.has(key):
+                ps.set_values({key: value})
+
         # Apply transforms after aliases so keys may be aliases or "component:name".
         for key, (to_transformed, to_real) in self.parameter_transforms.items():
             if ps.has(key):
@@ -758,7 +826,7 @@ class Model(ABC):
         ----------
         structure_id
             The structure variant to inspect (default 1, the primary). Models with
-            glacier/lake covers define several variants.
+            glacier/water covers define several variants.
         with_forcing
             Include the meteorological forcing inputs (precipitation, temperature,
             pet) as source nodes. Set to False for a less cluttered graph.
@@ -904,12 +972,15 @@ class Model(ABC):
 
         # Check the allowed land cover types. The generic cover aliases (ground,
         # generic, ...) are accepted wherever the canonical generic cover (open) is
-        # allowed, so older 'ground'-based configurations keep working.
+        # allowed, so older 'ground'-based configurations keep working. The generic
+        # soil covers (e.g. wetland) are likewise accepted wherever a generic cover
+        # is allowed, so they are available in every model without being listed.
         allowed = set(self.allowed_land_cover_types)
         allows_generic = bool(allowed & GENERIC_COVER_ALIASES)
         for cover_type in self.land_cover_types:
             accepted = cover_type in allowed or (
-                allows_generic and cover_type in GENERIC_COVER_ALIASES
+                allows_generic
+                and cover_type in (GENERIC_COVER_ALIASES | GENERIC_SOIL_COVER_TYPES)
             )
             if not accepted:
                 raise ConfigurationError(
@@ -1044,7 +1115,7 @@ class Model(ABC):
         # a cover carries no zero-area brick for it. Most models have a single variant.
         # A variant may optionally carry a 4th element: an options override (a dict
         # merged over self.options for that variant only, e.g. {"with_snow": False} for
-        # a lake variant whose precipitation goes directly into open water).
+        # a water variant whose precipitation goes directly into open water).
         for i, variant in enumerate(self._define_structure_variants()):
             if len(variant) == 4:
                 land_cover_names, land_cover_types, structure, options_override = (
@@ -1121,7 +1192,7 @@ class Model(ABC):
         An entry may optionally be a 4-tuple
         ``(names, types, structure, options_override)`` where ``options_override`` is a
         dict merged over ``self.options`` while that variant is generated (e.g.
-        ``{"with_snow": False}`` for an HBV lake variant, whose precipitation goes
+        ``{"with_snow": False}`` for an HBV water variant, whose precipitation goes
         directly into open water with no snowpack).
         """
         return [(self.land_cover_names, self.land_cover_types, self.structure)]
@@ -1201,7 +1272,7 @@ class Model(ABC):
         if "rain_to_snowpack" in self.options:
             rain_to_snowpack = self.options["rain_to_snowpack"]
         # with_snow is on by default; an explicit option overrides it last, so it wins
-        # over the presence of a snow melt process (e.g. a lake variant sets it False
+        # over the presence of a snow melt process (e.g. a water variant sets it False
         # to send all precipitation directly into open water, with no snowpack).
         if "with_snow" in self.options:
             with_snow = self.options["with_snow"]
@@ -1218,6 +1289,11 @@ class Model(ABC):
             snow_sublimation_process=snow_sublimation_process,
             rain_to_snowpack=rain_to_snowpack,
             forest_interception=self.options.get("forest_interception", False),
+            canopy_interception_process=self.options.get(
+                "canopy_interception_process", "outflow:threshold"
+            ),
+            canopy_et_process=self.options.get("canopy_et_process", "et:open_water"),
+            interception_covers=self.options.get("interception_covers"),
         )
 
     def _set_structure_brick(self, brick: dict[str, Any], key: str) -> None:
@@ -1265,7 +1341,9 @@ class Model(ABC):
             Name/identifier for the process.
         process_data
             Process definition dictionary containing 'kind', 'target', and optional
-            'log' and 'instantaneous' keys.
+            'log', 'instantaneous' and 'gate' keys ('gate' names a brick whose state
+            modulates the process rate without receiving its flux, e.g. the soil
+            moisture store gating the PREVAH percolation).
 
         Raises
         ------
@@ -1306,6 +1384,14 @@ class Model(ABC):
         )
         for extra_target in targets[1:]:
             self.settings.add_process_output(extra_target)
+        if "gate" in process_data:
+            # A process can read the state of several bricks (e.g. one soil moisture
+            # store per land cover); each is registered in turn.
+            gates = process_data["gate"]
+            if isinstance(gates, str):
+                gates = [gates]
+            for gate in gates:
+                self.settings.set_process_gate_brick(gate)
 
     def _set_parameter_values(self, parameters: ParameterSet) -> None:
         """
@@ -1330,6 +1416,26 @@ class Model(ABC):
                 param["component"], param["name"], param["value"]
             ):
                 raise ModelError("Failed setting parameter values.")
+        # Push any monthly-varying values (e.g. monthly canopy capacity) so their
+        # modifier is (re)attached before update_parameters registers it.
+        for component, name, values in parameters.get_monthly_parameters():
+            if isinstance(component, (list, tuple)):
+                component = ",".join(component)
+            if not self.settings.set_parameter_monthly_values(component, name, values):
+                raise ModelError("Failed setting monthly parameter values.")
+        # Push any spatial (per-unit) bindings so each unit reads its own value.
+        for component, name, prop in parameters.get_spatial_parameters():
+            if isinstance(component, (list, tuple)):
+                component = ",".join(component)
+            self.settings.set_parameter_spatial_from_property(component, name, prop)
+        # Push the bindings of the parameters that are both spatial and monthly: each
+        # unit then follows its own monthly series.
+        for component, name, props in parameters.get_spatial_monthly_parameters():
+            if isinstance(component, (list, tuple)):
+                component = ",".join(component)
+            self.settings.set_parameter_spatial_monthly_from_properties(
+                component, name, props
+            )
         self.model.update_parameters(self.settings.settings)
 
     def _set_forcing(self, forcing: Forcing | None) -> None:

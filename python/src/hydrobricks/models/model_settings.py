@@ -2,6 +2,11 @@ from typing import Any
 
 from hydrobricks._exceptions import ConfigurationError
 from hydrobricks._hydrobricks import SettingsModel
+from hydrobricks.land_covers import (
+    GENERIC_COVER_ALIASES,
+    GENERIC_SOIL_COVER_TYPES,
+    WATER_COVER_TYPE,
+)
 
 
 class ModelSettings:
@@ -116,6 +121,70 @@ class ModelSettings:
         """
         return self.settings.set_parameter_value(component, name, float(value))
 
+    def set_parameter_monthly_values(
+        self, component: str, name: str, values: list[float]
+    ) -> bool:
+        """
+        Set 12 monthly values for a parameter (time-varying over the year).
+
+        Parameters
+        ----------
+        component
+            Name of the component (a comma-separated list sets several components).
+        name
+            Name of the parameter.
+        values
+            The 12 monthly values (January to December).
+
+        Returns
+        -------
+        True if the parameter was set successfully, False otherwise.
+        """
+        return self.settings.set_parameter_monthly_values(
+            component, name, [float(v) for v in values]
+        )
+
+    def set_parameter_spatial_from_property(
+        self, component: str, name: str, property_name: str
+    ) -> None:
+        """
+        Bind a parameter to a per-unit hydro-unit property (spatial parameter).
+
+        Parameters
+        ----------
+        component
+            Name of the component (brick) owning the parameter.
+        name
+            Name of the parameter.
+        property_name
+            Name of the hydro-unit property holding the per-unit values.
+        """
+        self.settings.set_parameter_spatial_from_property(
+            component, name, property_name
+        )
+
+    def set_parameter_spatial_monthly_from_properties(
+        self, component: str, name: str, property_names: list[str]
+    ) -> None:
+        """
+        Bind a parameter to 12 per-unit hydro-unit properties, one per calendar month.
+
+        Each hydro unit then follows its own monthly series for this parameter.
+
+        Parameters
+        ----------
+        component
+            Name of the component (brick) owning the parameter.
+        name
+            Name of the parameter.
+        property_names
+            Names of the 12 hydro-unit properties holding the per-unit values, from
+            January to December.
+        """
+        self.settings.set_parameter_spatial_monthly_from_properties(
+            component, name, [str(p) for p in property_names]
+        )
+
     def get_structure(self) -> list:
         """
         Export the model structure (bricks, processes, fluxes, splitters).
@@ -141,6 +210,9 @@ class ModelSettings:
         snow_sublimation_process: str | None = None,
         rain_to_snowpack: bool = False,
         forest_interception: bool = False,
+        canopy_interception_process: str = "outflow:threshold",
+        canopy_et_process: str = "et:open_water",
+        interception_covers: list[str] | None = None,
     ) -> None:
         """
         Generate basic elements
@@ -183,6 +255,20 @@ class ModelSettings:
         forest_interception
             Add a canopy interception store on each ``forest`` land cover (default
             False). When False, forest covers behave like a generic soil cover.
+        canopy_interception_process
+            Throughfall process of the forest canopy (default 'outflow:threshold',
+            fill-then-spill). Use 'interception:menzel' for the PREVAH asymptotic
+            filling (Menzel, 1997).
+        canopy_et_process
+            Evaporation process of the forest canopy (default 'et:open_water', the
+            potential rate). Use 'et:open_water_prevah' to apply PREVAH's
+            snow-albedo reduction of the potential rate.
+        interception_covers
+            Names of the land covers to equip with a canopy interception store
+            (default None: the covers of type ``forest`` when forest_interception
+            is enabled). PREVAH applies interception to every vegetated cover, not
+            only forests; list the cover names here to reproduce that. Providing a
+            list activates the interception regardless of forest_interception.
         """
         if len(land_cover_names) != len(land_cover_types):
             raise ConfigurationError(
@@ -204,8 +290,17 @@ class ModelSettings:
         # while special covers (e.g. glacier) keep their type. Several generic covers
         # can coexist (e.g. open and forest), each getting its own snowpack and
         # soil routine.
+        # Covers that map to the generic land-cover brick: the generic aliases
+        # (open/ground/...), the generic soil covers (wetland, urban, rock), and the
+        # covers whose special behaviour is layered on top of a generic brick (forest =
+        # generic + optional canopy; water = generic + open-water routine).
+        generic_covers = (
+            GENERIC_COVER_ALIASES
+            | GENERIC_SOIL_COVER_TYPES
+            | {WATER_COVER_TYPE, "forest"}
+        )
         for cover_type, cover_name in zip(land_cover_types, land_cover_names):
-            if cover_type in ["ground", "generic_land_cover", "open", "forest", "lake"]:
+            if cover_type in generic_covers:
                 self.settings.add_land_cover_brick(cover_name, "generic_land_cover")
             else:
                 self.settings.add_land_cover_brick(cover_name, cover_type)
@@ -216,17 +311,35 @@ class ModelSettings:
         # original rain target (the snowpack when the rain is routed to it, otherwise
         # the land cover). When disabled, forest covers behave like a generic soil cover
         # and interception can be accounter for through ET correction.
-        if forest_interception:
-            rain_to_snowpack_active = with_snow and rain_to_snowpack
-            for cover_type, cover_name in zip(land_cover_types, land_cover_names):
-                if cover_type == "forest":
-                    if rain_to_snowpack_active:
-                        throughfall_target = f"{cover_name}_snowpack"
-                    else:
-                        throughfall_target = cover_name
-                    self.settings.generate_canopy_interception(
-                        cover_name, throughfall_target
-                    )
+        if interception_covers is not None:
+            unknown = set(interception_covers) - set(land_cover_names)
+            if unknown:
+                raise ConfigurationError(
+                    f"Unknown land cover(s) in interception_covers: {sorted(unknown)}.",
+                    item_name="interception_covers",
+                    reason="Cover name not in land_cover_names",
+                )
+            covers_with_canopy = list(interception_covers)
+        elif forest_interception:
+            covers_with_canopy = [
+                cover_name
+                for cover_type, cover_name in zip(land_cover_types, land_cover_names)
+                if cover_type == "forest"
+            ]
+        else:
+            covers_with_canopy = []
+        rain_to_snowpack_active = with_snow and rain_to_snowpack
+        for cover_name in covers_with_canopy:
+            if rain_to_snowpack_active:
+                throughfall_target = f"{cover_name}_snowpack"
+            else:
+                throughfall_target = cover_name
+            self.settings.generate_canopy_interception(
+                cover_name,
+                throughfall_target,
+                canopy_interception_process,
+                canopy_et_process,
+            )
 
         # Snowpack
         if with_snow:
@@ -356,6 +469,20 @@ class ModelSettings:
             Target brick of the additional output.
         """
         self.settings.add_process_output(target)
+
+    def set_process_gate_brick(self, name: str) -> None:
+        """
+        Set the gate brick of the most recently added process.
+
+        The gate brick's state modulates the process rate without receiving its
+        flux (e.g. the soil moisture store gating the PREVAH percolation).
+
+        Parameters
+        ----------
+        name
+            Name of the gate brick.
+        """
+        self.settings.set_process_gate_brick(name)
 
     def add_brick_parameter(
         self, name: str, value: int | float | bool, kind: str = "constant"

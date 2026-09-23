@@ -39,5 +39,6 @@ const vecDouble& ProcessInfiltrationHBV::GetRates() {
 
     double ratio = std::clamp(GetTargetFillingRatio(), 0.0, 1.0);
 
-    return StoreRates({in * (1.0 - std::pow(ratio, static_cast<double>(*_beta)))});
+    // The share of this step's input entering the soil, as a rate over the step.
+    return StoreRates({in * (1.0 - std::pow(ratio, static_cast<double>(*_beta))) / GetTimeStepInDays()});
 }

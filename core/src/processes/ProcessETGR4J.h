@@ -30,6 +30,13 @@ class ProcessETGR4J : public ProcessET {
     /**
      * @copydoc Process::IsValid()
      */
+    /**
+     * @copydoc Process::RequiresDailyTimeStep()
+     */
+    [[nodiscard]] bool RequiresDailyTimeStep() const override {
+        return true;
+    }
+
     [[nodiscard]] bool IsValid() const override;
 
     /**

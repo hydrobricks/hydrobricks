@@ -35,5 +35,5 @@ void ProcessETLinear::AttachForcing(Forcing* forcing) {
 
 const vecDouble& ProcessETLinear::GetRates() {
     assert(_container->HasMaximumCapacity());
-    return StoreRates({_pet->GetValue() * std::min(1.0, _container->GetTargetFillingRatio())});
+    return StoreRates({GetForcingRate(_pet) * std::min(1.0, _container->GetTargetFillingRatio())});
 }

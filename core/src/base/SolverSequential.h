@@ -57,13 +57,35 @@ class SolverSequential : public Solver {
     static double TotalRateAt(Brick* brick, double* contentDelta, double offset);
 
     /**
-     * Store the per-connection rates of the brick's processes, evaluated at the
-     * current content, into the provided vector (resized to the connection count).
+     * Store the per-connection rates of the brick's processes, evaluated at the given
+     * content offset, and return their sum. The rates are computed once and used both
+     * for the total and for the per-connection values, which matters because this sits
+     * on the innermost solver loop.
      *
      * @param brick The brick to evaluate.
+     * @param contentDelta Pointer to the container's dynamic content change.
+     * @param offset Content offset from the start-of-step content [mm].
      * @param rates The vector receiving the rates.
+     * @return the total outflow rate [mm/d].
      */
-    static void StoreRatesAtCurrentContent(Brick* brick, vecDouble& rates);
+    static double StoreRatesAndTotalAt(Brick* brick, double* contentDelta, double offset, vecDouble& rates);
+
+    /**
+     * Sum the affine response coefficients of the brick's processes, evaluated at the
+     * current content: every process must report an affine response (rate = k S - offset)
+     * on a single connection for the sum to be meaningful.
+     *
+     * A process may be affine only over part of the content range (a threshold outflow is
+     * simply off below its threshold, an empty store produces no outflow at all), so a
+     * solution built from these coefficients is a candidate that still has to be checked
+     * against the real process rates.
+     *
+     * @param brick The brick to inspect.
+     * @param rate Receives the summed linear coefficient k [1/d].
+     * @param offset Receives the summed offset [mm/d].
+     * @return true if every process of the brick reports an affine response.
+     */
+    static bool SumAffineResponse(Brick* brick, double& rate, double& offset);
 };
 
 #endif  // HYDROBRICKS_SOLVER_SEQUENTIAL_H

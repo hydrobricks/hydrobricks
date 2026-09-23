@@ -5,6 +5,7 @@
 #include "Process.h"
 
 class Brick;
+class FluxToBrickInstantaneous;
 
 class WaterContainer {
   public:
@@ -59,6 +60,26 @@ class WaterContainer {
      * Set the outgoing rates to zero.
      */
     void SetOutgoingRatesToZero();
+
+    /**
+     * Book the amounts of the incoming fluxes into the content changes and flag them as
+     * booked, so that ApplyConstraints accounts for them through the content instead of
+     * adding them a second time as pending inputs. The flag is cleared by Finalize.
+     *
+     * @param asStatic true to book the amounts as a static change (the incoming amount is
+     * then not part of the dynamic state integrated by the solvers), false for a dynamic one.
+     * @return the summed amount of the incoming fluxes [mm]
+     */
+    double BookIncomingFluxes(bool asStatic = false);
+
+    /**
+     * Flag the incoming amounts as no longer booked into the content changes. Needed by the
+     * multi-stage solvers: they book the inputs at the intermediate stages and then drop the
+     * dynamic changes again (Processor::ResetState) before constraining the combined rates.
+     */
+    void ResetInputBooking() {
+        _inputsBooked = false;
+    }
 
     /**
      * Finalize the water container computation.
@@ -278,6 +299,28 @@ class WaterContainer {
     virtual double SumIncomingFluxes() const;
 
     /**
+     * Sums the change rates [mm/d] of the dynamic incoming fluxes (skipping the
+     * forcing, static and instantaneous inputs). Valid during the change-rate
+     * computation phase once the upstream (earlier-declared) bricks have been
+     * processed, so their rates are linked to the fluxes. Mirrors the input handling
+     * of ApplyConstraints and is used by inflow-dependent outflow processes (the
+     * PREVAH SLOWCOMP overflow).
+     *
+     * @return the summed incoming change rate [mm/d].
+     */
+    double SumIncomingChangeRates() const;
+
+    /**
+     * Sum the amounts delivered this step by the inputs that carry an amount rather
+     * than a rate (forcing, static and instantaneous fluxes), as long as the brick has
+     * not booked them into its content yet. The counterpart of SumIncomingChangeRates:
+     * together they give all the water reaching the container during the step.
+     *
+     * @return the summed incoming amount [mm], or 0 once the inputs are booked.
+     */
+    double SumIncomingAmounts() const;
+
+    /**
      * Check if the water content is accessible.
      *
      * @return true if the content (including pending changes) is greater than zero.
@@ -339,6 +382,29 @@ class WaterContainer {
     }
 
   private:
+    /**
+     * Classify the attached fluxes into the lists used by ApplyConstraints.
+     *
+     * The model structure (bricks, processes, fluxes) is fixed once the model is built, so
+     * the classification is done once on the first constraint application and reused for
+     * the whole simulation. ApplyConstraints sits on the innermost solver loop (once per
+     * brick, per constraint sweep, per solver stage, per time step), so rebuilding these
+     * lists there cost a heap allocation per call for nothing.
+     */
+    void BuildConstraintCache();
+
+    struct OutgoingLink {
+        Flux* flux;
+        Process* process;  // non-owning; kept for error reporting
+        bool priority;
+    };
+
+    bool _constraintCacheBuilt;                                     // the flux classification below is filled in
+    std::vector<OutgoingLink> _outgoingFluxes;                      // outgoing fluxes of this container's processes
+    std::vector<Flux*> _incomingRateFluxes;                         // incoming fluxes carrying a change rate
+    std::vector<Flux*> _incomingAmountFluxes;                       // incoming forcing / static fluxes (amounts)
+    std::vector<FluxToBrickInstantaneous*> _incomingInstantFluxes;  // incoming instantaneous fluxes
+
     double _content;               // [mm]
     double _contentChangeDynamic;  // [mm]
     double _contentChangeStatic;   // [mm]
@@ -346,6 +412,7 @@ class WaterContainer {
     const float* _capacity;        // non-owning reference
     bool _infiniteStorage;
     bool _allowNegativeContent;
+    bool _inputsBooked;                                    // incoming amounts already in the content changes
     Brick* _parent;                                        // non-owning reference
     Process* _overflow;                                    // non-owning reference
     vector<Flux*> _inputs;                                 // non-owning references

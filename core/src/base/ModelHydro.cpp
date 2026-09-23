@@ -46,6 +46,10 @@ ModelResult ModelHydro::Initialize(SettingsModel& modelSettings, SettingsBasin& 
             return std::unexpected("Timer initialization failed validation.");
         }
 
+        if (auto r = CheckTimeStepCompatibility(); !r) {
+            return r;
+        }
+
         // Convert the spin-up duration into time steps; a spin-up longer than the
         // modelling period degrades to replaying the whole period once.
         double timeStepInDays = *_timer.GetTimeStepPointer();
@@ -81,6 +85,71 @@ void ModelHydro::UpdateParameters(SettingsModel& modelSettings) {
     ModelBuilder builder(_subBasin, &_timer, &_logger);
     builder.UpdateSubBasinParameters(modelSettings);
     builder.UpdateHydroUnitsParameters(modelSettings);
+
+    // (Re)register the parameters carrying a time modifier (e.g. monthly canopy
+    // capacity) with the updater so their values follow the calendar during the run.
+    // Cleared first so a re-run (calibration) does not register them several times.
+    _parametersUpdater.Reset();
+    for (Parameter* parameter : modelSettings.GetParametersWithModifier()) {
+        _parametersUpdater.AddParameter(parameter);
+    }
+
+    // Register the per-unit monthly overrides too (a parameter that is both spatial and
+    // monthly): the updater writes each unit's own value for the month.
+    for (int iUnit = 0; iUnit < _subBasin->GetHydroUnitCount(); ++iUnit) {
+        for (auto& [target, values] : _subBasin->GetHydroUnit(iUnit)->GetMonthlyParameterOverrides()) {
+            _parametersUpdater.AddUnitMonthlyOverride(target, values);
+        }
+    }
+}
+
+ModelResult ModelHydro::CheckTimeStepCompatibility() {
+    double timeStepInDays = *_timer.GetTimeStepPointer();
+    if (timeStepInDays == 1.0) {
+        return {};
+    }
+
+    // A discrete daily formulation (GR4J, GR6J) is not a continuous model sampled at a
+    // time step: it works on the water volume of a step and advances its unit hydrograph
+    // by one slot per step, so a shorter step silently reinterprets its parameters. Say
+    // so at initialization rather than let it run and produce plausible nonsense.
+    auto firstDailyOnly = [](const Brick* brick) -> const Process* {
+        for (size_t i = 0; i < brick->GetProcessCount(); ++i) {
+            const Process* process = brick->GetProcess(i);
+            if (process != nullptr && process->RequiresDailyTimeStep()) {
+                return process;
+            }
+        }
+        return nullptr;
+    };
+
+    auto reject = [timeStepInDays](const Brick* brick, const Process* process) {
+        return std::unexpected(
+            std::format("The process '{}' of '{}' is a discrete daily formulation and only works on a "
+                        "daily time step (the current one is {:g} day). Such a process works on the "
+                        "water volume of a time step, so a shorter step reinterprets its parameters "
+                        "rather than refining it. Use a daily time step, or a model whose processes "
+                        "are continuous in time.",
+                        process->GetName(), brick->GetName(), timeStepInDays));
+    };
+
+    for (int iBrick = 0; iBrick < _subBasin->GetBrickCount(); ++iBrick) {
+        const Brick* brick = _subBasin->GetBrick(iBrick);
+        if (const Process* process = firstDailyOnly(brick)) {
+            return reject(brick, process);
+        }
+    }
+    for (int iUnit = 0; iUnit < _subBasin->GetHydroUnitCount(); ++iUnit) {
+        HydroUnit* unit = _subBasin->GetHydroUnit(iUnit);
+        for (int iBrick = 0; iBrick < unit->GetBrickCount(); ++iBrick) {
+            const Brick* brick = unit->GetBrick(iBrick);
+            if (const Process* process = firstDailyOnly(brick)) {
+                return reject(brick, process);
+            }
+        }
+    }
+
+    return {};
 }
 
 bool ModelHydro::IsValid() const {
@@ -109,6 +178,11 @@ ModelResult ModelHydro::Run() {
     }
 
     _logger.SaveInitialValues();
+
+    // Apply time-modified parameters (e.g. monthly canopy capacity) for the start date
+    // before the first step: the updater otherwise only fires on IncrementTime, which
+    // runs after a step, so the first step would keep the scalar baseline.
+    _parametersUpdater.DateUpdate(_timer.GetDate());
 
     // Per-run lifecycle messages are debug-level: at Message level they would
     // flood the output during calibration (thousands of runs).
@@ -274,6 +348,21 @@ bool ModelHydro::AddTimeSeries(std::unique_ptr<TimeSeries> timeSeries) {
             LogError("The data variable is already linked to the model.");
             return false;
         }
+    }
+
+    // The forcing is advanced one record per time step, so its spacing has to be the
+    // computation step: daily data on an hourly model runs out of records a day in, and
+    // hourly data on a daily model silently reads one value in twenty-four and drops the
+    // rest of the water.
+    double dataStep = timeSeries->GetTimeStepInDays();
+    double modelStep = *_timer.GetTimeStepPointer();
+    if (dataStep > 0 && std::abs(dataStep - modelStep) > 1e-9) {
+        LogError(
+            "The forcing is provided every {:g} day(s) but the model runs on a time step of "
+            "{:g} day(s); they have to match. Provide the forcing at the resolution of the "
+            "computation time step.",
+            dataStep, modelStep);
+        return false;
     }
 
     if (timeSeries->GetStart() > _timer.GetStart()) {

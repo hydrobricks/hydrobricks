@@ -31,6 +31,11 @@ bool TimeSeriesDistributed::AdvanceOneTimeStep() {
     return true;
 }
 
+double TimeSeriesDistributed::GetTimeStepInDays() const {
+    assert(!_data.empty());
+    return _data[0]->GetTimeStepInDays();
+}
+
 double TimeSeriesDistributed::GetStart() const {
     assert(!_data.empty());
     return _data[0]->GetStart();

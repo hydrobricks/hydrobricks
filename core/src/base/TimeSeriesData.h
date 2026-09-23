@@ -55,6 +55,16 @@ class TimeSeriesData {
     virtual bool AdvanceOneTimeStep() = 0;
 
     /**
+     * Get the spacing of the records, in days. Zero when the data carry no regular
+     * spacing (an irregular series).
+     *
+     * @return the time step in days, or 0 if there is none.
+     */
+    [[nodiscard]] virtual double GetTimeStepInDays() const {
+        return 0;
+    }
+
+    /**
      * Get the start date of the time series data.
      *
      * @return the start date of the time series data.
@@ -124,6 +134,11 @@ class TimeSeriesDataRegular : public TimeSeriesData {
      * @copydoc TimeSeriesData::AdvanceOneTimeStep()
      */
     bool AdvanceOneTimeStep() override;
+
+    /**
+     * @copydoc TimeSeriesData::GetTimeStepInDays()
+     */
+    [[nodiscard]] double GetTimeStepInDays() const override;
 
     /**
      * @copydoc TimeSeriesData::GetStart()

@@ -1,5 +1,7 @@
 #include "Processor.h"
 
+#include <algorithm>
+
 #include "FluxToBrick.h"
 #include "ModelHydro.h"
 #include "SubBasin.h"
@@ -8,7 +10,8 @@ Processor::Processor()
     : _solver(nullptr),
       _model(nullptr),
       _solvableConnectionCount(0),
-      _directConnectionCount(0) {}
+      _directConnectionCount(0),
+      _directRateCount(0) {}
 
 Processor::~Processor() = default;  // Automatic cleanup via unique_ptr
 
@@ -22,8 +25,9 @@ void Processor::Initialize(const SolverSettings& solverSettings) {
     _solver->Connect(this);
     ConnectToElementsToSolve();
     ValidateFluxTopology();
+    BuildTraversalTables();
     _solver->InitializeContainers();
-    _changeRatesNoSolver = axd::Zero(_directConnectionCount);
+    _changeRatesNoSolver = axd::Zero(_directRateCount);
 }
 
 void Processor::ValidateFluxTopology() const {
@@ -119,6 +123,68 @@ void Processor::StoreStateVariableChanges(std::span<double*> values) {
     }
 }
 
+void Processor::BuildTraversalTables() {
+    _solvableProcesses.clear();
+    _solvableBrickEntries.clear();
+    _solvableBrickEntries.reserve(_iterableBricks.size());
+
+    int rateOffset = 0;
+    for (auto brick : _iterableBricks) {
+        int processStart = static_cast<int>(_solvableProcesses.size());
+        for (int i = 0; i < brick->GetProcessCount(); ++i) {
+            Process* process = brick->GetProcess(i);
+            int connectionCount = process->GetConnectionCount();
+            _solvableProcesses.push_back({process, connectionCount, rateOffset});
+            rateOffset += connectionCount;
+        }
+        _solvableBrickEntries.push_back({brick, processStart, static_cast<int>(_solvableProcesses.size())});
+    }
+
+    assert(rateOffset == _solvableConnectionCount);
+
+    // Same flattening for the direct pass. The rate slices are assigned once here, so a
+    // brick that is null on a given time step simply leaves its own slots untouched
+    // instead of shifting everyone else's, as the running index used to do.
+    SubBasin* basin = _model->GetSubBasin();
+    int directRateOffset = 0;
+    int hydroUnitCount = basin->GetHydroUnitCount();
+    _directUnits.reserve(hydroUnitCount);
+    for (int iUnit = 0; iUnit < hydroUnitCount; ++iUnit) {
+        HydroUnit* unit = basin->GetHydroUnit(iUnit);
+
+        int splitterStart = static_cast<int>(_directSplitters.size());
+        int splitterCount = unit->GetSplitterCount();
+        for (int iSplitter = 0; iSplitter < splitterCount; ++iSplitter) {
+            _directSplitters.push_back(unit->GetSplitter(iSplitter));
+        }
+
+        int brickStart = static_cast<int>(_directBricks.size());
+        int brickCount = unit->GetBrickCount();
+        for (int iBrick = 0; iBrick < brickCount; ++iBrick) {
+            Brick* brick = unit->GetBrick(iBrick);
+            if (brick->NeedsSolver()) {
+                continue;
+            }
+
+            int processStart = static_cast<int>(_directProcesses.size());
+            for (int i = 0; i < brick->GetProcessCount(); ++i) {
+                Process* process = brick->GetProcess(i);
+                int outputFluxCount = process->GetOutputFluxCount();
+                int connectionCount = process->GetConnectionCount();
+                _directProcesses.push_back(
+                    {process, process->GetWaterContainer(), outputFluxCount, connectionCount, directRateOffset});
+                directRateOffset += std::max(outputFluxCount, connectionCount);
+            }
+            _directBricks.push_back({brick, processStart, static_cast<int>(_directProcesses.size())});
+        }
+
+        _directUnits.push_back({splitterStart, static_cast<int>(_directSplitters.size()), brickStart,
+                                static_cast<int>(_directBricks.size())});
+    }
+
+    _directRateCount = directRateOffset;
+}
+
 int Processor::GetStateVariableCount() const {
     return static_cast<int>(_stateVariableChanges.size());
 }
@@ -141,28 +207,32 @@ void Processor::ResetState() {
     for (auto value : _stateVariableChanges) {
         *value = 0;
     }
+
+    // Zeroing the dynamic content changes also drops the input amounts that ApplyRates
+    // booked at the intermediate stages, so the constraint enforcement has to account for
+    // them as pending inputs again.
+    for (auto brick : _iterableBricks) {
+        brick->ResetInputBooking();
+    }
 }
 
 void Processor::EvaluateRates(axd& rates, double timeStepInDays, bool applyConstraints) {
-    int iRate = 0;
-    for (auto brick : _iterableBricks) {
-        for (int i = 0; i < brick->GetProcessCount(); ++i) {
-            auto process = brick->GetProcess(i);
+    for (const auto& entry : _solvableProcesses) {
+        // Get the change rates (per day) independently of the time step and constraints (null bricks handled).
+        // Reference into the process's reusable buffer; consumed below before the next process is queried.
+        const vecDouble& processRates = entry.process->GetChangeRates();
+        assert(static_cast<int>(processRates.size()) == entry.connectionCount);
 
-            // Get the change rates (per day) independently of the time step and constraints (null bricks handled).
-            // Reference into the process's reusable buffer; consumed below before the next process is queried.
-            const vecDouble& processRates = process->GetChangeRates();
+        int iRate = entry.rateOffset;
+        for (int j = 0; j < static_cast<int>(processRates.size()); ++j) {
+            assert(rates.size() > iRate);
+            rates(iRate) = processRates[j];
 
-            for (int j = 0; j < processRates.size(); ++j) {
-                assert(rates.size() > iRate);
-                rates(iRate) = processRates[j];
-
-                // Link to fluxes to enforce subsequent constraints
-                if (applyConstraints) {
-                    process->StoreInOutgoingFlux(&rates(iRate), j);
-                }
-                iRate++;
+            // Link to fluxes to enforce subsequent constraints
+            if (applyConstraints) {
+                entry.process->StoreInOutgoingFlux(&rates(iRate), j);
             }
+            iRate++;
         }
     }
 
@@ -172,16 +242,13 @@ void Processor::EvaluateRates(axd& rates, double timeStepInDays, bool applyConst
 }
 
 void Processor::ConstrainRates(axd& rates, double timeStepInDays) {
-    int iRate = 0;
-    for (auto brick : _iterableBricks) {
-        for (int i = 0; i < brick->GetProcessCount(); ++i) {
-            auto process = brick->GetProcess(i);
-            for (int j = 0; j < process->GetConnectionCount(); ++j) {
-                assert(rates.size() > iRate);
-                // Link to fluxes to enforce subsequent constraints
-                process->StoreInOutgoingFlux(&rates(iRate), j);
-                iRate++;
-            }
+    for (const auto& entry : _solvableProcesses) {
+        int iRate = entry.rateOffset;
+        for (int j = 0; j < entry.connectionCount; ++j) {
+            assert(rates.size() > iRate);
+            // Link to fluxes to enforce subsequent constraints
+            entry.process->StoreInOutgoingFlux(&rates(iRate), j);
+            iRate++;
         }
     }
 
@@ -209,16 +276,16 @@ void Processor::EnforceConstraints(axd& rates, double timeStepInDays) {
 }
 
 void Processor::ApplyRates(const axd& rates, double timeStepInDays) {
-    int iRate = 0;
-    for (auto brick : _iterableBricks) {
-        if (brick->IsNull()) {
+    for (const auto& brickEntry : _solvableBrickEntries) {
+        if (brickEntry.brick->IsNull()) {
             continue;
         }
-        brick->UpdateContentFromInputs();
-        for (int i = 0; i < brick->GetProcessCount(); ++i) {
-            auto process = brick->GetProcess(i);
-            for (int iConnect = 0; iConnect < process->GetConnectionCount(); ++iConnect) {
-                process->ApplyChange(iConnect, rates(iRate), timeStepInDays);
+        brickEntry.brick->UpdateContentFromInputs(timeStepInDays);
+        for (int i = brickEntry.processStart; i < brickEntry.processEnd; ++i) {
+            const auto& entry = _solvableProcesses[i];
+            int iRate = entry.rateOffset;
+            for (int iConnect = 0; iConnect < entry.connectionCount; ++iConnect) {
+                entry.process->ApplyChange(iConnect, rates(iRate), timeStepInDays);
                 iRate++;
             }
         }
@@ -240,26 +307,17 @@ bool Processor::ProcessTimeStep(double timeStepInDays) {
     SubBasin* basin = _model->GetSubBasin();
 
     // Process the bricks that do not need a solver.
-    int ptIndex = 0;
-    int hydroUnitCount = basin->GetHydroUnitCount();
-    for (int iUnit = 0; iUnit < hydroUnitCount; ++iUnit) {
-        HydroUnit* unit = basin->GetHydroUnit(iUnit);
-        int splitterCount = unit->GetSplitterCount();
-        for (int iSplitter = 0; iSplitter < splitterCount; ++iSplitter) {
-            Splitter* splitter = unit->GetSplitter(iSplitter);
-            splitter->Compute();
+    for (const auto& unitEntry : _directUnits) {
+        for (int i = unitEntry.splitterStart; i < unitEntry.splitterEnd; ++i) {
+            _directSplitters[i]->Compute();
         }
-        int brickCount = unit->GetBrickCount();
-        for (int iBrick = 0; iBrick < brickCount; ++iBrick) {
-            Brick* brick = unit->GetBrick(iBrick);
-            if (brick->NeedsSolver()) {
-                continue;
-            }
-            if (brick->IsNull()) {
+        for (int i = unitEntry.brickStart; i < unitEntry.brickEnd; ++i) {
+            const DirectBrickEntry& brickEntry = _directBricks[i];
+            if (brickEntry.brick->IsNull()) {
                 continue;
             }
 
-            ApplyDirectChanges(brick, ptIndex, timeStepInDays);
+            ApplyDirectChanges(brickEntry, timeStepInDays);
         }
     }
 
@@ -275,47 +333,43 @@ bool Processor::ProcessTimeStep(double timeStepInDays) {
     return true;
 }
 
-void Processor::ApplyDirectChanges(Brick* brick, int& ptIndex, double timeStepInDays) {
-    brick->UpdateContentFromInputs();
+void Processor::ApplyDirectChanges(const DirectBrickEntry& brickEntry, double timeStepInDays) {
+    Brick* brick = brickEntry.brick;
+    brick->UpdateContentFromInputs(timeStepInDays);
 
-    // Initialize the change rates to 0 and link to fluxes
-    int iRate = ptIndex;
-    for (int i = 0; i < brick->GetProcessCount(); ++i) {
-        auto process = brick->GetProcess(i);
-        for (int j = 0; j < process->GetOutputFluxCount(); ++j) {
-            assert(_changeRatesNoSolver.rows() > iRate);
-            _changeRatesNoSolver(iRate) = 0;
+    // Initialize the change rates to 0 and link to fluxes. All the processes of the brick
+    // are linked before any rate is computed, because a process rate may read the fluxes
+    // of the sibling processes (Process::GetSumChangeRatesOtherProcesses).
+    for (int i = brickEntry.processStart; i < brickEntry.processEnd; ++i) {
+        const DirectProcess& entry = _directProcesses[i];
+        for (int j = 0; j < entry.outputFluxCount; ++j) {
+            assert(_changeRatesNoSolver.rows() > entry.rateOffset + j);
+            _changeRatesNoSolver(entry.rateOffset + j) = 0;
 
             // Link to fluxes to enforce subsequent constraints
-            process->StoreInOutgoingFlux(&_changeRatesNoSolver(iRate), j);
-            iRate++;
+            entry.process->StoreInOutgoingFlux(&_changeRatesNoSolver(entry.rateOffset + j), j);
         }
     }
 
-    iRate = ptIndex;
-    for (int i = 0; i < brick->GetProcessCount(); ++i) {
-        auto process = brick->GetProcess(i);
+    for (int i = brickEntry.processStart; i < brickEntry.processEnd; ++i) {
+        const DirectProcess& entry = _directProcesses[i];
 
         // Get the change rates (per day) independently of the time step and constraints.
         // Reference into the process's reusable buffer; consumed within this iteration.
-        const vecDouble& rates = process->GetChangeRates();
+        const vecDouble& rates = entry.process->GetChangeRates();
+        assert(static_cast<int>(rates.size()) == entry.connectionCount);
 
-        int iRateCopy = iRate;
-        for (double rate : rates) {
-            assert(_changeRatesNoSolver.rows() > iRateCopy);
-            _changeRatesNoSolver(iRateCopy) = rate;
-            iRateCopy++;
+        for (int j = 0; j < static_cast<int>(rates.size()); ++j) {
+            _changeRatesNoSolver(entry.rateOffset + j) = rates[j];
         }
 
         // Apply constraints for the current brick (e.g. maximum capacity or avoid negative values)
-        process->GetWaterContainer()->ApplyConstraints(timeStepInDays);
+        entry.container->ApplyConstraints(timeStepInDays);
 
         // Apply changes
-        for (int j = 0; j < rates.size(); ++j) {
-            process->ApplyChange(j, _changeRatesNoSolver(iRate), timeStepInDays);
-            _changeRatesNoSolver(iRate) = 0;
-            iRate++;
-            ptIndex++;
+        for (int j = 0; j < static_cast<int>(rates.size()); ++j) {
+            entry.process->ApplyChange(j, _changeRatesNoSolver(entry.rateOffset + j), timeStepInDays);
+            _changeRatesNoSolver(entry.rateOffset + j) = 0;
         }
     }
 

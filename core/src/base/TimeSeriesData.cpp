@@ -78,20 +78,26 @@ bool TimeSeriesDataRegular::SetCursorToDate(double date) {
 
     double dt = date - _start;
 
+    // Offset from the series start, in the series' own unit. Rounded, not truncated.
+    double stepsPerDay;
     switch (_timeStepUnit) {
         case TimeUnit::Day:
-            _cursor = static_cast<int>(dt);
+            stepsPerDay = 1.0;
             break;
         case TimeUnit::Hour:
-            _cursor = static_cast<int>(dt) * 24;
+            stepsPerDay = 24.0;
             break;
         case TimeUnit::Minute:
-            _cursor = static_cast<int>(dt) * 1440;
+            stepsPerDay = 1440.0;
             break;
         default:
             throw NotImplemented(std::format("TimeSeriesDataRegular::SetCursorToDate - Time unit {} not supported",
                                              static_cast<int>(_timeStepUnit)));
     }
+
+    // The series may hold several units per record (e.g. a 3-hourly series).
+    int step = _timeStep > 0 ? _timeStep : 1;
+    _cursor = static_cast<int>(std::llround(dt * stepsPerDay) / step);
 
     return true;
 }
@@ -104,6 +110,21 @@ bool TimeSeriesDataRegular::AdvanceOneTimeStep() {
     _cursor++;
 
     return true;
+}
+
+double TimeSeriesDataRegular::GetTimeStepInDays() const {
+    switch (_timeStepUnit) {
+        case TimeUnit::Week:
+            return _timeStep * 7.0;
+        case TimeUnit::Day:
+            return _timeStep;
+        case TimeUnit::Hour:
+            return _timeStep / 24.0;
+        case TimeUnit::Minute:
+            return _timeStep / 1440.0;
+        default:
+            return 0;
+    }
 }
 
 double TimeSeriesDataRegular::GetStart() const {

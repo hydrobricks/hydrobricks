@@ -100,11 +100,10 @@ class TimeSeries1D(TimeSeries):
             path, parse_dates=[column_time], date_format=time_format
         )
 
-        if start_date and end_date:
-            file_content = file_content.loc[
-                (file_content[column_time] >= start_date)
-                & (file_content[column_time] <= end_date)
-            ]
+        if start_date is not None:
+            file_content = file_content.loc[file_content[column_time] >= start_date]
+        if end_date is not None:
+            file_content = file_content.loc[file_content[column_time] <= end_date]
 
         self.time = file_content[column_time]
 
@@ -135,6 +134,9 @@ class TimeSeries2D(TimeSeries):
         apply_data_gradient: bool = True,
         gradient_type: str = "additive",
         dem_path: str | Path | None = None,
+        dem_signature: Any | None = None,
+        start_date: str | pd.Timestamp | None = None,
+        end_date: str | pd.Timestamp | None = None,
         cache_dir: str | Path | None = None,
     ) -> None:
         """
@@ -181,6 +183,14 @@ class TimeSeries2D(TimeSeries):
         dem_path
             Path to DEM raster file for spatialization (gradient computation).
             Needed if apply_data_gradient is True.
+        dem_signature
+            Stable identity of the DEM for the cache key, when 'dem_path' is not one
+            (e.g. a cropped DEM served from memory). Default: None = the stat
+            signature of 'dem_path'.
+        start_date, end_date
+            Modelling period the data is restricted to: the steps outside it are
+            dropped before the regridding, so they are neither computed nor kept in
+            memory. The data must cover the period. Default: None = no trimming.
         cache_dir
             Directory where the regridded result is cached as a CSV file keyed
             by a hash of the inputs and options; an identical request reloads
@@ -242,6 +252,8 @@ class TimeSeries2D(TimeSeries):
             config = {
                 "cache_version": 1,
                 "var_name": var_name,
+                "start_date": str(pd.Timestamp(start_date)) if start_date else None,
+                "end_date": str(pd.Timestamp(end_date)) if end_date else None,
                 "data_crs": data_crs,
                 "dim_time": dim_time,
                 "dim_x": dim_x,
@@ -257,7 +269,11 @@ class TimeSeries2D(TimeSeries):
                 # The DEM only matters for the gradient computation; a stat
                 # signature is used (not full bytes) as DEMs can be large.
                 "dem_signature": (
-                    caching.source_signature([dem_path])
+                    (
+                        dem_signature
+                        if dem_signature is not None
+                        else caching.source_signature([dem_path])
+                    )
                     if apply_data_gradient and dem_path is not None
                     else None
                 ),
@@ -290,14 +306,44 @@ class TimeSeries2D(TimeSeries):
             logger.debug(
                 f"Found {len(nc_files)} files matching pattern '{file_pattern}'"
             )
-            nc_data = xr.open_mfdataset(nc_files, chunks={})
+            # The combine options are pinned to the current xarray defaults:
+            # they are about to change (and warn until they are set explicitly).
+            nc_data = xr.open_mfdataset(
+                nc_files,
+                chunks={},
+                data_vars="all",
+                coords="different",
+                compat="no_conflicts",
+            )
+
+        # Restrict the data to the modelling period: the steps outside it would be
+        # regridded and carried around for nothing. A 'day_of_year' climatology is
+        # indexed by the day of the year, not by dates: there is nothing to trim,
+        # and slicing that axis with timestamps would raise. It is detected on the
+        # dimensions of the file, not on the declared 'dim_time', which the caller
+        # may well have named after it.
+        is_climatology = "day_of_year" in nc_data.dims
+        trim = (start_date is not None or end_date is not None) and not is_climatology
+        if trim and dim_time in nc_data.dims:
+            period = slice(
+                pd.Timestamp(start_date) if start_date is not None else None,
+                pd.Timestamp(end_date) if end_date is not None else None,
+            )
+            nc_data = nc_data.sel({dim_time: period})
+            if nc_data.sizes[dim_time] == 0:
+                raise DataError(
+                    f"The netcdf data holds no time step within the modelling "
+                    f"period ({start_date} to {end_date}).",
+                    data_type="time series",
+                    reason="Period not covered",
+                )
 
         # Get CRS of the netcdf file
-        data_crs = self._parse_crs(nc_data, data_crs)
+        data_crs = self._parse_crs(nc_data, data_crs, source="netCDF data")
         logger.debug(f"NetCDF CRS: {data_crs}")
 
         # Get CRS of the unit ids raster
-        unit_ids_crs = self._parse_crs(unit_ids, None)
+        unit_ids_crs = self._parse_crs(unit_ids, None, source="hydro unit ids raster")
         logger.debug(f"Raster CRS: {unit_ids_crs}")
 
         if data_crs != unit_ids_crs:
@@ -334,8 +380,43 @@ class TimeSeries2D(TimeSeries):
             time_nc = nc_data.variables[dim_time][:]
             logger.debug(f"Using full time series with {len(time_nc)} time steps")
 
+            # The trimming above cannot invent the steps a source is missing: the
+            # data has to cover the modelling period.
+            time_bounds = (
+                pd.Timestamp(np.asarray(time_nc)[0]),
+                pd.Timestamp(np.asarray(time_nc)[-1]),
+            )
+            if start_date is not None and time_bounds[0] > pd.Timestamp(start_date):
+                raise DataError(
+                    f"The netcdf data starts on {time_bounds[0].date()}, after the "
+                    f"beginning of the modelling period ({start_date}).",
+                    data_type="time series",
+                    reason="Period not covered",
+                )
+            if end_date is not None and time_bounds[1] < pd.Timestamp(end_date):
+                raise DataError(
+                    f"The netcdf data ends on {time_bounds[1].date()}, before the "
+                    f"end of the modelling period ({end_date}).",
+                    data_type="time series",
+                    reason="Period not covered",
+                )
+
             if len(self.time) == 0:
                 self.time = pd.Series(time_nc)
+            elif len(time_nc) != len(self.time):
+                # Gridded sources are updated at their own cadence, so one can
+                # extend past the others (e.g. an operational product covering the
+                # current year). The steps beyond the period already loaded by the
+                # preceding variables are dropped; a real mismatch (a shorter or
+                # shifted series) still raises below.
+                time_ref = np.asarray(self.time)
+                period = slice(pd.Timestamp(time_ref[0]), pd.Timestamp(time_ref[-1]))
+                nc_data = nc_data.sel({dim_time: period})
+                time_nc = nc_data.variables[dim_time][:]
+                logger.debug(
+                    f"Trimmed the netcdf time series to the {len(time_nc)} steps "
+                    f"of the period already loaded."
+                )
 
             # Check if the time steps are the same
             if len(self.time) != len(time_nc):
@@ -369,8 +450,12 @@ class TimeSeries2D(TimeSeries):
             unit_id_mask = xr.where(unit_ids == unit_id, 1, 0)
             unit_id_masks.append(unit_id_mask)
 
-        # Initialize data array
-        data = np.zeros((len(self.time), unit_id_count))
+        # Initialize data array. A 'day_of_year' climatology is regridded on its
+        # own 366-day axis and expanded to the simulation period further down, so
+        # it is that axis the array must hold — the simulation period can be
+        # shorter (or much longer) than a year.
+        n_steps = 366 if time_method == "day_of_year" else len(self.time)
+        data = np.zeros((n_steps, unit_id_count))
         self.data.append(data)
 
         # Drop other variables
@@ -852,7 +937,7 @@ class TimeSeries2D(TimeSeries):
         x_ref_min, x_ref_max, y_ref_min, y_ref_max = self._get_spatial_bounds(ref_data)
 
         # Convert the spatial extent to the data CRS
-        src_crs = self._parse_crs(ref_data)
+        src_crs = self._parse_crs(ref_data, source="reference raster")
         if src_crs != data_crs:
             transformer = pyproj.Transformer.from_crs(src_crs, data_crs, always_xy=True)
             x_min_dat, y_min_dat = transformer.transform(x_ref_min, y_ref_min)
@@ -898,12 +983,16 @@ class TimeSeries2D(TimeSeries):
         return data_var
 
     @staticmethod
-    def _parse_crs(data: xr.DataArray | xr.Dataset, file_crs: int | None = None) -> int:
+    def _parse_crs(
+        data: xr.DataArray | xr.Dataset,
+        file_crs: int | None = None,
+        source: str = "data",
+    ) -> int:
         """
         Extract CRS information from xarray data.
 
         Attempts to retrieve CRS from multiple sources: explicit parameter,
-        data attributes, or rioxarray crs property.
+        data attributes, rioxarray crs property, or a CF grid mapping variable.
         Raises error if CRS cannot be determined.
 
         Parameters
@@ -912,6 +1001,8 @@ class TimeSeries2D(TimeSeries):
             xarray DataArray or Dataset to extract CRS from.
         file_crs
             Explicit CRS as EPSG code. If provided, this value is returned directly.
+        source
+            Label of the data being parsed, used in the error message.
 
         Returns
         -------
@@ -923,21 +1014,62 @@ class TimeSeries2D(TimeSeries):
         DataError
             If no CRS is found and file_crs is not provided.
         """
-        if file_crs is None:
-            if "crs" in data.attrs:
-                # Try to get it from the global attributes
-                return data.attrs["crs"]
-            elif data.rio.crs:
-                # Try to get it from the rio crs
-                return data.rio.crs.to_epsg()
-            else:
-                raise DataError(
-                    "Could not determine the CRS from the data."
-                    "Please provide a CRS (option 'file_crs').",
-                    data_type="spatial data",
-                    reason="Missing CRS information",
-                )
-        return file_crs
+        if file_crs is not None:
+            return file_crs
+
+        if "crs" in data.attrs:
+            # Try to get it from the global attributes
+            return data.attrs["crs"]
+
+        if data.rio.crs:
+            # Try to get it from the rio crs
+            return data.rio.crs.to_epsg()
+
+        # Try a CF grid mapping variable: rioxarray does not pick it up when the
+        # spatial dimensions are not named x/y (e.g. the E/N of the MeteoSwiss
+        # gridded products).
+        detail = ""
+        crs = TimeSeries2D._parse_cf_grid_mapping(data)
+        if crs is not None:
+            epsg = crs.to_epsg()
+            if epsg is not None:
+                return epsg
+            detail = (
+                f" The file declares '{crs.name}', for which no EPSG code "
+                f"could be derived."
+            )
+
+        raise DataError(
+            f"Could not determine the CRS of the {source}.{detail} "
+            f"Provide it explicitly (option 'data_crs') or georeference the file.",
+            data_type="spatial data",
+            reason="Missing CRS information",
+        )
+
+    @staticmethod
+    def _parse_cf_grid_mapping(data: xr.DataArray | xr.Dataset) -> Any | None:
+        """
+        The CRS of the CF grid mapping variable of the data, if any.
+
+        Looks for a variable (or coordinate) carrying the CF projection attributes
+        and builds a pyproj CRS from it. Returns None when there is no such variable
+        or when its attributes cannot be interpreted.
+        """
+        candidates = list(getattr(data, "variables", {}).values())
+        candidates += list(data.coords.values())
+
+        for var in candidates:
+            attrs = var.attrs
+            wkt = attrs.get("crs_wkt") or attrs.get("spatial_ref")
+            try:
+                if wkt:
+                    return pyproj.CRS.from_wkt(wkt)
+                if "grid_mapping_name" in attrs:
+                    return pyproj.CRS.from_cf(attrs)
+            except (pyproj.exceptions.CRSError, KeyError, TypeError, ValueError):
+                continue
+
+        return None
 
     @staticmethod
     def _get_spatial_bounds(ref_data: xr.DataArray | xr.Dataset) -> tuple:

@@ -40,6 +40,11 @@ class TimeSeriesUniform : public TimeSeries {
     }
 
     /**
+     * @copydoc TimeSeries::GetTimeStepInDays()
+     */
+    [[nodiscard]] double GetTimeStepInDays() const override;
+
+    /**
      * @copydoc TimeSeries::GetStart()
      */
     [[nodiscard]] double GetStart() const override;

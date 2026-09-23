@@ -27,6 +27,21 @@ class Forcing {
     }
 
     /**
+     * Check whether the forcing accumulates over the time step (a depth of water, given
+     * per step: precipitation, PET) rather than being an instantaneous or averaged value
+     * that does not depend on the step length (temperature, radiation).
+     *
+     * Only a cumulative forcing may be divided by the step length to give a rate. The
+     * custom variables are treated as non-cumulative: their meaning is the user's, and
+     * scaling one that was not meant to be scaled would silently corrupt it.
+     *
+     * @return true if the value is an amount accumulated over the time step.
+     */
+    [[nodiscard]] bool IsCumulative() const {
+        return _type == VariableType::Precipitation || _type == VariableType::PET;
+    }
+
+    /**
      * Get the value of the forcing at the current time in the simulation.
      * Returns the dynamic override if one has been set this timestep, otherwise the time-series value.
      *

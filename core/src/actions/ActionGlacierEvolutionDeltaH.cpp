@@ -49,8 +49,8 @@ bool ActionGlacierEvolutionDeltaH::Init() {
             }
         } else if (!NearlyEqual(areaInModel, areaRef, PRECISION)) {
             LogError(
-                "The glacier area fraction in hydro unit %d does not match the lookup table "
-                "initial area (%g vs %g).",
+                "The glacier area fraction in hydro unit {} does not match the lookup table "
+                "initial area ({} vs {}).",
                 id, areaInModel, areaRef);
             return false;
         }

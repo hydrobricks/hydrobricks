@@ -56,6 +56,16 @@ class TimeSeries {
     [[nodiscard]] virtual bool IsDistributed() const = 0;
 
     /**
+     * Get the spacing of the records, in days. Zero when the series carries no regular
+     * spacing. Compared against the computation time step, which it has to match: the
+     * forcing is advanced one record per step, so a mismatch would either run out of
+     * data or skip most of it.
+     *
+     * @return the time step in days, or 0 if there is none.
+     */
+    [[nodiscard]] virtual double GetTimeStepInDays() const = 0;
+
+    /**
      * Get the time start of the time series.
      *
      * @return the time start of the time series.

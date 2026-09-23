@@ -238,6 +238,16 @@ class Results:
 
         return self._select_time(areas, start_date, end_date)
 
+    def get_subbasin_structure_ids(self) -> np.ndarray:
+        """
+        Get the model structure variant used by each subbasin's catchment-level
+        components, in the order of :attr:`subbasin_ids` (ones for files written
+        before the structure ids were recorded).
+        """
+        if "subbasin_structure_ids" in self.results:
+            return self.results.subbasin_structure_ids.to_numpy()
+        return np.ones(len(self.subbasin_ids), dtype=int)
+
     def get_hydro_units_structure_ids(self) -> np.ndarray:
         """
         Get the model-structure id used by each hydro unit.

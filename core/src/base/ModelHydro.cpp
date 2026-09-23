@@ -23,10 +23,11 @@ ModelResult ModelHydro::InitializeWithBasin(SettingsModel& modelSettings, Settin
     }
     _subBasin = _network->GetOutlet();
 
-    // Assign each unit its structure variant from its land covers before building.
+    // Assign each unit, and each sub basin, its structure variant from the land covers before building.
     for (SubBasin* subbasin : _network->GetProcessingOrder()) {
         ModelBuilder builder(subbasin, &_timer, &_logger);
         builder.AssignHydroUnitStructures(modelSettings, basinSettings);
+        builder.AssignSubbasinStructure(modelSettings, basinSettings);
     }
 
     return Initialize(modelSettings, basinSettings);
@@ -109,11 +110,10 @@ ModelResult ModelHydro::Initialize(SettingsModel& modelSettings, SettingsBasin& 
 }
 
 void ModelHydro::UpdateParameters(SettingsModel& modelSettings) {
-    // Sub-basin parameters come from the primary structure (1); hydro-unit
-    // parameters are updated per unit against each unit's structure variant.
-    modelSettings.SelectStructure(1);
-
+    // Sub basin parameters come from each sub basin's structure variant; hydro-unit
+    // parameters are updated per unit against each unit's variant.
     for (SubBasin* subbasin : _subbasins) {
+        modelSettings.SelectStructure(subbasin->GetStructureId());
         ModelBuilder builder(subbasin, &_timer, &_logger);
         builder.UpdateSubBasinParameters(modelSettings);
         builder.UpdateHydroUnitsParameters(modelSettings);

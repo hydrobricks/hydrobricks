@@ -476,3 +476,135 @@ def test_calibration_with_a_gauge_on_a_subbasin(runs, tmp_path):
     assert upstream_only._obs_subbasins == [2]
     sampler = trainer.calibrate(upstream_only, "mc", repetitions=2, dbformat="ram")
     assert np.isfinite(trainer.get_best(sampler)["score"])
+
+
+# ---- Per-subbasin structure variants and reach logging -----------------------------
+
+
+def test_reach_values_are_logged_without_record_all(tmp_path):
+    hydro_units = _split_units_with_reaches(86400.0)
+    model = models.Socont(
+        soil_storage_nb=2, surface_runoff="linear_storage", channel_routing="lag"
+    )
+    parameters = model.generate_parameters()
+    parameters.set_values(
+        {
+            "A": 2000,
+            "a_snow": 3,
+            "k_slow_1": 0.9,
+            "k_slow_2": 0.8,
+            "k_quick": 1,
+            "percol": 9.8,
+            "channel_celerity": 1.0,
+        }
+    )
+    out = tmp_path / "lag_light"
+    out.mkdir()
+    model.setup(
+        spatial_structure=hydro_units,
+        output_path=str(out),
+        start_date=_START,
+        end_date="1981-03-31",
+    )
+    model.run(parameters=parameters, forcing=_forcing(hydro_units))
+    model.dump_outputs(str(out))
+    with hb.Results(str(out / "results.nc")) as results:
+        labels = results.labels_aggregated
+        assert "reach:outflow" in labels and "reach:storage" in labels
+        outflow = results.get_subbasin_values("reach:outflow", 1)
+        assert np.all(np.isfinite(outflow)) and outflow.sum() > 0
+        # Without record_all, the stores are not recorded.
+        assert not any(label.endswith(":water_content") for label in labels)
+        assert list(results.get_subbasin_structure_ids()) == [1, 1]
+
+
+def test_glacier_free_subbasin_carries_no_glacier_reservoir(tmp_path):
+    """Subbasin 2 (upstream) holds the glacierized bands and gets the with-glacier
+    variant with the shared glacier reservoirs; subbasin 1 (outlet) is glacier-free and
+    builds the base variant, without them."""
+    hu_csv = tmp_path / "hu.csv"
+    hu_csv.write_text(
+        "id,elevation,area_ground,area_glacier,subbasin\n"
+        "-,m,km2,km2,-\n"
+        "1,2000,2.0,0.0,1\n"
+        "2,2500,1.0,1.0,2\n"
+        "3,3000,2.0,0.0,1\n"
+        "4,3500,0.5,1.5,2\n"
+    )
+    hydro_units = hb.HydroUnits(
+        land_cover_types=["ground", "glacier"],
+        land_cover_names=["ground", "glacier"],
+    )
+    hydro_units.load_from_csv(
+        hu_csv,
+        column_elevation="elevation",
+        columns_areas={"ground": "area_ground", "glacier": "area_glacier"},
+    )
+    hydro_units.set_subbasins(pd.DataFrame({"id": [1, 2], "downstream": [0, 1]}))
+
+    socont = models.Socont(
+        surface_runoff="linear_storage",
+        record_all=True,
+        land_cover_names=["ground", "glacier"],
+        land_cover_types=["ground", "glacier"],
+    )
+    parameters = socont.generate_parameters()
+    parameters.set_values(
+        {
+            "a_snow": 3,
+            "a_ice": 5,
+            "A": 200,
+            "k_slow": 0.001,
+            "k_quick": 0.05,
+            "k_snow": 0.1,
+            "k_ice": 0.2,
+        }
+    )
+
+    meteo = tmp_path / "meteo.csv"
+    lines = ["date,precip(mm/day),temp(C),pet(mm/day)"]
+    start = pd.Timestamp("2020-01-01")
+    for i in range(40):
+        day = start + pd.Timedelta(days=i)
+        lines.append(f"{day.strftime('%d/%m/%Y')},5.0,3.0,1.0")
+    meteo.write_text("\n".join(lines) + "\n")
+    forcing = hb.Forcing(hydro_units)
+    forcing.load_station_data_from_csv(
+        meteo,
+        column_time="date",
+        time_format="%d/%m/%Y",
+        content={
+            "precipitation": "precip(mm/day)",
+            "temperature": "temp(C)",
+            "pet": "pet(mm/day)",
+        },
+    )
+    forcing.spatialize_from_station_data(
+        variable="temperature", ref_elevation=2500, gradient=-0.6
+    )
+    forcing.spatialize_from_station_data(variable="pet")
+    forcing.spatialize_from_station_data(
+        variable="precipitation", ref_elevation=2500, gradient=0.0
+    )
+
+    out = tmp_path / "out"
+    out.mkdir()
+    socont.setup(
+        spatial_structure=hydro_units,
+        output_path=str(out),
+        start_date="2020-01-01",
+        end_date="2020-02-09",
+    )
+    socont.run(parameters=parameters, forcing=forcing)
+    socont.dump_outputs(str(out))
+
+    with hb.Results(str(out / "results.nc")) as results:
+        assert list(results.subbasin_ids) == [2, 1]
+        # The glacierized subbasin uses the with-glacier variant (2), the other the base
+        assert list(results.get_subbasin_structure_ids()) == [2, 1]
+        ice = "glacier_area_icemelt_storage:water_content"
+        assert np.all(np.isnan(results.get_subbasin_values(ice, 1)))
+        assert np.all(np.isfinite(results.get_subbasin_values(ice, 2)))
+        assert np.all(np.isfinite(results.get_subbasin_values("outlet", 1)))
+    assert socont.get_total_outlet_discharge() > 0
+    assert np.isfinite(socont.get_total_water_storage_changes())

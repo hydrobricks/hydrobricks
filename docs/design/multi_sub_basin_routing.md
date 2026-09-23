@@ -243,8 +243,9 @@ routing scheme adds the physical delay. Siblings in the tree can run in parallel
 
 - `Logger` keeps one label set for subbasin values, stored as
   `[label][subbasin][time]`, mirroring the hydro-unit layout. Labels absent in a
-  subbasin stay NaN, as per-structure hydro-unit labels do today. Reach values are
-  logged under `reach:inflow`, `reach:outflow`, `reach:storage` (m³).
+  subbasin stay NaN, as per-structure hydro-unit labels do today. Reach values
+  (`reach:inflow`, `reach:outflow`, `reach:storage`, mm over the drained area) are
+  logged whenever the channel routing is on.
 - `ResultWriter` adds a `subbasins` dimension with `subbasin_ids`,
   `subbasin_downstream_ids`, `subbasin_local_areas`, `subbasin_drained_areas`, and
   writes `subbasin_values[aggregated_values, subbasins, time]`. The file `version`

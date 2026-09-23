@@ -57,11 +57,13 @@ class GlacierModule(Module):
 
     @abstractmethod
     def land_cover_keys(self, glacier_names: list[str]) -> set[str]:
-        """Return the structure keys that are glacier land covers.
+        """Return the structure keys excluded from the glacier-free base variant.
 
-        These are excluded from the glacier-free base variant (while any shared,
-        catchment-level bricks the module adds, such as sub-basin reservoirs, stay
-        in the base so the sub-basin owns and shares them).
+        The glacier land covers, plus any catchment-level brick that only glacier
+        covers feed (e.g. the shared glacier reservoirs): a subbasin builds its
+        catchment-level bricks from the variant matching the land covers its units
+        carry, so a glacier-free subbasin then carries none of them. A module may
+        keep a brick in the base when the brick order of the base matters to it.
         """
 
     @abstractmethod
@@ -135,9 +137,9 @@ class GSM(GlacierModule):
         }
 
     def land_cover_keys(self, glacier_names: list[str]) -> set[str]:
-        # The sub-basin reservoirs are intentionally not listed: they stay in the
-        # glacier-free base so the (catchment-level) sub-basin owns and shares them.
-        return set(glacier_names)
+        # The two catchment-level reservoirs only receive glacier water: a subbasin
+        # without glacier covers builds the base variant and carries none of them.
+        return set(glacier_names) | {self.RAIN_SNOWMELT_STORAGE, self.ICEMELT_STORAGE}
 
     def parameter_aliases(self, glacier_names: list[str]) -> dict[str, list[str]]:
         if not glacier_names:

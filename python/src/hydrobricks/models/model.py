@@ -1240,9 +1240,10 @@ class Model(ABC):
 
         self.settings.add_logging_to("outlet")
         # The reach values (in mm over the drained area, like the outlet) are logged
-        # only when the channel routing is on: a catchment without a network has no use
-        # for them, and adding labels would change the recorded set of existing runs.
-        if self.record_all and self.channel_routing != "none":
+        # whenever the channel routing is on: three series per subbasin, the state of
+        # the routing. A catchment without a network has no use for them, and adding
+        # labels would change the recorded set of existing runs.
+        if self.channel_routing != "none":
             for item in ("reach:inflow", "reach:outflow", "reach:storage"):
                 self.settings.add_logging_to(item)
 
@@ -1252,12 +1253,12 @@ class Model(ABC):
         """Define the ordered structure variants of the model.
 
         Each entry is a (land_cover_names, land_cover_types, structure) tuple emitted
-        as a separate model structure. The **first** is the primary (structure 1) and
-        defines the catchment-level sub-basin components; the rest are alternative
-        variants. Units are auto-assigned (in the C++ core) to the variant whose
-        land-cover set matches their present land covers, so a unit lacking a cover
-        carries no zero-area brick for it. The default is a single variant (the model's
-        own structure). Models override this (e.g. Socont makes the glacier-free
+        as a separate model structure. The **first** is the primary (structure 1); the
+        rest are alternative variants. Units, and the subbasins for their
+        catchment-level components, are auto-assigned (in the C++ core) to the variant
+        whose land-cover set matches their present land covers, so a unit lacking a
+        cover carries no zero-area brick for it. The default is a single variant (the
+        model's own structure). Models override this (e.g. Socont makes the glacier-free
         variant the base and adds a with-glacier variant).
 
         An entry may optionally be a 4-tuple
@@ -1276,12 +1277,13 @@ class Model(ABC):
     ) -> list[tuple[list[str], list[str], dict[str, Any]]]:
         """Split a structure that may contain glacier covers into glacier variants.
 
-        Returns a glacier-free **base** variant (the glacier land covers dropped) plus
-        a **with-glacier** variant (all covers), so glacier-free units carry no glacier
-        brick while glacierized units do. The catchment-level glacier reservoirs added
-        by the glacier module are kept in the base, so the sub-basin (built from the
-        primary structure) owns and shares them. Returns the single input variant when
-        there is no glacier cover or no glacier module is set.
+        Returns a glacier-free **base** variant (the glacier land covers dropped, and
+        the catchment-level bricks the glacier module lists with them) plus a
+        **with-glacier** variant (all covers), so glacier-free units carry no glacier
+        brick while glacierized units do. Each subbasin builds its catchment-level
+        bricks from the variant matching the covers of its units, so a subbasin
+        without glaciers carries no glacier reservoir either. Returns the single input
+        variant when there is no glacier cover or no glacier module is set.
 
         Models that support glaciers call this from ``_define_structure_variants`` (the
         glacier handling is thus shared, with the formulation pluggable via the glacier
@@ -1302,8 +1304,7 @@ class Model(ABC):
             key: brick for key, brick in structure.items() if key not in land_cover_keys
         }
 
-        # Glacier-free base first (primary, builds the shared sub-basin), then the
-        # with-glacier variant.
+        # Glacier-free base first (primary), then the with-glacier variant.
         return [
             (base_names, base_types, base_structure),
             (names, types, structure),

@@ -35,19 +35,60 @@ ModelBuilder::ModelBuilder(SubBasin* subBasin, TimeMachine* timer, Logger* logge
     assert(logger);
 }
 
-void ModelBuilder::AssignHydroUnitStructures(SettingsModel& modelSettings, SettingsBasin& basinSettings) {
-    int structureCount = modelSettings.GetStructureCount();
-    if (structureCount <= 1) {
-        return;  // single structure: every unit keeps the default id 1
-    }
-
+std::vector<std::set<string>> ModelBuilder::StructureLandCovers(SettingsModel& modelSettings) {
     // Land-cover name set of each structure variant (ids are 1..structureCount).
-    vector<std::set<string>> structureCovers(structureCount + 1);
+    int structureCount = modelSettings.GetStructureCount();
+    int previousId = modelSettings.GetSelectedStructureId();
+    std::vector<std::set<string>> structureCovers(structureCount + 1);
     for (int id = 1; id <= structureCount; ++id) {
         modelSettings.SelectStructure(id);
         vecStr covers = modelSettings.GetSelectedStructureLandCoverNames();
         structureCovers[id] = std::set<string>(covers.begin(), covers.end());
     }
+    modelSettings.SelectStructure(previousId);
+
+    return structureCovers;
+}
+
+int ModelBuilder::MatchStructure(const std::vector<std::set<string>>& structureCovers,
+                                 const std::set<string>& present) {
+    int structureCount = static_cast<int>(structureCovers.size()) - 1;
+
+    // Prefer the variant whose land-cover set matches the present covers exactly.
+    for (int id = 1; id <= structureCount; ++id) {
+        if (structureCovers[id] == present) {
+            return id;
+        }
+    }
+
+    // No exact match: use the smallest variant whose covers are a superset of the present covers (so all
+    // the covers are kept, with at most a few zero-area extras rather than a missing one). Fall back to the
+    // largest variant if none is a superset.
+    int smallestSuperset = -1;
+    size_t supersetSize = std::numeric_limits<size_t>::max();
+    int largest = 1;
+    size_t largestSize = 0;
+    for (int id = 1; id <= structureCount; ++id) {
+        const std::set<string>& covers = structureCovers[id];
+        if (covers.size() > largestSize) {
+            largest = id;
+            largestSize = covers.size();
+        }
+        bool isSuperset = std::includes(covers.begin(), covers.end(), present.begin(), present.end());
+        if (isSuperset && covers.size() < supersetSize) {
+            smallestSuperset = id;
+            supersetSize = covers.size();
+        }
+    }
+
+    return (smallestSuperset >= 0) ? smallestSuperset : largest;
+}
+
+void ModelBuilder::AssignHydroUnitStructures(SettingsModel& modelSettings, SettingsBasin& basinSettings) {
+    if (modelSettings.GetStructureCount() <= 1) {
+        return;  // single structure: every unit keeps the default id 1
+    }
+    std::vector<std::set<string>> structureCovers = StructureLandCovers(modelSettings);
 
     // The settings list every unit of the catchment; only those of this sub basin are assigned here.
     for (int iUnit = 0; iUnit < basinSettings.GetHydroUnitCount(); ++iUnit) {
@@ -66,47 +107,39 @@ void ModelBuilder::AssignHydroUnitStructures(SettingsModel& modelSettings, Setti
             }
         }
 
-        // Prefer the variant whose land-cover set matches the unit's covers exactly.
-        int matchedId = -1;
-        for (int id = 1; id <= structureCount; ++id) {
-            if (structureCovers[id] == present) {
-                matchedId = id;
-                break;
-            }
-        }
-
-        // No exact match: use the smallest variant whose covers are a superset of the
-        // unit's present covers (so the unit keeps all its covers, with at most a few
-        // zero-area extras rather than a missing one). Fall back to the largest variant
-        // if none is a superset.
-        if (matchedId < 0) {
-            int smallestSuperset = -1;
-            size_t supersetSize = std::numeric_limits<size_t>::max();
-            int largest = 1;
-            size_t largestSize = 0;
-            for (int id = 1; id <= structureCount; ++id) {
-                const std::set<string>& covers = structureCovers[id];
-                if (covers.size() > largestSize) {
-                    largest = id;
-                    largestSize = covers.size();
-                }
-                bool isSuperset = std::includes(covers.begin(), covers.end(), present.begin(), present.end());
-                if (isSuperset && covers.size() < supersetSize) {
-                    smallestSuperset = id;
-                    supersetSize = covers.size();
-                }
-            }
-            matchedId = (smallestSuperset >= 0) ? smallestSuperset : largest;
-        }
-
-        _subBasin->GetHydroUnitById(unitId)->SetStructureId(matchedId);
+        _subBasin->GetHydroUnitById(unitId)->SetStructureId(MatchStructure(structureCovers, present));
     }
 }
 
+void ModelBuilder::AssignSubbasinStructure(SettingsModel& modelSettings, SettingsBasin& basinSettings) {
+    if (modelSettings.GetStructureCount() <= 1) {
+        return;  // single structure: the sub basin keeps the default id 1
+    }
+    std::vector<std::set<string>> structureCovers = StructureLandCovers(modelSettings);
+
+    // Land covers present in any hydro unit of this sub basin (non-zero fraction).
+    std::set<string> present;
+    for (int iUnit = 0; iUnit < basinSettings.GetHydroUnitCount(); ++iUnit) {
+        basinSettings.SelectUnit(iUnit);
+        int unitId = basinSettings.GetHydroUnitSettings(iUnit).id;
+        if (!_subBasin->HasHydroUnit(unitId)) {
+            continue;
+        }
+        for (int iLC = 0; iLC < basinSettings.GetLandCoverCount(); ++iLC) {
+            LandCoverSettings lc = basinSettings.GetLandCoverSettings(iLC);
+            if (!NearlyZero(lc.fraction, PRECISION)) {
+                present.insert(lc.name);
+            }
+        }
+    }
+
+    _subBasin->SetStructureId(MatchStructure(structureCovers, present));
+}
+
 void ModelBuilder::BuildModelStructure(SettingsModel& modelSettings) {
-    // The sub-basin is catchment-level and built from the primary structure (1);
-    // each hydro unit then builds its own assigned structure variant.
-    modelSettings.SelectStructure(1);
+    // The sub basin-level components are built from the sub basin's assigned structure variant (the primary
+    // structure unless AssignSubbasinStructure chose another); each hydro unit then builds its own.
+    modelSettings.SelectStructure(_subBasin->GetStructureId());
 
     CreateSubBasinComponents(modelSettings);
     CreateHydroUnitsComponents(modelSettings);
@@ -805,10 +838,15 @@ void ModelBuilder::BuildForcingConnections(const SplitterSettings& splitterSetti
 void ModelBuilder::ConnectLoggerToValues(SettingsModel& modelSettings) {
     double* valPt = nullptr;
 
-    // Sub basin values. The sub-basin is catchment-level and built from the primary
-    // structure (1); select it so the positional indices below match its labels.
-    modelSettings.SelectStructure(1);
-    int iLabel = 0;
+    // Sub basin values. The labels are the union across structure variants; this sub basin connects only
+    // the labels its own variant provides (the others stay NaN), so the value pointers are keyed by label
+    // string, not by position.
+    modelSettings.SelectStructure(_subBasin->GetStructureId());
+    vecStr subBasinLabels = modelSettings.GetSubBasinLogLabels();
+    std::map<string, int> subBasinLabelIndex;
+    for (int i = 0; i < static_cast<int>(subBasinLabels.size()); ++i) {
+        subBasinLabelIndex[subBasinLabels[i]] = i;
+    }
 
     for (int iBrickType = 0; iBrickType < modelSettings.GetSubBasinBrickCount(); ++iBrickType) {
         modelSettings.SelectSubBasinBrick(iBrickType);
@@ -824,8 +862,8 @@ void ModelBuilder::ConnectLoggerToValues(SettingsModel& modelSettings) {
                     std::format("ModelBuilder::ConnectLoggerToValues - Log item '{}' not found in sub-basin brick {}",
                                 logItem, iBrickType));
             }
-            _logger->SetSubBasinValuePointer(_subbasinIndex, iLabel, valPt);
-            iLabel++;
+            _logger->SetSubBasinValuePointer(_subbasinIndex, subBasinLabelIndex.at(brickSettings.name + ":" + logItem),
+                                             valPt);
         }
 
         for (int iProcess = 0; iProcess < modelSettings.GetProcessCount(); ++iProcess) {
@@ -841,11 +879,11 @@ void ModelBuilder::ConnectLoggerToValues(SettingsModel& modelSettings) {
                                     "process {} of brick {}",
                                     logItem, iProcess, iBrickType));
                 }
-                _logger->SetSubBasinValuePointer(_subbasinIndex, iLabel, valPt);
+                int idx = subBasinLabelIndex.at(brickSettings.name + ":" + processSettings.name + ":" + logItem);
+                _logger->SetSubBasinValuePointer(_subbasinIndex, idx, valPt);
                 if (logItem == "output" && process->ToAtmosphere()) {
-                    _logger->AddSubBasinEtIndex(iLabel);
+                    _logger->AddSubBasinEtIndex(idx);
                 }
-                iLabel++;
             }
         }
     }
@@ -862,8 +900,8 @@ void ModelBuilder::ConnectLoggerToValues(SettingsModel& modelSettings) {
                                 "splitter {}",
                                 logItem, iSplitter));
             }
-            _logger->SetSubBasinValuePointer(_subbasinIndex, iLabel, valPt);
-            iLabel++;
+            _logger->SetSubBasinValuePointer(_subbasinIndex,
+                                             subBasinLabelIndex.at(splitterSettings.name + ":" + logItem), valPt);
         }
     }
 
@@ -875,8 +913,7 @@ void ModelBuilder::ConnectLoggerToValues(SettingsModel& modelSettings) {
                 std::format("ModelBuilder::ConnectLoggerToValues - Generic log label '{}' not found in sub-basin",
                             genericLogLabel));
         }
-        _logger->SetSubBasinValuePointer(_subbasinIndex, iLabel, valPt);
-        iLabel++;
+        _logger->SetSubBasinValuePointer(_subbasinIndex, subBasinLabelIndex.at(genericLogLabel), valPt);
     }
 
     // Hydro unit values. Labels are the union across structure variants; each unit

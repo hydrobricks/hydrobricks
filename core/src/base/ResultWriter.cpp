@@ -6,10 +6,10 @@
 #include "FileNetcdf.h"
 
 bool ResultWriter::WriteNetCDF(const string& path, const axd& time, const vecInt& subbasinIds,
-                               const vecInt& subbasinDownstreamIds, const axd& subbasinLocalAreas,
-                               const axd& subbasinDrainedAreas, const vecInt& hydroUnitIds,
-                               const vecInt& hydroUnitStructureIds, const axd& hydroUnitAreas,
-                               const vecStr& subBasinLabels, const vecAxxd& subBasinValues,
+                               const vecInt& subbasinDownstreamIds, const vecInt& subbasinStructureIds,
+                               const axd& subbasinLocalAreas, const axd& subbasinDrainedAreas,
+                               const vecInt& hydroUnitIds, const vecInt& hydroUnitStructureIds,
+                               const axd& hydroUnitAreas, const vecStr& subBasinLabels, const vecAxxd& subBasinValues,
                                const vecStr& hydroUnitLabels, const vecAxxd& hydroUnitValues,
                                const vecStr& hydroUnitFractionLabels, const vecAxxd& hydroUnitFractions) {
     if (!std::filesystem::is_directory(path)) {
@@ -53,6 +53,10 @@ bool ResultWriter::WriteNetCDF(const string& path, const axd& time, const vecInt
         varId = file.DefVarInt("subbasin_downstream_ids", {dimIdSubbasin});
         file.PutVar(varId, subbasinDownstreamIds);
         file.PutAttText("long_name", "downstream subbasin id (0: catchment outlet)", varId);
+
+        varId = file.DefVarInt("subbasin_structure_ids", {dimIdSubbasin});
+        file.PutVar(varId, subbasinStructureIds);
+        file.PutAttText("long_name", "model structure id used by each subbasin's catchment-level components", varId);
 
         varId = file.DefVarDouble("subbasin_local_areas", {dimIdSubbasin});
         file.PutVar(varId, subbasinLocalAreas);

@@ -303,3 +303,82 @@ TEST(ModelNetwork, ReachValuesAreLoggedWhenRequested) {
     // The headwater has no upstream: its reach values stay at zero.
     EXPECT_DOUBLE_EQ(values[index("reach:inflow")].col(0).sum(), 0.0);
 }
+
+TEST(ModelNetwork, SubbasinsBuildTheVariantMatchingTheirLandCovers) {
+    // Variant 1: ground only, draining directly to the outlet (no subbasin-level brick).
+    SettingsModel settings;
+    settings.SetSolver("heun_explicit");
+    settings.SetTimer("2020-01-01", "2020-01-12", 1, "day");
+    settings.SetLogAll(true);
+    settings.GeneratePrecipitationSplitters(false);
+    settings.AddLandCoverBrick("ground", "generic_land_cover");
+    settings.SelectHydroUnitBrick("ground");
+    settings.AddBrickProcess("outflow", "outflow:direct", "outlet");
+    settings.AddLoggingToItem("outlet");
+
+    // Variant 2: ground and forest; the forest drains through a subbasin-level linear store.
+    settings.AddStructure();
+    settings.GeneratePrecipitationSplitters(false);
+    settings.AddLandCoverBrick("ground", "generic_land_cover");
+    settings.SelectHydroUnitBrick("ground");
+    settings.AddBrickProcess("outflow", "outflow:direct", "outlet");
+    settings.AddLandCoverBrick("forest", "generic_land_cover");
+    settings.SelectHydroUnitBrick("forest");
+    settings.AddBrickProcess("outflow", "outflow:direct", "store");
+    settings.AddSubBasinBrick("store", "storage");
+    settings.SelectSubBasinBrick("store");
+    settings.AddBrickProcess("outflow", "outflow:linear", "outlet");
+    settings.AddProcessParameter("response_factor", 0.3f);
+    settings.AddLoggingToItem("outlet");
+
+    // Subbasin 1 (outlet) has a unit with forest; subbasin 2 (upstream) has ground only.
+    SettingsBasin basin;
+    basin.AddSubbasin(1, 0, "outlet");
+    basin.AddSubbasin(2, 1, "upstream");
+    basin.AddHydroUnit(1, 100, 1000, 1);
+    basin.AddLandCover("ground", "generic_land_cover", 0.5);
+    basin.AddLandCover("forest", "generic_land_cover", 0.5);
+    basin.AddHydroUnit(2, 300, 1000, 2);
+    basin.AddLandCover("ground", "generic_land_cover", 1.0);
+
+    ModelHydro model;
+    ASSERT_TRUE(model.InitializeWithBasin(settings, basin));
+    RiverNetwork* network = model.GetNetwork();
+    EXPECT_EQ(network->GetSubbasinById(1)->GetStructureId(), 2);
+    EXPECT_EQ(network->GetSubbasinById(2)->GetStructureId(), 1);
+    EXPECT_TRUE(network->GetSubbasinById(1)->HasBrick("store"));
+    EXPECT_FALSE(network->GetSubbasinById(2)->HasBrick("store"));
+
+    auto precip = std::make_unique<TimeSeriesDataRegular>(GetMJD(2020, 1, 1), GetMJD(2020, 1, 12), 1, TimeUnit::Day);
+    vecDouble values(kSteps, 0.0);
+    values[1] = 10.0;
+    values[2] = 10.0;
+    precip->SetValues(values);
+    auto ts = std::make_unique<TimeSeriesUniform>(VariableType::Precipitation);
+    ts->SetData(std::move(precip));
+    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(ts))));
+    ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
+    ASSERT_TRUE(model.Run());
+
+    // The store label is recorded for the outlet subbasin only (NaN for the upstream one), and the
+    // subbasin structure ids are reported in processing order (upstream first).
+    Logger* logger = model.GetLogger();
+    const vecStr& labels = logger->GetSubBasinLabels();
+    auto it = std::find(labels.begin(), labels.end(), "store:water_content");
+    ASSERT_NE(it, labels.end());
+    int iStore = static_cast<int>(it - labels.begin());
+    const axxd& store = logger->GetSubBasinValuesPerSubbasin()[iStore];
+    EXPECT_TRUE(std::isnan(store(kSteps - 1, 0)));   // upstream (subbasin 2)
+    EXPECT_FALSE(std::isnan(store(kSteps - 1, 1)));  // outlet (subbasin 1)
+    EXPECT_GT(store(3, 1), 0.0);
+    vecInt structureIds = logger->GetSubbasinStructureIds();
+    ASSERT_EQ(structureIds.size(), 2);
+    EXPECT_EQ(structureIds[0], 1);
+    EXPECT_EQ(structureIds[1], 2);
+
+    // Totals stay finite and the water balance closes despite the missing label.
+    double outlet = model.GetTotalOutletDischarge();
+    double storage = model.GetTotalWaterStorageChanges();
+    EXPECT_FALSE(std::isnan(outlet));
+    EXPECT_NEAR(outlet + storage, 20.0, 1e-6);
+}

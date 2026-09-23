@@ -271,6 +271,15 @@ class Logger {
     }
 
     /**
+     * Get the structure variant used by each sub basin's catchment-level components (processing order).
+     *
+     * @return vector of structure IDs.
+     */
+    const vecInt& GetSubbasinStructureIds() const {
+        return _subbasinStructureIds;
+    }
+
+    /**
      * Get the local areas of the sub-basins (their own hydro units) [m2].
      *
      * @return vector of local areas.
@@ -381,6 +390,7 @@ class Logger {
     bool _recordFractions;
     vecInt _subbasinIds;  // processing order, the outlet last
     vecInt _subbasinDownstreamIds;
+    vecInt _subbasinStructureIds;
     axd _subbasinLocalAreas;
     axd _subbasinDrainedAreas;
     axd _subbasinWeights;  // local area / catchment area, to sum sub-basin values over the catchment

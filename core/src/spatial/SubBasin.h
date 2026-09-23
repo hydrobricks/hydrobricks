@@ -77,6 +77,19 @@ class SubBasin {
     }
 
     /**
+     * Set the model-structure variant used to build the sub basin-level components (bricks, splitters).
+     *
+     * @param structureId The structure ID (1 = the primary structure).
+     */
+    void SetStructureId(int structureId) {
+        _structureId = structureId;
+    }
+
+    [[nodiscard]] int GetStructureId() const {
+        return _structureId;
+    }
+
+    /**
      * Get the area of the sub basin's own hydro units [m2] (same as GetArea()).
      *
      * @return the local area.
@@ -500,6 +513,7 @@ class SubBasin {
     int _id = 1;
     int _downstreamId = 0;  // 0: terminal outlet of the network
     string _name;
+    int _structureId = 1;         // model-structure variant of the sub basin-level components
     double _area;                 // m2, own hydro units
     double _drainedArea = 0;      // m2, own + upstream (set by the network)
     bool _hasUpstream = false;    // other sub basins drain into this one

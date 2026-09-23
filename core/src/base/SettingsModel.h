@@ -667,6 +667,16 @@ class SettingsModel {
     }
 
     /**
+     * Get the ID of the selected structure variant.
+     *
+     * @return the selected structure ID.
+     */
+    int GetSelectedStructureId() const {
+        assert(_selectedStructure);
+        return _selectedStructure->id;
+    }
+
+    /**
      * Get the number of structures in the model.
      *
      * @return number of structures.

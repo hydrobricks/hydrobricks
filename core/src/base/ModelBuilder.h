@@ -1,6 +1,9 @@
 #ifndef HYDROBRICKS_MODEL_BUILDER_H
 #define HYDROBRICKS_MODEL_BUILDER_H
 
+#include <set>
+#include <vector>
+
 #include "Includes.h"
 
 class SettingsModel;
@@ -36,6 +39,16 @@ class ModelBuilder {
      * @param basinSettings the basin settings (per-unit land covers and fractions).
      */
     void AssignHydroUnitStructures(SettingsModel& modelSettings, SettingsBasin& basinSettings);
+
+    /**
+     * Assign the sub basin the structure variant matching the land covers present in its hydro units (the
+     * union over the units), with the same rule as the units. The sub basin-level components (e.g. shared
+     * glacier reservoirs) are then built from that variant only.
+     *
+     * @param modelSettings The model settings.
+     * @param basinSettings The basin settings.
+     */
+    void AssignSubbasinStructure(SettingsModel& modelSettings, SettingsBasin& basinSettings);
 
     /**
      * Build the full model structure. The sub-basin components are built from the
@@ -77,6 +90,17 @@ class ModelBuilder {
     Logger* _logger;
     int _subbasinIndex;  // index of the sub basin in the logger
     int _unitOffset;     // index of the sub basin's first hydro unit in the logger
+
+    /**
+     * The land-cover name sets of the structure variants (index = structure ID, 1..count).
+     */
+    static std::vector<std::set<string>> StructureLandCovers(SettingsModel& modelSettings);
+
+    /**
+     * The structure variant matching a set of present land covers: the exact match, else the smallest
+     * superset, else the largest variant.
+     */
+    static int MatchStructure(const std::vector<std::set<string>>& structureCovers, const std::set<string>& present);
 
     void CreateSubBasinComponents(SettingsModel& modelSettings);
     void CreateHydroUnitsComponents(SettingsModel& modelSettings);

@@ -25,6 +25,7 @@ void Logger::InitContainers(int timeSize, const std::vector<SubBasin*>& subbasin
     int subbasinCount = static_cast<int>(subbasins.size());
     _subbasinIds.clear();
     _subbasinDownstreamIds.clear();
+    _subbasinStructureIds.clear();
     _subbasinLocalAreas.resize(subbasinCount);
     _subbasinDrainedAreas.resize(subbasinCount);
     _subbasinWeights.resize(subbasinCount);
@@ -37,6 +38,7 @@ void Logger::InitContainers(int timeSize, const std::vector<SubBasin*>& subbasin
         SubBasin* subbasin = subbasins[i];
         _subbasinIds.push_back(subbasin->GetId());
         _subbasinDownstreamIds.push_back(subbasin->GetDownstreamId());
+        _subbasinStructureIds.push_back(subbasin->GetStructureId());
         _subbasinLocalAreas[i] = subbasin->GetLocalArea();
         // A sub basin outside a network (built directly) has no drained area set: it is its own.
         _subbasinDrainedAreas[i] = subbasin->GetDrainedArea() > 0 ? subbasin->GetDrainedArea()
@@ -179,9 +181,9 @@ bool Logger::DumpOutputs(const string& path) {
     // Delegate output writing to ResultWriter
     ResultWriter writer;
 
-    return writer.WriteNetCDF(path, _time, _subbasinIds, _subbasinDownstreamIds, _subbasinLocalAreas,
-                              _subbasinDrainedAreas, _hydroUnitIds, _hydroUnitStructureIds, _hydroUnitAreas,
-                              _subBasinLabels, _subBasinValues, _hydroUnitLabels, _hydroUnitValues,
+    return writer.WriteNetCDF(path, _time, _subbasinIds, _subbasinDownstreamIds, _subbasinStructureIds,
+                              _subbasinLocalAreas, _subbasinDrainedAreas, _hydroUnitIds, _hydroUnitStructureIds,
+                              _hydroUnitAreas, _subBasinLabels, _subBasinValues, _hydroUnitLabels, _hydroUnitValues,
                               _hydroUnitFractionLabels, _hydroUnitFractions);
 }
 

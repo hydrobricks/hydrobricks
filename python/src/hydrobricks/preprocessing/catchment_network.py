@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import heapq
 import logging
+import math
 import warnings
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -41,6 +43,13 @@ _D8_OFFSETS: dict[int, tuple[int, int]] = {
 
 #: Minimum slope kept for a reach [m/m] (flat reaches from a coarse DEM).
 MIN_SLOPE = 1e-4
+
+#: Tolerance [m] within which two river line ends are the same node of the network.
+NODE_TOLERANCE = 1.0
+
+#: Bounds on the river network length of a reach relative to its flow path length.
+#: Outside them the path found on the network is deemed wrong and the flow path is kept.
+LENGTH_RATIO_BOUNDS = (0.5, 3.0)
 
 
 class CatchmentNetwork:
@@ -91,6 +100,7 @@ class CatchmentNetwork:
         snap_distance: float | None = None,
         stream_threshold_area: float = 1e6,
         river_network: str | Path | Any | None = None,
+        reach_lengths: str = "auto",
         split_units: bool = False,
         outlet_name: str = "outlet",
     ) -> pd.DataFrame:
@@ -118,7 +128,15 @@ class CatchmentNetwork:
         river_network
             Optional river network (a path to a line vector file, or a
             GeoDataFrame): the outlets are then snapped to the DEM cells crossed by
-            these lines rather than to the accumulation-based streams.
+            these lines rather than to the accumulation-based streams, and the reach
+            lengths are measured along these lines.
+        reach_lengths
+            Where the reach lengths come from: ``"auto"`` (default) measures them along
+            the ``river_network`` lines when one is given, and along the D8 flow path
+            otherwise; ``"flow_path"`` always uses the D8 flow path. The flow path of a
+            coarse DEM misses the meanders the mapped river has, which shortens the
+            reach and, the slope being the drop over that length, steepens it; the
+            Muskingum-Cunge scheme has no calibrated celerity to absorb the error.
         split_units
             Whether to split the hydro units spanning several subbasins, one part
             per subbasin (default: False). A split rebuilds the hydro units from
@@ -136,8 +154,10 @@ class CatchmentNetwork:
         The subbasin table (also set on the catchment's hydro units): one row per
         subbasin with ``id``, ``downstream`` (0 for the catchment outlet), ``name``,
         ``area_local`` and ``area_drained`` [m²], ``length`` [m] and ``slope``
-        [m/m] of the reach, ``elevation_outlet`` [m], and the snapped outlet
-        coordinates ``outlet_x``, ``outlet_y``.
+        [m/m] of the reach (the slope is the elevation drop over that length, so the
+        product of the two is the drop whichever length is used),
+        ``elevation_outlet`` [m], and the snapped outlet coordinates ``outlet_x``,
+        ``outlet_y``.
         """
         self._check_dependencies()
         if self.catchment.dem is None or self.catchment.dem_data is None:
@@ -152,10 +172,17 @@ class CatchmentNetwork:
                 reason="Catchment not discretized",
             )
 
+        if reach_lengths not in ("auto", "flow_path"):
+            raise ConfigurationError(
+                f"Unknown reach_lengths '{reach_lengths}': expected 'auto' or "
+                f"'flow_path'.",
+                reason="Invalid option",
+            )
         points, names = self._read_outlets(outlets, names)
+        rivers = self._read_river_network(river_network)
         grid, fdir, acc = self._flow_grid()
         inside = ~np.isnan(self.catchment.dem_data)
-        stream = self._stream_mask(acc, stream_threshold_area, river_network)
+        stream = self._stream_mask(acc, stream_threshold_area, rivers)
         pixel_area = self.catchment.get_dem_pixel_area()
         res = float(self.catchment.dem.res[0])
         if snap_distance is None:
@@ -238,19 +265,27 @@ class CatchmentNetwork:
 
         # The reaches: from the entry of the upstream subbasins to the outlet.
         elevation = self._elevation
+        graph = None
+        if rivers is not None and reach_lengths == "auto":
+            graph = self._river_graph(rivers)
         rows = []
         for k in range(n):
             entries = [j for j in range(n) if downstream[j] == k + 1]
-            length, z_top = 0.0, float(elevation[pixels[k]])
+            length, z_top, top = 0.0, float(elevation[pixels[k]]), pixels[k]
             if entries:
                 for j in entries:
                     path_length = self._trace_length(fdir, pixels[j], pixels[k], res)
                     if path_length > length:
                         length = path_length
                         z_top = float(elevation[pixels[j]])
+                        top = pixels[j]
             else:
-                length, z_top = self._longest_flow_path(
+                length, z_top, top = self._longest_flow_path(
                     grid, fdir, pixels[k], local[k], res
+                )
+            if graph is not None:
+                length = self._reach_length(
+                    graph, top, pixels[k], length, names[k], snap_distance
                 )
             z_out = float(elevation[pixels[k]])
             slope = max((z_top - z_out) / length, MIN_SLOPE) if length > 0 else 0.0
@@ -381,10 +416,6 @@ class CatchmentNetwork:
     ) -> np.ndarray:
         """The DEM cells that are streams: from the river lines, or the accumulation."""
         if river_network is not None:
-            if isinstance(river_network, (str, Path)):
-                river_network = gpd.read_file(river_network)
-            if river_network.crs is not None and self.catchment.crs is not None:
-                river_network = river_network.to_crs(self.catchment.crs)
             masked = self.catchment.mask_dem(
                 river_network, nodata=-9999, all_touched=True
             )
@@ -425,6 +456,160 @@ class CatchmentNetwork:
             )
         return int(rows[best]), int(cols[best])
 
+    def _read_river_network(self, river_network: Any) -> Any:
+        """The river network as a GeoDataFrame in the catchment CRS."""
+        if river_network is None:
+            return None
+        if isinstance(river_network, (str, Path)):
+            river_network = gpd.read_file(river_network)
+        if river_network.crs is not None and self.catchment.crs is not None:
+            river_network = river_network.to_crs(self.catchment.crs)
+        return river_network
+
+    @staticmethod
+    def _river_graph(river_network: Any) -> tuple[list, dict]:
+        """
+        The river lines and the adjacency of their ends.
+
+        The lines are the edges of the network; two ends closer than
+        :data:`NODE_TOLERANCE` are the same node. A network that is not noded at its
+        confluences gives a disconnected graph, and the reaches crossing a gap keep
+        their flow path length.
+        """
+        lines = []
+        for geom in river_network.geometry:
+            if geom is None or geom.is_empty:
+                continue
+            if geom.geom_type == "LineString":
+                lines.append(geom)
+            elif geom.geom_type == "MultiLineString":
+                lines.extend(geom.geoms)
+
+        def node(coord):
+            return (
+                round(coord[0] / NODE_TOLERANCE),
+                round(coord[1] / NODE_TOLERANCE),
+            )
+
+        adjacency: dict = {}
+        for line in lines:
+            coords = line.coords
+            start, end = node(coords[0]), node(coords[-1])
+            if start == end:
+                continue
+            adjacency.setdefault(start, []).append((end, line.length))
+            adjacency.setdefault(end, []).append((start, line.length))
+        return lines, adjacency
+
+    @staticmethod
+    def _project_on_network(
+        lines: list, x: float, y: float
+    ) -> tuple[int, float, float]:
+        """The nearest line, the distance along it, and the distance to it."""
+        from shapely.geometry import Point
+
+        point = Point(x, y)
+        best, best_distance = -1, math.inf
+        for i, line in enumerate(lines):
+            distance = line.distance(point)
+            if distance < best_distance:
+                best, best_distance = i, distance
+        if best < 0:
+            return -1, 0.0, math.inf
+        return best, float(lines[best].project(point)), float(best_distance)
+
+    @staticmethod
+    def _graph_distance(adjacency: dict, sources: dict, targets: dict) -> float | None:
+        """The shortest distance from any source to any target, extra costs included."""
+        best = math.inf
+        settled: dict = {}
+        heap = [(cost, node) for node, cost in sources.items()]
+        heapq.heapify(heap)
+        while heap:
+            cost, node = heapq.heappop(heap)
+            if cost >= best:
+                break
+            if node in settled:
+                continue
+            settled[node] = cost
+            if node in targets:
+                best = min(best, cost + targets[node])
+            for other, weight in adjacency.get(node, ()):
+                if other not in settled:
+                    heapq.heappush(heap, (cost + weight, other))
+        return None if math.isinf(best) else best
+
+    def _network_length(
+        self,
+        graph: tuple[list, dict],
+        top: tuple[float, float],
+        outlet: tuple[float, float],
+        max_distance: float,
+    ) -> float | None:
+        """The distance along the river network between two points (None if no path)."""
+        lines, adjacency = graph
+        i_top, d_top, off_top = self._project_on_network(lines, *top)
+        i_out, d_out, off_out = self._project_on_network(lines, *outlet)
+        if i_top < 0 or i_out < 0 or max(off_top, off_out) > max_distance:
+            return None
+        if i_top == i_out:
+            return abs(d_top - d_out)
+
+        def ends(index, along):
+            line = lines[index]
+            coords = line.coords
+            start = (
+                round(coords[0][0] / NODE_TOLERANCE),
+                round(coords[0][1] / NODE_TOLERANCE),
+            )
+            end = (
+                round(coords[-1][0] / NODE_TOLERANCE),
+                round(coords[-1][1] / NODE_TOLERANCE),
+            )
+            return {start: along, end: max(line.length - along, 0.0)}
+
+        return self._graph_distance(adjacency, ends(i_top, d_top), ends(i_out, d_out))
+
+    def _reach_length(
+        self,
+        graph: tuple[list, dict],
+        top: tuple[int, int],
+        outlet: tuple[int, int],
+        flow_path_length: float,
+        name: str,
+        max_distance: float,
+    ) -> float:
+        """The reach length [m] along the river network, or the flow path length."""
+        if flow_path_length <= 0:
+            return flow_path_length
+        length = self._network_length(
+            graph,
+            self.catchment.dem.xy(*top),
+            self.catchment.dem.xy(*outlet),
+            max_distance,
+        )
+        if length is None or length <= 0:
+            logger.warning(
+                "Subbasin %s: no path along the river network between the ends of its "
+                "reach; keeping the flow path length (%.0f m).",
+                name,
+                flow_path_length,
+            )
+            return flow_path_length
+        ratio = length / flow_path_length
+        low, high = LENGTH_RATIO_BOUNDS
+        if not low <= ratio <= high:
+            logger.warning(
+                "Subbasin %s: the river network gives a reach length of %.0f m for a "
+                "flow path of %.0f m (ratio %.2f); keeping the flow path length.",
+                name,
+                length,
+                flow_path_length,
+                ratio,
+            )
+            return flow_path_length
+        return length
+
     @staticmethod
     def _trace_length(
         fdir: Any, start: tuple[int, int], end: tuple[int, int], res: float
@@ -452,8 +637,8 @@ class CatchmentNetwork:
         outlet: tuple[int, int],
         local: np.ndarray,
         res: float,
-    ) -> tuple[float, float]:
-        """The longest flow path [m] of a headwater subbasin and its top elevation."""
+    ) -> tuple[float, float, tuple[int, int]]:
+        """The longest flow path of a headwater subbasin: length, elevation, cell."""
         row, col = outlet
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", DeprecationWarning)
@@ -464,8 +649,9 @@ class CatchmentNetwork:
         distances[~local] = -1
         distances[~np.isfinite(distances)] = -1
         far = np.unravel_index(int(np.argmax(distances)), distances.shape)
-        length = self._trace_length(fdir, (int(far[0]), int(far[1])), outlet, res)
-        return length, float(self._elevation[far])
+        cell = (int(far[0]), int(far[1]))
+        length = self._trace_length(fdir, cell, outlet, res)
+        return length, float(self._elevation[far]), cell
 
     def _assign_hydro_units(self, map_ids: np.ndarray, split_units: bool) -> None:
         """Give every hydro unit its subbasin (majority cell), or split the units."""

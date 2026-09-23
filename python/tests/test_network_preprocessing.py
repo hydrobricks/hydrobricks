@@ -205,3 +205,98 @@ def test_outlets_from_a_point_file(catchment, tmp_path):
     table = catchment.delineate_subbasins(path, names=["upper Sitter"])
     assert list(table["name"]) == ["upper Sitter", "outlet"]
     assert isinstance(table, pd.DataFrame)
+
+
+def test_distance_along_a_river_network(catchment):
+    """The graph helpers measure the distance along the lines, not as the crow flies."""
+    import geopandas as gpd
+    from shapely.geometry import LineString
+
+    network = catchment.network
+    lines = [
+        LineString([(0, 0), (100, 0)]),  # the main stem, upstream part
+        LineString([(100, 0), (100, 50)]),  # a tributary joining it
+        LineString([(100, 0), (200, 0)]),  # the main stem, downstream part
+        LineString([(500, 500), (600, 500)]),  # a disconnected piece
+    ]
+    graph = network._river_graph(gpd.GeoDataFrame(geometry=lines))
+
+    # Across three lines, and along a single one.
+    assert network._network_length(graph, (0, 0), (200, 0), 10) == pytest.approx(200)
+    assert network._network_length(graph, (100, 50), (200, 0), 10) == pytest.approx(150)
+    assert network._network_length(graph, (20, 0), (60, 0), 10) == pytest.approx(40)
+
+    # A point too far from any line, and one on a disconnected piece.
+    assert network._network_length(graph, (0, 500), (200, 0), 10) is None
+    assert network._network_length(graph, (550, 500), (200, 0), 10) is None
+
+
+def test_reach_length_from_the_river_network(catchment):
+    """A mapped river is longer than the flow path, and the reach follows it."""
+    import geopandas as gpd
+    from shapely.geometry import LineString
+
+    flow_path = catchment.delineate_subbasins([APPENZELL_GAUGE], names=["Appenzell"])
+    upstream = flow_path[flow_path["name"] == "Appenzell"].iloc[0]
+    downstream = flow_path[flow_path["name"] == "outlet"].iloc[0]
+
+    # A synthetic river between the two outlets, meandering enough to be 20 % longer
+    # than the flow path of the downstream reach.
+    start = np.array([upstream["outlet_x"], upstream["outlet_y"]])
+    end = np.array([downstream["outlet_x"], downstream["outlet_y"]])
+    target = 1.2 * downstream["length"]
+
+    def meander(amplitude, points=21):
+        along = np.linspace(0, 1, points)
+        axis = end - start
+        normal = np.array([-axis[1], axis[0]])
+        normal = normal / np.linalg.norm(normal)
+        offsets = amplitude * np.sin(np.linspace(0, 4 * np.pi, points))
+        return LineString(
+            [start + t * axis + o * normal for t, o in zip(along, offsets)]
+        )
+
+    low, high = 0.0, float(np.linalg.norm(end - start))
+    for _ in range(60):
+        middle = 0.5 * (low + high)
+        if meander(middle).length < target:
+            low = middle
+        else:
+            high = middle
+    river = meander(0.5 * (low + high))
+    rivers = gpd.GeoDataFrame(geometry=[river], crs=catchment.crs)
+
+    table = catchment.delineate_subbasins(
+        [APPENZELL_GAUGE], names=["Appenzell"], river_network=rivers
+    )
+    routed = table[table["name"] == "outlet"].iloc[0]
+
+    # The reach now follows the river, and is longer than the flow path.
+    assert routed["length"] == pytest.approx(river.length, rel=0.02)
+    assert routed["length"] > downstream["length"]
+
+    # The slope is the drop over that length: the drop itself is unchanged, so the
+    # product of the two is an invariant and the reach gets gentler, not shorter only.
+    assert routed["slope"] < downstream["slope"]
+    assert routed["slope"] * routed["length"] == pytest.approx(
+        downstream["slope"] * downstream["length"], rel=0.02
+    )
+
+    # The headwater reach is not covered by the river: it keeps its flow path length.
+    assert table[table["name"] == "Appenzell"].iloc[0]["length"] == pytest.approx(
+        upstream["length"]
+    )
+
+    # And the flow path can be kept explicitly, river network or not.
+    kept = catchment.delineate_subbasins(
+        [APPENZELL_GAUGE],
+        names=["Appenzell"],
+        river_network=rivers,
+        reach_lengths="flow_path",
+    )
+    assert kept[kept["name"] == "outlet"].iloc[0]["length"] == pytest.approx(
+        downstream["length"]
+    )
+
+    with pytest.raises(hb.ConfigurationError):
+        catchment.delineate_subbasins([APPENZELL_GAUGE], reach_lengths="straight")

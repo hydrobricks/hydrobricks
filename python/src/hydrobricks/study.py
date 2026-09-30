@@ -76,7 +76,6 @@ import itertools
 import json
 import os
 import re
-import sys
 import time
 from collections.abc import Callable, Iterator
 from dataclasses import dataclass, field
@@ -421,13 +420,11 @@ class Study:
         # whole forcing of its catchment, and a pool's workers otherwise live as
         # long as the pool — the memory of every finished job would stay resident
         # until the last one ends, which is when the biggest jobs are still
-        # running. Only from 3.11; before that the pool keeps its workers.
-        recycle = {"max_tasks_per_child": 1} if sys.version_info >= (3, 11) else {}
-
+        # running.
         with ProcessPoolExecutor(
             max_workers=min(workers, len(job_ids)),
             initializer=_init_worker,
-            **recycle,
+            max_tasks_per_child=1,
         ) as pool:
             futures = [
                 pool.submit(function, self.source, self.base_dir, job_id, **kwargs)

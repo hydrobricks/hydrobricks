@@ -1,14 +1,13 @@
 from __future__ import annotations
 
-from enum import auto
+from enum import StrEnum, auto
 
 import pandas as pd
 
 from hydrobricks._exceptions import DataError
-from hydrobricks._optional import StrEnumClass
 
 
-class Unit(StrEnumClass):
+class Unit(StrEnum):
     """Enumeration of the units used in HydroBricks."""
 
     NO_UNIT = auto()  # [-]

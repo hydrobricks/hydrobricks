@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from enum import auto
+from enum import StrEnum, auto
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -17,7 +17,7 @@ from hydrobricks._exceptions import (
     DependencyError,
     ForcingError,
 )
-from hydrobricks._optional import HAS_NETCDF, HAS_PYET, Dataset, StrEnumClass, pyet
+from hydrobricks._optional import HAS_NETCDF, HAS_PYET, Dataset, pyet
 from hydrobricks.parameters import ParameterSet
 from hydrobricks.time_series import TimeSeries1D, TimeSeries2D
 
@@ -101,7 +101,7 @@ if TYPE_CHECKING:
 class Forcing:
     """Class for managing forcing (meteorological) data for hydrological models."""
 
-    class Variable(StrEnumClass):
+    class Variable(StrEnum):
         """Enumeration of supported meteorological variables."""
 
         P = auto()  # Precipitation [mm]

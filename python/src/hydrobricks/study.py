@@ -76,6 +76,7 @@ import itertools
 import json
 import os
 import re
+import sys
 import time
 from collections.abc import Callable, Iterator
 from dataclasses import dataclass, field
@@ -416,8 +417,17 @@ class Study:
 
         from concurrent.futures import ProcessPoolExecutor, as_completed
 
+        # One job per worker process, which then exits: a calibration holds the
+        # whole forcing of its catchment, and a pool's workers otherwise live as
+        # long as the pool — the memory of every finished job would stay resident
+        # until the last one ends, which is when the biggest jobs are still
+        # running. Only from 3.11; before that the pool keeps its workers.
+        recycle = {"max_tasks_per_child": 1} if sys.version_info >= (3, 11) else {}
+
         with ProcessPoolExecutor(
-            max_workers=min(workers, len(job_ids)), initializer=_init_worker
+            max_workers=min(workers, len(job_ids)),
+            initializer=_init_worker,
+            **recycle,
         ) as pool:
             futures = [
                 pool.submit(function, self.source, self.base_dir, job_id, **kwargs)

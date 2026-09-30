@@ -66,6 +66,20 @@ sampled set and its objective value to ``<output>/calibration.<format>``
 ``save_simulations`` stores the whole simulated series of every iteration —
 one column per time step, per repetition — so it is off unless asked for.
 
+``calibration.options`` carries the algorithm's own settings, forwarded to its
+SPOTPY ``sample()`` — SCE-UA's ``ngs`` (number of complexes), ``kstop``,
+``pcento`` and ``peps``, DDS's ``trials``, and so on::
+
+    calibration:
+      algorithm: sceua
+      repetitions: 5000
+      options: {ngs: 8, kstop: 20}
+
+They matter more than they look: with the default ``ngs`` of 20 and 11
+parameters, SCE-UA spends 20 x (2 x 11 + 1) = 460 runs on its initial population
+before any evolution, and it stops once the next loop would not fit in the
+budget — so it uses well under the repetitions it is given.
+
 The forcing can also come from gridded netCDF data — per variable, mixable
 with the station CSV — using a ``gridded`` section (the hydro units then need
 a ``unit_ids_raster`` to aggregate the grid cells, and optionally an
@@ -402,7 +416,9 @@ class Project:
             simulations is expensive: one series per iteration, held for the
             whole calibration (e.g. ~1 GB for 10 000 repetitions over 40 years).
         parallel, **calibrate_kwargs
-            Forwarded to :func:`hydrobricks.trainer.calibrate`.
+            Forwarded to :func:`hydrobricks.trainer.calibrate`. The file's
+            ``calibration.options`` reach the algorithm's ``sample()`` the same
+            way; a ``sample_kwargs`` given here overrides them entry by entry.
 
         Returns
         -------
@@ -487,6 +503,13 @@ class Project:
             # nothing here reads. Opt in through the project file instead.
             save_sim = bool(database["save_simulations"]) if database else False
 
+        # The algorithm's own settings go to its sample(), which is where SPOTPY
+        # puts them; an explicit sample_kwargs here wins over the file's.
+        sample_kwargs = {
+            **(defaults.get("options") or {}),
+            **(calibrate_kwargs.pop("sample_kwargs", None) or {}),
+        }
+
         sampler = trainer.calibrate(
             spot_setup,
             algorithm,
@@ -495,6 +518,7 @@ class Project:
             dbformat=dbformat,
             save_sim=save_sim,
             parallel=parallel,
+            sample_kwargs=sample_kwargs or None,
             **calibrate_kwargs,
         )
         best = trainer.get_best(sampler)
@@ -1655,6 +1679,38 @@ def _validate_calibration_database(section: dict, errors: list[str]) -> dict | N
     return out
 
 
+def _validate_calibration_options(section: dict, errors: list[str]) -> dict:
+    """Validate 'calibration.options', the algorithm's own settings.
+
+    They are forwarded to the SPOTPY algorithm's ``sample()``, which is where
+    the knobs live (SCE-UA's ``ngs``, ``kstop``, ``pcento``, ``peps``; DDS's
+    ``trials``; ...). Their names and meanings belong to SPOTPY, so they are not
+    enumerated here: only their shape is checked, and an unknown one fails when
+    the calibration starts.
+    """
+    options = section.get("options")
+    if options is None:
+        return {}
+    where = "calibration.options"
+    if not isinstance(options, dict):
+        errors.append(
+            f"{where}: expected a mapping of the algorithm's settings, e.g. "
+            "{ngs: 8, kstop: 20} for sceua."
+        )
+        return {}
+
+    out: dict[str, Any] = {}
+    for name, value in options.items():
+        if not isinstance(name, str):
+            errors.append(f"{where}: the setting names must be strings, got {name!r}.")
+            continue
+        if isinstance(value, (dict, list)):
+            errors.append(f"{where}.{name}: expected a single value, got {value!r}.")
+            continue
+        out[str(name)] = value
+    return out
+
+
 def _validate_calibration(config: dict, errors: list[str]) -> dict | None:
     """Validate the calibration section (how to calibrate the parameters)."""
     section = config.get("calibration")
@@ -1673,6 +1729,7 @@ def _validate_calibration(config: dict, errors: list[str]) -> dict | None:
         "transform",
         "parameters",
         "database",
+        "options",
     }
     _check_keys(section, valid, "calibration", errors)
 
@@ -1683,6 +1740,7 @@ def _validate_calibration(config: dict, errors: list[str]) -> dict | None:
         "transform": section.get("transform"),
         "parameters": section.get("parameters"),
         "database": _validate_calibration_database(section, errors),
+        "options": _validate_calibration_options(section, errors),
     }
     if not isinstance(out["algorithm"], str):
         errors.append(

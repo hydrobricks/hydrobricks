@@ -1720,6 +1720,32 @@ def _validate_calibration_options(section: dict, errors: list[str]) -> dict:
     return out
 
 
+def _validate_calibration_link(section: dict, errors: list[str]) -> dict:
+    """Validate 'calibration.link', collapsing parameters into one freedom.
+
+    A mapping {dependent: driver}: the dependent always takes the driver's value
+    and is dropped from the calibrated vector, so the pair costs one dimension
+    instead of two.
+    """
+    spec = section.get("link")
+    if spec is None:
+        return {}
+    where = "calibration.link"
+    if not isinstance(spec, dict):
+        errors.append(
+            f"{where}: expected a mapping of parameter to the parameter it "
+            "follows, e.g. {rain_correction_factor: snow_correction_factor}."
+        )
+        return {}
+    out = {}
+    for dependent, driver in spec.items():
+        if not isinstance(dependent, str) or not isinstance(driver, str):
+            errors.append(f"{where}: the parameter names must be strings.")
+            continue
+        out[str(dependent)] = str(driver)
+    return out
+
+
 def _validate_calibration(config: dict, errors: list[str]) -> dict | None:
     """Validate the calibration section (how to calibrate the parameters)."""
     section = config.get("calibration")
@@ -1740,6 +1766,7 @@ def _validate_calibration(config: dict, errors: list[str]) -> dict | None:
         "database",
         "options",
         "seed",
+        "link",
     }
     _check_keys(section, valid, "calibration", errors)
 
@@ -1752,6 +1779,7 @@ def _validate_calibration(config: dict, errors: list[str]) -> dict | None:
         "database": _validate_calibration_database(section, errors),
         "options": _validate_calibration_options(section, errors),
         "seed": section.get("seed"),
+        "link": _validate_calibration_link(section, errors),
     }
     if out["seed"] is not None and not isinstance(out["seed"], int):
         errors.append(f"calibration.seed: expected an integer, got {out['seed']!r}.")
@@ -2484,6 +2512,14 @@ def _build_project(
         )
     _check_parameter_names(parameter_set, cfg["parameters"], errors)
     calibration = cfg["calibration"]
+    if calibration is not None and calibration.get("link"):
+        # Applied on the parameter set itself, so the fresh build that
+        # Project.calibrate() makes from the same config inherits it too.
+        names = [n for pair in calibration["link"].items() for n in pair]
+        _check_parameter_names(parameter_set, names, errors, section="calibration.link")
+        if not errors:
+            for dependent, driver in calibration["link"].items():
+                parameter_set.link_parameter(dependent, driver)
     if calibration is not None and calibration["parameters"]:
         _check_parameter_names(
             parameter_set,

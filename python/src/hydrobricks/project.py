@@ -509,6 +509,15 @@ class Project:
             **(defaults.get("options") or {}),
             **(calibrate_kwargs.pop("sample_kwargs", None) or {}),
         }
+        # SPOTPY seeds numpy and random in the sampler's constructor, not in
+        # sample(), so the seed travels with the algorithm arguments rather than
+        # with 'options'. Without one, every run draws its own seed, which is
+        # what makes repeated calibrations differ.
+        seed = calibrate_kwargs.pop("seed", None)
+        if seed is None:
+            seed = defaults.get("seed")
+        if seed is not None:
+            calibrate_kwargs.setdefault("random_state", int(seed))
 
         sampler = trainer.calibrate(
             spot_setup,
@@ -1730,6 +1739,7 @@ def _validate_calibration(config: dict, errors: list[str]) -> dict | None:
         "parameters",
         "database",
         "options",
+        "seed",
     }
     _check_keys(section, valid, "calibration", errors)
 
@@ -1741,7 +1751,11 @@ def _validate_calibration(config: dict, errors: list[str]) -> dict | None:
         "parameters": section.get("parameters"),
         "database": _validate_calibration_database(section, errors),
         "options": _validate_calibration_options(section, errors),
+        "seed": section.get("seed"),
     }
+    if out["seed"] is not None and not isinstance(out["seed"], int):
+        errors.append(f"calibration.seed: expected an integer, got {out['seed']!r}.")
+        out["seed"] = None
     if not isinstance(out["algorithm"], str):
         errors.append(
             f"calibration.algorithm: expected an algorithm name (e.g. 'sceua'), "

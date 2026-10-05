@@ -1396,6 +1396,7 @@ def _validate_forcing(config: dict, base: Path, errors: list[str]) -> dict:
         "spatialized": {},
         "radiation": None,
         "pet_method": "Oudin",
+        "pet_use": ["t", "lat"],
         "pet_lat": None,
         "variables": set(),
     }
@@ -1436,9 +1437,37 @@ def _validate_forcing(config: dict, base: Path, errors: list[str]) -> dict:
     if not isinstance(pet, dict):
         errors.append("forcing.pet: expected a mapping (method, lat).")
         pet = {}
-    _check_keys(pet, {"method", "lat"}, "forcing.pet", errors)
+    _check_keys(pet, {"method", "lat", "use"}, "forcing.pet", errors)
     out["pet_method"] = _get_str(pet, "method", "forcing.pet", errors) or "Oudin"
     out["pet_lat"] = _get_number(pet, "lat", "forcing.pet", errors)
+
+    # Which variables the pyet method is given. Temperature-only formulations
+    # (Oudin, Hamon, McGuinness-Bordne) need just 't' and 'lat', but Hargreaves
+    # works from the diurnal range and needs 'tmin' and 'tmax' as well, so the
+    # inputs cannot be assumed from the method name.
+    use = pet.get("use")
+    if use is None:
+        out["pet_use"] = ["t", "lat"]
+    elif not isinstance(use, list) or not all(isinstance(v, str) for v in use):
+        errors.append(
+            "forcing.pet.use: expected a list of pyet variable names, e.g. "
+            "[t, tmin, tmax, lat]."
+        )
+    else:
+        out["pet_use"] = [str(v) for v in use]
+        missing = [
+            v
+            for v in out["pet_use"]
+            if v in {"tmin", "tmax"}
+            and v not in set(out["gridded"]) | set(out["spatialized"])
+            and v not in set((out["station"] or {}).get("columns", {}))
+        ]
+        if missing:
+            errors.append(
+                f"forcing.pet.use lists {', '.join(missing)}, but no source "
+                "provides them; add them under 'gridded', 'spatialized' or the "
+                "station columns."
+            )
 
     sources = {
         "columns": set((out["station"] or {}).get("columns", {})),
@@ -2503,7 +2532,9 @@ def _build_project(
             # carry it (delineation, or a CSV holding the column), the catchment
             # mean otherwise. The validation guarantees a catchment here.
             pet_lat = float(catchment.extract_unit_mean_lat_lon(catchment.dem_data)[0])
-        forcing.compute_pet(method=fc["pet_method"], use=["t", "lat"], lat=pet_lat)
+        forcing.compute_pet(
+            method=fc["pet_method"], use=list(fc["pet_use"]), lat=pet_lat
+        )
 
     parameter_set = model.generate_parameters()
     for name, spec in cfg["data_parameters"].items():

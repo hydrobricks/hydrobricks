@@ -285,6 +285,7 @@ class TimeSeries2D(TimeSeries):
             )
             cache_path = caching.cache_file(cache_dir, "forcing_regrid", key)
             if cache_path.exists() and self._load_regrid_cache(cache_path):
+                self._check_regridded(var_name, path)
                 return
 
         # Get unit ids
@@ -493,6 +494,25 @@ class TimeSeries2D(TimeSeries):
         if dim_y != "y":
             data_var = data_var.rename({dim_y: "y"})
 
+        # Normalise the axis direction. The gradient path differentiates both the
+        # data and the DEM along each axis and divides the two, which lines up
+        # only when they run the same way; xarray aligns the quotient on
+        # coordinate labels, and 'diff' keeps a different set of labels depending
+        # on the direction. A product stored with y descending (MeteoSwiss ships
+        # the Oudin PET that way, while TabsD and RhiresD ascend) then yielded an
+        # all-NaN gradient, which 'np.nansum' turns into a silent, exact zero.
+        # Sorting here - before the cell indices are built from these coordinates
+        # - keeps every later step independent of how the source happened to
+        # store its axes.
+        for axis in ("x", "y"):
+            coordinate = data_var[axis].values
+            if coordinate.size > 1 and coordinate[0] > coordinate[-1]:
+                logger.debug(
+                    f"Sorting the '{axis}' axis: the source stores it "
+                    "in decreasing order."
+                )
+                data_var = data_var.sortby(axis)
+
         # Time the computation
         start_time = time.time()
 
@@ -614,6 +634,10 @@ class TimeSeries2D(TimeSeries):
             # Wait for all tasks to complete
             concurrent.futures.wait(futures)
 
+        # Before caching: a broken result must not be written to the cache and
+        # then silently reused by every later run.
+        self._check_regridded(var_name, path)
+
         # Save to the cache. For 'day_of_year' data this happens before the
         # expansion to the full time series, so the cache stays independent of
         # the simulation period.
@@ -639,6 +663,49 @@ class TimeSeries2D(TimeSeries):
         logger.info(
             f"Elapsed time: {elapsed_time:.2f} seconds "
             f"(using {num_threads} threads)"
+        )
+
+    def _check_regridded(self, var_name: str, path: str | Path) -> None:
+        """Refuse a regridded variable that carries no information.
+
+        The output array starts as zeros and the extraction writes into slices
+        bounded by the source's own time length, so any path that writes nothing
+        leaves a full, plausible-looking array of zeros instead of failing. A
+        forcing variable that arrives entirely zero (or entirely NaN) is then
+        indistinguishable from one that is genuinely zero, and every flux that
+        depends on it is silently zero for the whole simulation.
+
+        Raises
+        ------
+        DataError
+            If the last regridded variable is all zeros or all NaN.
+        """
+        if not self.data:
+            return
+        values = np.asarray(self.data[-1], dtype=float)
+        if values.size == 0:
+            return
+
+        finite = np.isfinite(values)
+        if not finite.any():
+            problem = "only NaN"
+        elif np.all(values[finite] == 0):
+            problem = "only zeros"
+        else:
+            return
+
+        raise DataError(
+            f"The regridded variable '{var_name}' from '{path}' contains "
+            f"{problem} ({values.shape[0]} time steps x {values.shape[1]} "
+            "hydro units). That is almost always a reading or regridding "
+            "failure rather than real data: check the variable name, the "
+            "x/y/time dimension names, that the grid overlaps the catchment, "
+            "and - for a variable that is neither precipitation nor "
+            "temperature - whether 'apply_data_gradient' should be set at all. "
+            "Any model flux driven by this variable would otherwise be zero "
+            "for the whole simulation.",
+            data_type="time series",
+            reason=f"Regridded variable contains {problem}",
         )
 
     def _load_regrid_cache(self, cache_path: Path) -> bool:

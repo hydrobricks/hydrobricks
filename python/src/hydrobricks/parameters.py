@@ -1037,19 +1037,16 @@ PROCESS_PARAM_SPECS: dict[str, list[ParamSpec]] = {
 }
 
 BRICK_PARAM_SPECS: dict[str, ParamSpec] = {
-    # Storage capacity of a brick. The upper bound matters beyond plausibility:
-    # where a brick drains by evapotranspiration the rate is scaled by the
-    # filling ratio (ET = PET * (content / capacity) ** exponent), so an
-    # over-large capacity keeps that ratio small and switches ET off. A
-    # calibration free to do so will, because the water can leave as discharge
-    # instead and the hydrograph still fits - it just makes the model
-    # unphysical. Every model here defaults between 200 and 350 mm (GR4J 350,
-    # HBV 250, PREVAH 250, Socont 200), so 1000 leaves ample room while
-    # excluding that regime. The lower bound keeps the filling ratio defined.
-    # Widen either with 'parameter_ranges' in a project file, or
-    # ParameterSet.change_range().
+    # Storage capacity of a brick. The lower bound is not cosmetic: where a brick
+    # drains by evapotranspiration the rate is scaled by the filling ratio
+    # (ET = PET * (content / capacity) ** exponent), which is undefined at zero.
+    # The upper bound stays generous because capacity means different things per
+    # model - GR4J's production store X1 is a conceptual reservoir that calibrates
+    # well above 1000 mm - so a model whose ET uses that filling ratio tightens it
+    # itself through 'parameter_ranges' (see Socont), rather than every brick in
+    # every model paying for one model's failure mode.
     "capacity": ParamSpec(
-        name="capacity", unit="mm", aliases=[], min=10, max=1000, mandatory=True
+        name="capacity", unit="mm", aliases=[], min=10, max=3000, mandatory=True
     ),
 }
 

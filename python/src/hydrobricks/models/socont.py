@@ -309,6 +309,9 @@ class Socont(Model):
         a consistent user-facing parameterization (and is skipped automatically when
         a single soil storage is used).
         """
+        self.parameter_ranges = {
+            "slow_reservoir:capacity": (10.0, 1000.0),
+        }
         self.parameter_transforms = {
             "slow_reservoir:response_factor": (
                 lambda rf: math.log(rf / 24.0),  # real [1/d] -> lk = log(k[1/h])

@@ -89,6 +89,7 @@ class Socont(Model):
         self.options["soil_storage_nb"] = 1
         self.options["surface_runoff"] = "socont_runoff"
         self.options["snow_melt_process"] = "melt:degree_day"
+        self.options["snow_rain_process"] = None
         self.options["snow_ice_transformation"] = None
         self.options["snow_redistribution"] = None
         self.options["snow_sublimation_process"] = None

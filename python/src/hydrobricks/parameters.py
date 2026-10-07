@@ -282,12 +282,16 @@ PROCESS_PARAM_SPECS: dict[str, list[ParamSpec]] = {
     # Precipitation correction factors (HBV RFCF/SFCF) applied at the snow/rain
     # splitter. Default 1.0 = no correction; optional (not mandatory).
     "correction:snow_rain": [
+        # These correct gauge undercatch, which raises the measured amount and
+        # is worse for snow: a few per cent for rain in summer, occasionally
+        # over 40 % for snowfall at altitude (Sevruk 1985, and the MeteoSwiss
+        # RhiresD product documentation). The bounds follow that asymmetry.
         ParamSpec(
             name="rain_correction_factor",
             unit="-",
             aliases=["rain_correction_factor", "rain_corr_factor", "rfcf", "rcf"],
-            min=0.5,
-            max=2.0,
+            min=0.8,
+            max=1.3,
             default=1.0,
             mandatory=False,
         ),
@@ -295,8 +299,8 @@ PROCESS_PARAM_SPECS: dict[str, list[ParamSpec]] = {
             name="snow_correction_factor",
             unit="-",
             aliases=["snow_correction_factor", "snow_corr_factor", "sfcf", "scf"],
-            min=0.5,
-            max=2.0,
+            min=0.8,
+            max=1.6,
             default=1.0,
             mandatory=False,
         ),
@@ -307,8 +311,8 @@ PROCESS_PARAM_SPECS: dict[str, list[ParamSpec]] = {
             name="rain_correction_factor",
             unit="-",
             aliases=["rain_correction_factor", "rain_corr_factor", "rfcf", "rcf"],
-            min=0.5,
-            max=2.0,
+            min=0.8,
+            max=1.3,
             default=1.0,
             mandatory=False,
         ),
@@ -1033,8 +1037,19 @@ PROCESS_PARAM_SPECS: dict[str, list[ParamSpec]] = {
 }
 
 BRICK_PARAM_SPECS: dict[str, ParamSpec] = {
+    # Storage capacity of a brick. The upper bound matters beyond plausibility:
+    # where a brick drains by evapotranspiration the rate is scaled by the
+    # filling ratio (ET = PET * (content / capacity) ** exponent), so an
+    # over-large capacity keeps that ratio small and switches ET off. A
+    # calibration free to do so will, because the water can leave as discharge
+    # instead and the hydrograph still fits - it just makes the model
+    # unphysical. Every model here defaults between 200 and 350 mm (GR4J 350,
+    # HBV 250, PREVAH 250, Socont 200), so 1000 leaves ample room while
+    # excluding that regime. The lower bound keeps the filling ratio defined.
+    # Widen either with 'parameter_ranges' in a project file, or
+    # ParameterSet.change_range().
     "capacity": ParamSpec(
-        name="capacity", unit="mm", aliases=[], min=0, max=3000, mandatory=True
+        name="capacity", unit="mm", aliases=[], min=10, max=1000, mandatory=True
     ),
 }
 

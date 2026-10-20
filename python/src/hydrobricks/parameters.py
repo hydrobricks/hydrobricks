@@ -282,12 +282,16 @@ PROCESS_PARAM_SPECS: dict[str, list[ParamSpec]] = {
     # Precipitation correction factors (HBV RFCF/SFCF) applied at the snow/rain
     # splitter. Default 1.0 = no correction; optional (not mandatory).
     "correction:snow_rain": [
+        # These correct gauge undercatch, which raises the measured amount and
+        # is worse for snow: a few per cent for rain in summer, occasionally
+        # over 40 % for snowfall at altitude (Sevruk 1985, and the MeteoSwiss
+        # RhiresD product documentation). The bounds follow that asymmetry.
         ParamSpec(
             name="rain_correction_factor",
             unit="-",
             aliases=["rain_correction_factor", "rain_corr_factor", "rfcf", "rcf"],
-            min=0.5,
-            max=2.0,
+            min=0.8,
+            max=1.3,
             default=1.0,
             mandatory=False,
         ),
@@ -295,8 +299,8 @@ PROCESS_PARAM_SPECS: dict[str, list[ParamSpec]] = {
             name="snow_correction_factor",
             unit="-",
             aliases=["snow_correction_factor", "snow_corr_factor", "sfcf", "scf"],
-            min=0.5,
-            max=2.0,
+            min=0.8,
+            max=1.6,
             default=1.0,
             mandatory=False,
         ),
@@ -307,8 +311,8 @@ PROCESS_PARAM_SPECS: dict[str, list[ParamSpec]] = {
             name="rain_correction_factor",
             unit="-",
             aliases=["rain_correction_factor", "rain_corr_factor", "rfcf", "rcf"],
-            min=0.5,
-            max=2.0,
+            min=0.8,
+            max=1.3,
             default=1.0,
             mandatory=False,
         ),
@@ -1033,8 +1037,16 @@ PROCESS_PARAM_SPECS: dict[str, list[ParamSpec]] = {
 }
 
 BRICK_PARAM_SPECS: dict[str, ParamSpec] = {
+    # Storage capacity of a brick. The lower bound is not cosmetic: where a brick
+    # drains by evapotranspiration the rate is scaled by the filling ratio
+    # (ET = PET * (content / capacity) ** exponent), which is undefined at zero.
+    # The upper bound stays generous because capacity means different things per
+    # model - GR4J's production store X1 is a conceptual reservoir that calibrates
+    # well above 1000 mm - so a model whose ET uses that filling ratio tightens it
+    # itself through 'parameter_ranges' (see Socont), rather than every brick in
+    # every model paying for one model's failure mode.
     "capacity": ParamSpec(
-        name="capacity", unit="mm", aliases=[], min=0, max=3000, mandatory=True
+        name="capacity", unit="mm", aliases=[], min=10, max=3000, mandatory=True
     ),
 }
 
@@ -1102,6 +1114,8 @@ class ParameterSet:
         )
         self.constraints: list[list[str]] = []
         self._allow_changing: list[str] = []
+        #: Parameters that mirror another one, as {dependent: driver}.
+        self._links: dict[str, str] = {}
         # Monthly-varying parameters: DataFrame index -> 12 monthly values (Jan..Dec).
         # The scalar 'value' still holds the annual mean as a baseline.
         self._monthly_values: dict[Hashable, list[float]] = {}
@@ -1136,7 +1150,70 @@ class ParameterSet:
             changed. If a parameter is related to data forcing, the spatialization
             will be performed again.
         """
+        tied = [name for name in allow_changing if self._is_linked(name)]
+        if tied:
+            raise ConfigurationError(
+                f"Parameter(s) {', '.join(tied)} follow another parameter and "
+                "cannot be calibrated; calibrate the one they follow instead.",
+                item_name="allow_changing",
+                reason="Linked parameter cannot be free",
+            )
         self._allow_changing = allow_changing
+
+    def _is_linked(self, name: str) -> bool:
+        """Whether this parameter (by any alias) mirrors another one."""
+        if not self._links:
+            return False
+        index = self._get_parameter_index(name)
+        return any(
+            self._get_parameter_index(dependent) == index for dependent in self._links
+        )
+
+    def link_parameter(self, dependent: str, driver: str) -> None:
+        """Make one parameter always take the value of another.
+
+        Used to collapse two parameters into one degree of freedom - for example
+        forcing the rain and snow correction factors to share a single value, so
+        the model applies one bulk precipitation correction instead of two
+        independent ones. The dependent is then no longer free: it is excluded
+        from the calibrated vector and updated whenever values are set.
+
+        Parameters
+        ----------
+        dependent
+            The parameter that follows (by name or alias).
+        driver
+            The parameter it follows.
+        """
+        dependent_index = self._get_parameter_index(dependent)
+        driver_index = self._get_parameter_index(driver)
+        if dependent_index == driver_index:
+            raise ConfigurationError(
+                f"'{dependent}' cannot follow itself.",
+                item_name=dependent,
+                reason="Self-referencing link",
+            )
+        if self._is_linked(driver):
+            raise ConfigurationError(
+                f"'{driver}' already follows another parameter; chained links "
+                "are not supported.",
+                item_name=driver,
+                reason="Chained link",
+            )
+        self._links[dependent] = driver
+        self._apply_links()
+
+    def _apply_links(self) -> None:
+        """Copy each driver's value onto the parameter that follows it."""
+        for dependent, driver in self._links.items():
+            value = self.get(driver)
+            if value is None:
+                continue
+            index = self._get_parameter_index(dependent)
+            # The two may not share a range; a driver value the dependent cannot
+            # take is a configuration error, not something to silently clip.
+            self._check_value_range(index, dependent, value, allow_adapt=False)
+            self.parameters.loc[index, "value"] = value
 
     def define_parameter(
         self,
@@ -1497,6 +1574,10 @@ class ParameterSet:
                     index, key, value, allow_adapt=allow_adapt
                 )
             self.parameters.loc[index, "value"] = value
+
+        # A linked parameter follows its driver on every assignment, so the
+        # constraint and range checks that follow see the value the model runs.
+        self._apply_links()
 
     def set_monthly_values(
         self,

@@ -66,6 +66,20 @@ sampled set and its objective value to ``<output>/calibration.<format>``
 ``save_simulations`` stores the whole simulated series of every iteration —
 one column per time step, per repetition — so it is off unless asked for.
 
+``calibration.options`` carries the algorithm's own settings, forwarded to its
+SPOTPY ``sample()`` — SCE-UA's ``ngs`` (number of complexes), ``kstop``,
+``pcento`` and ``peps``, DDS's ``trials``, and so on::
+
+    calibration:
+      algorithm: sceua
+      repetitions: 5000
+      options: {ngs: 8, kstop: 20}
+
+They matter more than they look: with the default ``ngs`` of 20 and 11
+parameters, SCE-UA spends 20 x (2 x 11 + 1) = 460 runs on its initial population
+before any evolution, and it stops once the next loop would not fit in the
+budget — so it uses well under the repetitions it is given.
+
 The forcing can also come from gridded netCDF data — per variable, mixable
 with the station CSV — using a ``gridded`` section (the hydro units then need
 a ``unit_ids_raster`` to aggregate the grid cells, and optionally an
@@ -402,7 +416,9 @@ class Project:
             simulations is expensive: one series per iteration, held for the
             whole calibration (e.g. ~1 GB for 10 000 repetitions over 40 years).
         parallel, **calibrate_kwargs
-            Forwarded to :func:`hydrobricks.trainer.calibrate`.
+            Forwarded to :func:`hydrobricks.trainer.calibrate`. The file's
+            ``calibration.options`` reach the algorithm's ``sample()`` the same
+            way; a ``sample_kwargs`` given here overrides them entry by entry.
 
         Returns
         -------
@@ -487,6 +503,22 @@ class Project:
             # nothing here reads. Opt in through the project file instead.
             save_sim = bool(database["save_simulations"]) if database else False
 
+        # The algorithm's own settings go to its sample(), which is where SPOTPY
+        # puts them; an explicit sample_kwargs here wins over the file's.
+        sample_kwargs = {
+            **(defaults.get("options") or {}),
+            **(calibrate_kwargs.pop("sample_kwargs", None) or {}),
+        }
+        # SPOTPY seeds numpy and random in the sampler's constructor, not in
+        # sample(), so the seed travels with the algorithm arguments rather than
+        # with 'options'. Without one, every run draws its own seed, which is
+        # what makes repeated calibrations differ.
+        seed = calibrate_kwargs.pop("seed", None)
+        if seed is None:
+            seed = defaults.get("seed")
+        if seed is not None:
+            calibrate_kwargs.setdefault("random_state", int(seed))
+
         sampler = trainer.calibrate(
             spot_setup,
             algorithm,
@@ -495,6 +527,7 @@ class Project:
             dbformat=dbformat,
             save_sim=save_sim,
             parallel=parallel,
+            sample_kwargs=sample_kwargs or None,
             **calibrate_kwargs,
         )
         best = trainer.get_best(sampler)
@@ -1363,6 +1396,7 @@ def _validate_forcing(config: dict, base: Path, errors: list[str]) -> dict:
         "spatialized": {},
         "radiation": None,
         "pet_method": "Oudin",
+        "pet_use": ["t", "lat"],
         "pet_lat": None,
         "variables": set(),
     }
@@ -1403,9 +1437,37 @@ def _validate_forcing(config: dict, base: Path, errors: list[str]) -> dict:
     if not isinstance(pet, dict):
         errors.append("forcing.pet: expected a mapping (method, lat).")
         pet = {}
-    _check_keys(pet, {"method", "lat"}, "forcing.pet", errors)
+    _check_keys(pet, {"method", "lat", "use"}, "forcing.pet", errors)
     out["pet_method"] = _get_str(pet, "method", "forcing.pet", errors) or "Oudin"
     out["pet_lat"] = _get_number(pet, "lat", "forcing.pet", errors)
+
+    # Which variables the pyet method is given. Temperature-only formulations
+    # (Oudin, Hamon, McGuinness-Bordne) need just 't' and 'lat', but Hargreaves
+    # works from the diurnal range and needs 'tmin' and 'tmax' as well, so the
+    # inputs cannot be assumed from the method name.
+    use = pet.get("use")
+    if use is None:
+        out["pet_use"] = ["t", "lat"]
+    elif not isinstance(use, list) or not all(isinstance(v, str) for v in use):
+        errors.append(
+            "forcing.pet.use: expected a list of pyet variable names, e.g. "
+            "[t, tmin, tmax, lat]."
+        )
+    else:
+        out["pet_use"] = [str(v) for v in use]
+        missing = [
+            v
+            for v in out["pet_use"]
+            if v in {"tmin", "tmax"}
+            and v not in set(out["gridded"]) | set(out["spatialized"])
+            and v not in set((out["station"] or {}).get("columns", {}))
+        ]
+        if missing:
+            errors.append(
+                f"forcing.pet.use lists {', '.join(missing)}, but no source "
+                "provides them; add them under 'gridded', 'spatialized' or the "
+                "station columns."
+            )
 
     sources = {
         "columns": set((out["station"] or {}).get("columns", {})),
@@ -1655,6 +1717,64 @@ def _validate_calibration_database(section: dict, errors: list[str]) -> dict | N
     return out
 
 
+def _validate_calibration_options(section: dict, errors: list[str]) -> dict:
+    """Validate 'calibration.options', the algorithm's own settings.
+
+    They are forwarded to the SPOTPY algorithm's ``sample()``, which is where
+    the knobs live (SCE-UA's ``ngs``, ``kstop``, ``pcento``, ``peps``; DDS's
+    ``trials``; ...). Their names and meanings belong to SPOTPY, so they are not
+    enumerated here: only their shape is checked, and an unknown one fails when
+    the calibration starts.
+    """
+    options = section.get("options")
+    if options is None:
+        return {}
+    where = "calibration.options"
+    if not isinstance(options, dict):
+        errors.append(
+            f"{where}: expected a mapping of the algorithm's settings, e.g. "
+            "{ngs: 8, kstop: 20} for sceua."
+        )
+        return {}
+
+    out: dict[str, Any] = {}
+    for name, value in options.items():
+        if not isinstance(name, str):
+            errors.append(f"{where}: the setting names must be strings, got {name!r}.")
+            continue
+        if isinstance(value, (dict, list)):
+            errors.append(f"{where}.{name}: expected a single value, got {value!r}.")
+            continue
+        out[str(name)] = value
+    return out
+
+
+def _validate_calibration_link(section: dict, errors: list[str]) -> dict:
+    """Validate 'calibration.link', collapsing parameters into one freedom.
+
+    A mapping {dependent: driver}: the dependent always takes the driver's value
+    and is dropped from the calibrated vector, so the pair costs one dimension
+    instead of two.
+    """
+    spec = section.get("link")
+    if spec is None:
+        return {}
+    where = "calibration.link"
+    if not isinstance(spec, dict):
+        errors.append(
+            f"{where}: expected a mapping of parameter to the parameter it "
+            "follows, e.g. {rain_correction_factor: snow_correction_factor}."
+        )
+        return {}
+    out = {}
+    for dependent, driver in spec.items():
+        if not isinstance(dependent, str) or not isinstance(driver, str):
+            errors.append(f"{where}: the parameter names must be strings.")
+            continue
+        out[str(dependent)] = str(driver)
+    return out
+
+
 def _validate_calibration(config: dict, errors: list[str]) -> dict | None:
     """Validate the calibration section (how to calibrate the parameters)."""
     section = config.get("calibration")
@@ -1673,6 +1793,9 @@ def _validate_calibration(config: dict, errors: list[str]) -> dict | None:
         "transform",
         "parameters",
         "database",
+        "options",
+        "seed",
+        "link",
     }
     _check_keys(section, valid, "calibration", errors)
 
@@ -1683,7 +1806,13 @@ def _validate_calibration(config: dict, errors: list[str]) -> dict | None:
         "transform": section.get("transform"),
         "parameters": section.get("parameters"),
         "database": _validate_calibration_database(section, errors),
+        "options": _validate_calibration_options(section, errors),
+        "seed": section.get("seed"),
+        "link": _validate_calibration_link(section, errors),
     }
+    if out["seed"] is not None and not isinstance(out["seed"], int):
+        errors.append(f"calibration.seed: expected an integer, got {out['seed']!r}.")
+        out["seed"] = None
     if not isinstance(out["algorithm"], str):
         errors.append(
             f"calibration.algorithm: expected an algorithm name (e.g. 'sceua'), "
@@ -2403,7 +2532,9 @@ def _build_project(
             # carry it (delineation, or a CSV holding the column), the catchment
             # mean otherwise. The validation guarantees a catchment here.
             pet_lat = float(catchment.extract_unit_mean_lat_lon(catchment.dem_data)[0])
-        forcing.compute_pet(method=fc["pet_method"], use=["t", "lat"], lat=pet_lat)
+        forcing.compute_pet(
+            method=fc["pet_method"], use=list(fc["pet_use"]), lat=pet_lat
+        )
 
     parameter_set = model.generate_parameters()
     for name, spec in cfg["data_parameters"].items():
@@ -2412,6 +2543,14 @@ def _build_project(
         )
     _check_parameter_names(parameter_set, cfg["parameters"], errors)
     calibration = cfg["calibration"]
+    if calibration is not None and calibration.get("link"):
+        # Applied on the parameter set itself, so the fresh build that
+        # Project.calibrate() makes from the same config inherits it too.
+        names = [n for pair in calibration["link"].items() for n in pair]
+        _check_parameter_names(parameter_set, names, errors, section="calibration.link")
+        if not errors:
+            for dependent, driver in calibration["link"].items():
+                parameter_set.link_parameter(dependent, driver)
     if calibration is not None and calibration["parameters"]:
         _check_parameter_names(
             parameter_set,

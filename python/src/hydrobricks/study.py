@@ -416,8 +416,15 @@ class Study:
 
         from concurrent.futures import ProcessPoolExecutor, as_completed
 
+        # One job per worker process, which then exits: a calibration holds the
+        # whole forcing of its catchment, and a pool's workers otherwise live as
+        # long as the pool — the memory of every finished job would stay resident
+        # until the last one ends, which is when the biggest jobs are still
+        # running.
         with ProcessPoolExecutor(
-            max_workers=min(workers, len(job_ids)), initializer=_init_worker
+            max_workers=min(workers, len(job_ids)),
+            initializer=_init_worker,
+            max_tasks_per_child=1,
         ) as pool:
             futures = [
                 pool.submit(function, self.source, self.base_dir, job_id, **kwargs)

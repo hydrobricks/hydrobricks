@@ -287,6 +287,31 @@ def test_calibration_database_validation(tmp_path):
     assert "calibration.database: unknown key 'keep'" in message
 
 
+def test_calibration_options_reach_the_algorithm(tmp_path):
+    """The algorithm's own settings are forwarded to its sample()."""
+    config = calibration_config(tmp_path)
+    config["calibration"]["algorithm"] = "sceua"
+    # A tiny population, so the run stays short and the setting is visible in
+    # the number of model runs it produces.
+    config["calibration"]["options"] = {"ngs": 2}
+    config["calibration"]["repetitions"] = 40
+
+    project = hb.load_project(config, base_dir=SITTER_DIR)
+    best = project.calibrate()
+
+    # 2 complexes of (2 * 2 + 1) points: the initial population alone is 10, far
+    # short of the 40 a default ngs of 20 would have spent on it.
+    assert 10 <= len(best["sampler"].datawriter.ram) <= 40
+
+
+def test_calibration_options_validation(tmp_path):
+    config = calibration_config(tmp_path)
+    config["calibration"]["options"] = {"ngs": [2, 3]}
+    with pytest.raises(hb.ConfigurationError) as excinfo:
+        hb.load_project(config, base_dir=SITTER_DIR)
+    assert "calibration.options.ngs: expected a single value" in str(excinfo.value)
+
+
 def test_calibration_requires_observations_and_period(tmp_path):
     config = calibration_config(tmp_path)
     del config["observations"]

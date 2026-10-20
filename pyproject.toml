@@ -11,7 +11,7 @@ maintainers = [
 ]
 description = "A modular hydrological modelling framework"
 readme = "python/README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 license = "MIT"
 classifiers = [
     "Programming Language :: C++",
@@ -22,8 +22,7 @@ dependencies = [
     "numpy<2.4",
     "HydroErr",
     "pandas",
-    "pyyaml",
-    "StrEnum; python_version < '3.11'"
+    "pyyaml"
 ]
 
 [project.optional-dependencies]

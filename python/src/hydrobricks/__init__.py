@@ -1,3 +1,5 @@
+from importlib import metadata as _metadata
+
 from hydrobricks._exceptions import (
     ConfigurationError,
     DataError,
@@ -69,6 +71,11 @@ from ._hydrobricks import (
     set_max_log_level,
     set_message_log_level,
 )
+
+try:
+    __version__ = _metadata.version("hydrobricks")
+except _metadata.PackageNotFoundError:  # Not installed (e.g. source tree on sys.path)
+    __version__ = "unknown"
 
 init()
 __all__ = (

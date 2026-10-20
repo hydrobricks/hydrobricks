@@ -1,6 +1,6 @@
 [project]
 name = "hydrobricks"
-version = "0.9.1"
+version = "0.9.2"
 authors = [
     { name = "Pascal Horton et al.", email = "pascal.horton@unibe.ch" }
 ]

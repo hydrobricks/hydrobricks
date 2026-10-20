@@ -41,10 +41,19 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 # OPTIONS
 
-# Version number
-set(VERSION_MAJOR "0")
-set(VERSION_MINOR "9")
-set(VERSION_PATCH "1")
+# Version number, read from pyproject.toml (the single source of truth). Reconfigure when it changes.
+file(STRINGS "${PROJECT_SOURCE_DIR}/pyproject.toml" HYDROBRICKS_VERSION_LINE
+     REGEX "^version = \"[0-9]+\\.[0-9]+\\.[0-9]+")
+if (NOT HYDROBRICKS_VERSION_LINE MATCHES "^version = \"([0-9]+)\\.([0-9]+)\\.([0-9]+)")
+    message(FATAL_ERROR "Could not read the version from pyproject.toml")
+endif ()
+set(VERSION_MAJOR "${CMAKE_MATCH_1}")
+set(VERSION_MINOR "${CMAKE_MATCH_2}")
+set(VERSION_PATCH "${CMAKE_MATCH_3}")
+set_property(
+    DIRECTORY
+    APPEND
+    PROPERTY CMAKE_CONFIGURE_DEPENDS "${PROJECT_SOURCE_DIR}/pyproject.toml")
 add_definitions(-DHYDROBRICKS_MAJOR_VERSION=${VERSION_MAJOR})
 add_definitions(-DHYDROBRICKS_MINOR_VERSION=${VERSION_MINOR})
 add_definitions(-DHYDROBRICKS_PATCH_VERSION=${VERSION_PATCH})

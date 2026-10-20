@@ -989,6 +989,22 @@ def test_day_of_year_forcing_is_not_trimmed(tmp_path):
     Restricting the gridded sources to the modelling period must skip it, even
     when its dimension is declared as the time one.
     """
+    import xarray as xr
+
+    # A small synthetic climatology over the unit ids raster (2669000-2677000 E,
+    # 1154500-1169000 N, EPSG:2056) on a 500 m grid: the real one is generated, not
+    # committed.
+    days = np.arange(1, 367)
+    x = np.arange(2669250.0, 2677000.0, 500.0)
+    y = np.arange(1168750.0, 1154500.0, -500.0)
+    seasonal = 150 + 100 * np.sin(2 * np.pi * (days - 80) / 366)
+    radiation = np.broadcast_to(seasonal[:, None, None], (days.size, y.size, x.size))
+    radiation_path = tmp_path / "daily_potential_radiation.nc"
+    xr.Dataset(
+        {"radiation": (("day_of_year", "y", "x"), radiation.copy())},
+        coords={"day_of_year": days, "y": y, "x": x},
+    ).to_netcdf(radiation_path)
+
     config = {
         "model": {
             "name": "socont",
@@ -1013,7 +1029,7 @@ def test_day_of_year_forcing_is_not_trimmed(tmp_path):
             "ref_elevation": 2702,
             "gridded": {
                 "solar_radiation": {
-                    "path": "daily_potential_radiation.nc",
+                    "path": str(radiation_path),
                     "var_name": "radiation",
                     "dim_time": "day_of_year",
                     "data_crs": 2056,

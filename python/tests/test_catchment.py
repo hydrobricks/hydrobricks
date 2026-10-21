@@ -885,7 +885,7 @@ def test_extract_soil_properties():
 
 
 def test_extract_soil_properties_feeds_the_prevah_tables():
-    """The properties must be usable as they are by the PREVAH land-use methods."""
+    """The properties must be usable as they are by the PREVAH cover methods."""
     if not has_required_packages():
         return
     import hydrobricks.models as models
@@ -911,14 +911,14 @@ def test_extract_soil_properties_feeds_the_prevah_tables():
         def column(name):
             return hydro_units.hydro_units[name].to_numpy().flatten()
 
-        model.apply_land_use_field_capacity(
+        model.apply_cover_field_capacity(
             parameters,
             hydro_units,
             "pasture",
             available_water_content=column("awc"),
             soil_depth=column("soil_depth"),
         )
-        model.apply_land_use_percolation(
+        model.apply_cover_percolation(
             parameters,
             hydro_units,
             "pasture",

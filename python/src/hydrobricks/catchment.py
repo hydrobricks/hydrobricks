@@ -742,9 +742,9 @@ class Catchment:
         A convenience over :meth:`extract_unit_property_from_raster` naming the
         properties the models expect: ``awc`` [%], ``soil_depth`` [m] and
         ``conductivity`` [-]. The first two feed
-        :meth:`~hydrobricks.models.PrevahUniBE.apply_land_use_field_capacity` (the
+        :meth:`~hydrobricks.models.PrevahUniBE.apply_cover_field_capacity` (the
         soil moisture capacity) and the third
-        :meth:`~hydrobricks.models.PrevahUniBE.apply_land_use_percolation` (PREVAH's
+        :meth:`~hydrobricks.models.PrevahUniBE.apply_cover_percolation` (PREVAH's
         KWPER percolation factor).
 
         Parameters

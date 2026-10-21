@@ -7,16 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Breaking changes
+
+- The "land use" vocabulary is dropped, with no deprecation shim. hydrobricks has land covers, which differ either by their *type* (what the model builds: `open`, `forest`, `glacier`, `water`, `wetland`, `urban`, `rock`) or only by their *parameters*; an entry of an external classification, such as PREVAH's 22 classes, is a *cover class*. What PREVAH calls a land-use table is a land cover classification — forests, meadows, crops, rock, water — and the values read from it (interception capacity, vegetation cover fraction, rooting depth, albedo, LAI) are physical properties of the canopy and the soil, not a socioeconomic use of the land. Renamed accordingly:
+  - `hydrobricks.land_covers.PREVAH_LAND_USE_*` → `PREVAH_COVER_*`, and `PREVAH_LAND_USE_COVER_TYPES` → `PREVAH_COVER_TYPES`;
+  - `PrevahUniBE.apply_land_use` → `apply_cover_parameters`, `apply_land_use_field_capacity` → `apply_cover_field_capacity`, `apply_land_use_percolation` → `apply_cover_percolation`, `land_use_field_capacity` → `cover_field_capacity`, `land_use_interception_capacity` → `cover_interception_capacity`;
+  - the `land_use` argument of those methods → `cover_class`;
+  - the `land_use` column of the Ticino hydro units CSV and of `prevah_ticino_project.yaml` → `cover_class`.
+
 ### Added
 
 - Hydro unit properties from a raster: `Catchment.extract_unit_property_from_raster(raster, name, unit, reclassify=..., statistic='mean')` warps any raster onto the DEM grid and stores its per-unit mean as a hydro unit property, which a parameter can then follow per unit through `ParameterSet.set_spatial`. `reclassify` turns class codes into values for a map given as classes (unmapped codes are ignored rather than averaged in).
-- Soil properties of the hydro units from soil maps: `Catchment.extract_soil_properties(available_water_content=..., soil_depth=..., conductivity=...)` writes the `awc` [%], `soil_depth` [m] and `conductivity` [-] properties that `PrevahUniBE.apply_land_use_field_capacity` and `apply_land_use_percolation` consume — the latter being how PREVAH's KWPER percolation factor gets its input, which nothing in the package could produce until now. `reclassify=True` applies PREVAH's tables for the class-coded Swiss soil suitability map, now in `hydrobricks.soils` as `PREVAH_SOIL_AWC_CLASSES`, `PREVAH_SOIL_DEPTH_CLASSES` and `PREVAH_SOIL_CONDUCTIVITY_CLASSES`.
+- Soil properties of the hydro units from soil maps: `Catchment.extract_soil_properties(available_water_content=..., soil_depth=..., conductivity=...)` writes the `awc` [%], `soil_depth` [m] and `conductivity` [-] properties that `PrevahUniBE.apply_cover_field_capacity` and `apply_cover_percolation` consume — the latter being how PREVAH's KWPER percolation factor gets its input, which nothing in the package could produce until now. `reclassify=True` applies PREVAH's tables for the class-coded Swiss soil suitability map, now in `hydrobricks.soils` as `PREVAH_SOIL_AWC_CLASSES`, `PREVAH_SOIL_DEPTH_CLASSES` and `PREVAH_SOIL_CONDUCTIVITY_CLASSES`.
 - Eight aspect classes in the catchment discretization (`discretize_by(..., aspect_classes=8)`, N/NE/E/SE/S/SW/W/NW), and `flat_slope_threshold` to send the cells flatter than a given slope to the `FLAT` class instead of to a direction. It defaults to 3°, below which the aspect of a cell of a 25 m DEM is mostly noise (perturbing the DEM by 1 m moves 37 % of the cells of the 1-2° band to another class out of four, against 14 % at 3-5°) while the north-south difference in annual clear-sky radiation it would resolve stays under 8 %. Set it to 0 for the previous behaviour. A finer DEM calls for a higher threshold, since the error of the aspect scales with the vertical error over the cell size.
 - `area_of` brick key in model structures: a storage representing a land cover's area (e.g. a per-cover soil store) has its capacity and its evapotranspiration scaled by that cover's live area fraction.
 
 ### Changed
 
-- HBV-96 per-class soils (the default with several soil-bearing covers) and PREVAH-UniBE with `share_soil=False`: `fc_<cover>` is now the capacity of the cover's own soil (in mm over the cover area) rather than a share of the unit's soil storage. Each store is scaled by its cover's area fraction in each unit and follows land cover changes, so a cover absent from a unit no longer holds the percolation gate shut, and per-cover soils now work on single-land-use units (PREVAH hydrotopes).
+- HBV-96 per-class soils (the default with several soil-bearing covers) and PREVAH-UniBE with `share_soil=False`: `fc_<cover>` is now the capacity of the cover's own soil (in mm over the cover area) rather than a share of the unit's soil storage. Each store is scaled by its cover's area fraction in each unit and follows land cover changes, so a cover absent from a unit no longer holds the percolation gate shut, and per-cover soils now work on single-cover units (PREVAH hydrotopes).
 - The lower bound of `rain_correction_factor` (`rfcf`) is widened from 0.8 to 0.7: beyond gauge undercatch, a calibrated factor also absorbs the bias of the interpolation onto the catchment, so values below 0.8 are legitimate (the Ticino PREVAH calibration uses 0.776, which the previous bound rejected).
 
 ### Fixed

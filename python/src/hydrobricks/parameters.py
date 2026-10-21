@@ -1690,7 +1690,7 @@ class ParameterSet:
         This is the combination of ``set_spatial`` and ``set_monthly_values``, for a
         parameter that varies both in space and through the year — PREVAH's soil
         moisture capacity, for instance, which combines a per-unit soil map with a
-        rooting depth that depends on the land use and the month.
+        rooting depth that depends on the cover class and the month.
 
         The per-unit values are given as 12 properties rather than as a per-unit
         value times a monthly shape, because the two are not always separable: PREVAH

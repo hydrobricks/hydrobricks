@@ -86,7 +86,7 @@ class HBV(Model):
     Land covers
     -----------
     Besides the default soil-bearing ``open`` cover, HBV supports the land cover
-    types of the original HBV (its land-use classes): ``forest`` (an optional canopy
+    types of the original HBV: ``forest`` (an optional canopy
     interception on the rain path, enabled with ``forest_interception=True``),
     ``water`` (exclusive open-water
     cover: all precipitation direct, open-water evaporation, linear outflow — its own

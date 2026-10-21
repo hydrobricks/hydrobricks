@@ -11,7 +11,7 @@ transcribed from, and are meant for the ``reclassify`` argument of
 #: Available water content [Vol-%] of each class of the Swiss soil suitability map
 #: (the ``NFK`` grid), as used by PREVAH (manual part II, p. 19). It feeds the soil
 #: moisture capacity through
-#: :meth:`~hydrobricks.models.PrevahUniBE.land_use_field_capacity`.
+#: :meth:`~hydrobricks.models.PrevahUniBE.cover_field_capacity`.
 PREVAH_SOIL_AWC_CLASSES: dict[int, float] = {
     1: 1.5,
     2: 4.5,

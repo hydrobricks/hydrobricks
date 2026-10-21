@@ -2,12 +2,13 @@
 
 A real, spatially-distributed PREVAH setup: 570 hydrotopes (HRUs) with three land
 covers (open / forest / wetland), the forcing given per meteo zone and read per HRU,
-PREVAH's **monthly vegetation tables** applied per cover (``apply_land_use``), and a
+PREVAH's **monthly vegetation tables** applied per cover
+(``apply_cover_parameters``), and a
 soil moisture capacity that varies per hydrotope *and* per month
-(``apply_land_use_field_capacity``).
+(``apply_cover_field_capacity``).
 
 The whole setup -- model, hydro units, forcing, periods and the calibrated parameters
--- is declared in ``prevah_ticino_project.yaml``. Only PREVAH's land-use tables are
+-- is declared in ``prevah_ticino_project.yaml``. Only PREVAH's cover tables are
 left to Python: they are model-specific calls that the project-file schema does not
 cover. So the file is loaded with ``setup=False``, the tables are applied, and the
 model is set up and run.
@@ -30,7 +31,8 @@ aspect of the hydrotope with no terrain shading. That table comes with the datas
 because the calibrated radiation melt factor of the control file multiplies exactly
 that quantity: a radiation computed from a DEM is a different measure (it carries the
 atmospheric attenuation and another daily-integration convention) and would need its
-own coefficient.
+own coefficient. On this catchment the ratio between the two varies through the year
+by about a third.
 
 The data lives in ``tests/files/catchments/ch_ticino_bellinzona/`` (see its
 ``_readme.txt`` for provenance). Run from anywhere:
@@ -48,17 +50,17 @@ import hydrobricks as hb
 HERE = Path(__file__).parent
 DATA = HERE.parent.parent / "tests" / "files" / "catchments" / "ch_ticino_bellinzona"
 
-# PREVAH parameterizes its vegetation through monthly tables, one per land use.
+# PREVAH parameterizes its vegetation through monthly tables, one per cover class.
 # Each cover of this dataset aggregates several of them (area shares of the source
-# hydrotope table), so each is given the land use that represents it best:
+# hydrotope table), so each is given the cover class that represents it best:
 #   forest  = 60 % coniferous, 29 % deciduous, 9 % mixed  -> the dominant one
 #   wetland = 97 % wetland                                -> the dominant one
 #   open    = 39 % rough pasture, 30 % rock, 18 % bare soil, 7 % pasture, 5 % urban.
-#             No land use dominates this catch-all, so it takes the one closest to
+#             No cover class dominates this catch-all, so it takes the one closest to
 #             the mixture's vegetation cover (0.43 in winter, 0.49 in summer):
 #             alpine meadow, at 0.5 / 0.6. Rough pasture, the largest single class,
 #             would be far too lush at 0.7 / 0.8.
-LAND_USES = {
+COVER_CLASSES = {
     "open": "alpine_meadow",
     "forest": "coniferous_forest",
     "wetland": "wetland",
@@ -66,7 +68,7 @@ LAND_USES = {
 
 # ---------------------------------------------------------------------------
 # 1. The project file: model, hydro units, forcing, periods, parameters.
-#    setup=False, because the land-use tables below must be applied first.
+#    setup=False, because the cover tables below must be applied first.
 # ---------------------------------------------------------------------------
 project = hb.load_project(HERE / "prevah_ticino_project.yaml", setup=False)
 model = project.model
@@ -81,18 +83,18 @@ def unit_column(name):
 
 
 # ---------------------------------------------------------------------------
-# 2. PREVAH's land-use tables, the part the project file cannot express
+# 2. PREVAH's cover tables, the part the project file cannot express
 # ---------------------------------------------------------------------------
 # The soil moisture capacity: PREVAH builds it from the soil (available water content
-# and depth) and from the rooting depth of the hydrotope's land use, which varies by
+# and depth) and from the rooting depth of the hydrotope's cover class, which varies by
 # month, so the capacity varies in space and through the year at once. The soil depth
 # caps the rooting depth per unit, which is why the two cannot be separated into a
 # per-unit value times a shared monthly shape.
-land_use = unit_column("land_use")
-model.apply_land_use_field_capacity(
+cover_class = unit_column("cover_class")
+model.apply_cover_field_capacity(
     parameters,
     hydro_units,
-    land_use,  # one land use per hydrotope
+    cover_class,  # one cover class per hydrotope
     available_water_content=unit_column("awc"),
     soil_depth=unit_column("soil_depth"),
 )
@@ -101,10 +103,10 @@ model.apply_land_use_field_capacity(
 # more than their fixed 5 mm or 3 mm capacity percolate at a constant rate while snow
 # free. Its conductivity factor KWPER would need the soil conductivity, but PREVAH sets
 # it to 1 as soon as a hydrotope has none, as some do here, so it is left out.
-model.apply_land_use_percolation(
+model.apply_cover_percolation(
     parameters,
     hydro_units,
-    land_use,
+    cover_class,
     available_water_content=unit_column("awc"),
     soil_depth=unit_column("soil_depth"),
 )
@@ -116,8 +118,8 @@ model.apply_land_use_percolation(
 
 # The monthly vegetation tables: the canopy interception capacity of each cover
 # (si_max x veg_cov) and its canopy evaporation factor (veg_cov), month by month.
-for cover, cover_land_use in LAND_USES.items():
-    model.apply_land_use(parameters, cover_land_use, cover_name=cover)
+for cover, cover_cover_class in COVER_CLASSES.items():
+    model.apply_cover_parameters(parameters, cover_cover_class, cover_name=cover)
 
 # ---------------------------------------------------------------------------
 # 3. Run

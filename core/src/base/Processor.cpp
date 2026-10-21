@@ -3,11 +3,11 @@
 #include <algorithm>
 
 #include "FluxToBrick.h"
-#include "SubBasin.h"
+#include "Subbasin.h"
 
 Processor::Processor()
     : _solver(nullptr),
-      _subBasin(nullptr),
+      _subbasin(nullptr),
       _solvableConnectionCount(0),
       _directConnectionCount(0),
       _directRateCount(0) {}
@@ -54,12 +54,12 @@ void Processor::ValidateFluxTopology() const {
     }
 }
 
-void Processor::SetSubBasin(SubBasin* subBasin) {
-    _subBasin = subBasin;
+void Processor::SetSubbasin(Subbasin* subbasin) {
+    _subbasin = subbasin;
 }
 
 void Processor::ConnectToElementsToSolve() {
-    SubBasin* basin = _subBasin;
+    Subbasin* basin = _subbasin;
 
     // Two-phase time step contract: bricks computed directly (surface components, land
     // covers) form the discrete phase, processed sequentially in declaration order before
@@ -144,7 +144,7 @@ void Processor::BuildTraversalTables() {
     // Same flattening for the direct pass. The rate slices are assigned once here, so a
     // brick that is null on a given time step simply leaves its own slots untouched
     // instead of shifting everyone else's, as the running index used to do.
-    SubBasin* basin = _subBasin;
+    Subbasin* basin = _subbasin;
     int directRateOffset = 0;
     int hydroUnitCount = basin->GetHydroUnitCount();
     _directUnits.reserve(hydroUnitCount);
@@ -301,9 +301,9 @@ void Processor::FinalizeTimeStep() {
 }
 
 bool Processor::ProcessTimeStep(double timeStepInDays) {
-    assert(_subBasin);
+    assert(_subbasin);
 
-    SubBasin* basin = _subBasin;
+    Subbasin* basin = _subbasin;
 
     // Process the bricks that do not need a solver.
     for (const auto& unitEntry : _directUnits) {

@@ -6,7 +6,7 @@
 #include "ModelHydro.h"
 #include "SettingsBasin.h"
 #include "SettingsModel.h"
-#include "SubBasin.h"
+#include "Subbasin.h"
 #include "TimeSeries.h"
 #include "Utils.h"
 
@@ -135,10 +135,10 @@ int RunModel(const CliArgs& args) {
         return 1;
     }
 
-    // Initialize sub-basin
-    SubBasin subBasin;
-    if (!subBasin.Initialize(basinSettings)) {
-        LogError("Failed to initialize sub-basin.");
+    // Initialize subbasin
+    Subbasin subbasin;
+    if (!subbasin.Initialize(basinSettings)) {
+        LogError("Failed to initialize subbasin.");
         return 1;
     }
 

@@ -54,10 +54,10 @@ TEST_F(ModelSocontBasic, ModelBuildsCorrectly) {
     basinSettings.AddLandCover("ground", "", 0.5);
     basinSettings.AddLandCover("glacier", "", 0.5);
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
 
     EXPECT_TRUE(model.Initialize(_model, basinSettings));
     EXPECT_TRUE(model.IsValid());
@@ -69,10 +69,10 @@ TEST_F(ModelSocontBasic, ModelRunsCorrectly) {
     basinSettings.AddLandCover("ground", "", 0.5);
     basinSettings.AddLandCover("glacier", "", 0.5);
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     EXPECT_TRUE(model.Initialize(_model, basinSettings));
     EXPECT_TRUE(model.IsValid());
 
@@ -90,14 +90,14 @@ TEST_F(ModelSocontBasic, WaterBalanceClosesWithoutGlacierMelt) {
     basinSettings.AddLandCover("ground", "", 0.5);
     basinSettings.AddLandCover("glacier", "", 0.5);
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
     _model.SelectHydroUnitBrick("glacier");
     _model.SelectProcess("melt");
     _model.SetProcessParameterValue("degree_day_factor", 0.0f);
 
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     EXPECT_TRUE(model.Initialize(_model, basinSettings));
     EXPECT_TRUE(model.IsValid());
 
@@ -129,10 +129,10 @@ TEST_F(ModelSocontBasic, WaterBalanceClosesOnlyIceMelt) {
     basinSettings.AddLandCover("ground", "", 0.5);
     basinSettings.AddLandCover("glacier", "", 0.5);
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     EXPECT_TRUE(model.Initialize(_model, basinSettings));
     EXPECT_TRUE(model.IsValid());
 
@@ -171,10 +171,10 @@ TEST_F(ModelSocontBasic, WaterBalanceClosesWithHeunExplicit) {
     basinSettings.AddLandCover("ground", "", 0.5);
     basinSettings.AddLandCover("glacier", "", 0.5);
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     EXPECT_TRUE(model.Initialize(_model, basinSettings));
     EXPECT_TRUE(model.IsValid());
 
@@ -206,10 +206,10 @@ TEST_F(ModelSocontBasic, WaterBalanceClosesWithEulerExplicit) {
     basinSettings.AddLandCover("ground", "", 0.5);
     basinSettings.AddLandCover("glacier", "", 0.5);
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     _model.SetSolver("euler_explicit");
     EXPECT_TRUE(model.Initialize(_model, basinSettings));
     EXPECT_TRUE(model.IsValid());
@@ -242,10 +242,10 @@ TEST_F(ModelSocontBasic, WaterBalanceClosesWithRungeKutta) {
     basinSettings.AddLandCover("ground", "", 0.5);
     basinSettings.AddLandCover("glacier", "", 0.5);
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     _model.SetSolver("runge_kutta");
     EXPECT_TRUE(model.Initialize(_model, basinSettings));
     EXPECT_TRUE(model.IsValid());
@@ -281,10 +281,10 @@ TEST_F(ModelSocontBasic, WaterBalanceClosesWith2HydroUnitsIceMeltOnly) {
     basinSettings.AddLandCover("ground", "", 0.2);
     basinSettings.AddLandCover("glacier", "", 0.8);
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     EXPECT_TRUE(model.Initialize(_model, basinSettings));
     EXPECT_TRUE(model.IsValid());
 
@@ -325,8 +325,8 @@ TEST_F(ModelSocontBasic, WaterBalanceClosesWith2HydroUnitsNoIceMeltNoStorageCapa
     basinSettings.AddLandCover("ground", "", 0.8);
     basinSettings.AddLandCover("glacier", "", 0.2);
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
     _model.SelectHydroUnitBrick("glacier");
     _model.SelectProcess("melt");
@@ -335,7 +335,7 @@ TEST_F(ModelSocontBasic, WaterBalanceClosesWith2HydroUnitsNoIceMeltNoStorageCapa
     _model.SelectHydroUnitBrick("slow_reservoir");
     _model.SetBrickParameterValue("capacity", 0);
 
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     EXPECT_TRUE(model.Initialize(_model, basinSettings));
     EXPECT_TRUE(model.IsValid());
 
@@ -370,14 +370,14 @@ TEST_F(ModelSocontBasic, WaterBalanceClosesWith2HydroUnitsNoIceMelt) {
     basinSettings.AddLandCover("ground", "", 0.8);
     basinSettings.AddLandCover("glacier", "", 0.2);
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
     _model.SelectHydroUnitBrick("glacier");
     _model.SelectProcess("melt");
     _model.SetProcessParameterValue("degree_day_factor", 0.0f);
 
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     EXPECT_TRUE(model.Initialize(_model, basinSettings));
     EXPECT_TRUE(model.IsValid());
 
@@ -412,10 +412,10 @@ TEST_F(ModelSocontBasic, WaterBalanceClosesWith2HydroUnits) {
     basinSettings.AddLandCover("ground", "", 0.2);
     basinSettings.AddLandCover("glacier", "", 0.8);
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     EXPECT_TRUE(model.Initialize(_model, basinSettings));
     EXPECT_TRUE(model.IsValid());
 
@@ -456,10 +456,10 @@ TEST_F(ModelSocontBasic, WaterBalanceClosesWith4HydroUnits) {
     basinSettings.AddLandCover("ground", "", 1);
     basinSettings.AddLandCover("glacier", "", 0);
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     EXPECT_TRUE(model.Initialize(_model, basinSettings));
     EXPECT_TRUE(model.IsValid());
 
@@ -489,10 +489,10 @@ TEST(ModelSocont, WaterBalanceCloses) {
     SettingsBasin basinSettings;
     EXPECT_TRUE(basinSettings.Parse("../../tests/files/catchments/ch_sitter_appenzell/hydro_units.nc"));
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
 
     SettingsModel modelSettings;
     modelSettings.SetLogAll();
@@ -578,13 +578,13 @@ TEST_F(ModelSocontSingleLandCover, QuickDischargeIsCorrect) {
     basinSettings.AddHydroUnitPropertyDouble("slope", 0.3, "m/m");
     basinSettings.AddLandCover("ground", "", 1.0);
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
     _model.SetParameterValue("surface_runoff", "beta", 301);
     _model.SetParameterValue("slow_reservoir", "capacity", 0);
 
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     EXPECT_TRUE(model.Initialize(_model, basinSettings));
     EXPECT_TRUE(model.IsValid());
 
@@ -685,14 +685,14 @@ TEST_F(ModelSocontReference, DischargeIsCloseToReference) {
     basinSettings.AddHydroUnitPropertyDouble("slope", 0.3, "m/m");
     basinSettings.AddLandCover("ground", "", 1.0);
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
     _model.SetParameterValue("surface_runoff", "beta", 300);
     _model.SetParameterValue("slow_reservoir", "capacity", 2000);                            // A
     _model.SetParameterValue("slow_reservoir", "response_factor", 24.0f * std::exp(-9.0f));  // 24 * exp(lk)
 
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     EXPECT_TRUE(model.Initialize(_model, basinSettings));
     EXPECT_TRUE(model.IsValid());
 

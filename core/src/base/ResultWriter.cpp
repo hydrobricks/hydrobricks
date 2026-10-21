@@ -9,7 +9,7 @@ bool ResultWriter::WriteNetCDF(const string& path, const axd& time, const vecInt
                                const vecInt& subbasinDownstreamIds, const vecInt& subbasinStructureIds,
                                const axd& subbasinLocalAreas, const axd& subbasinDrainedAreas,
                                const vecInt& hydroUnitIds, const vecInt& hydroUnitStructureIds,
-                               const axd& hydroUnitAreas, const vecStr& subBasinLabels, const vecAxxd& subBasinValues,
+                               const axd& hydroUnitAreas, const vecStr& subbasinLabels, const vecAxxd& subbasinValues,
                                const vecStr& hydroUnitLabels, const vecAxxd& hydroUnitValues,
                                const vecStr& hydroUnitFractionLabels, const vecAxxd& hydroUnitFractions) {
     if (!std::filesystem::is_directory(path)) {
@@ -32,7 +32,7 @@ bool ResultWriter::WriteNetCDF(const string& path, const axd& time, const vecInt
         int dimIdTime = file.DefDim("time", (int)time.size());
         int dimIdSubbasin = file.DefDim("subbasins", (int)subbasinIds.size());
         int dimIdUnit = file.DefDim("hydro_units", (int)hydroUnitIds.size());
-        int dimIdItemsAgg = file.DefDim("aggregated_values", (int)subBasinLabels.size());
+        int dimIdItemsAgg = file.DefDim("aggregated_values", (int)subbasinLabels.size());
         int dimIdItemsDist = file.DefDim("distributed_values", (int)hydroUnitLabels.size());
         int dimIdFractions = 0;
         bool recordFractions = !hydroUnitFractionLabels.empty() && !hydroUnitFractions.empty();
@@ -81,7 +81,7 @@ bool ResultWriter::WriteNetCDF(const string& path, const axd& time, const vecInt
         file.PutAttText("long_name", "hydrological units areas", varId);
 
         varId = file.DefVarDouble("subbasin_values", {dimIdItemsAgg, dimIdSubbasin, dimIdTime}, 3, true);
-        file.PutVar(varId, subBasinValues);
+        file.PutVar(varId, subbasinValues);
         file.PutAttText("long_name",
                         "aggregated values per subbasin (mm over its local area; the outlet over its drained area)",
                         varId);
@@ -101,7 +101,7 @@ bool ResultWriter::WriteNetCDF(const string& path, const axd& time, const vecInt
 
         // Global attributes
         file.PutAttText("format_version", "2");
-        file.PutAttString("labels_aggregated", subBasinLabels);
+        file.PutAttString("labels_aggregated", subbasinLabels);
         file.PutAttString("labels_distributed", hydroUnitLabels);
         if (recordFractions) {
             file.PutAttString("labels_land_covers", hydroUnitFractionLabels);
@@ -163,14 +163,14 @@ bool ResultWriter::WriteCSV(const string& path, const axd& time, const vecStr& l
 }
 
 bool ResultWriter::AppendToNetCDF(const string& /*filePath*/, int /*timeStep*/, double /*time*/,
-                                  const axd& /*subBasinValues*/, const axxd& /*hydroUnitValues*/,
+                                  const axd& /*subbasinValues*/, const axxd& /*hydroUnitValues*/,
                                   const axxd& /*hydroUnitFractions*/) {
     LogWarning("Streaming NetCDF writing is not yet implemented.");
     return false;
 }
 
 string ResultWriter::InitializeStreamingNetCDF(const string& /*path*/, int /*timeSize*/, const vecInt& /*hydroUnitIds*/,
-                                               const axd& /*hydroUnitAreas*/, const vecStr& /*subBasinLabels*/,
+                                               const axd& /*hydroUnitAreas*/, const vecStr& /*subbasinLabels*/,
                                                const vecStr& /*hydroUnitLabels*/,
                                                const vecStr& /*hydroUnitFractionLabels*/) {
     LogWarning("Streaming NetCDF initialization is not yet implemented.");
@@ -178,9 +178,9 @@ string ResultWriter::InitializeStreamingNetCDF(const string& /*path*/, int /*tim
 }
 
 bool ResultWriter::CreateNetCDFStructure(const string& /*filePath*/, int /*timeSize*/, int /*numHydroUnits*/,
-                                         int /*numSubBasinItems*/, int /*numHydroUnitItems*/, int /*numFractions*/,
+                                         int /*numSubbasinItems*/, int /*numHydroUnitItems*/, int /*numFractions*/,
                                          const vecInt& /*hydroUnitIds*/, const axd& /*hydroUnitAreas*/,
-                                         const vecStr& /*subBasinLabels*/, const vecStr& /*hydroUnitLabels*/,
+                                         const vecStr& /*subbasinLabels*/, const vecStr& /*hydroUnitLabels*/,
                                          const vecStr& /*hydroUnitFractionLabels*/) {
     return false;
 }

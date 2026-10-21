@@ -18,10 +18,10 @@ Logger::Logger()
       _recordFractions(false),
       _outletIndex(0) {}
 
-void Logger::InitContainers(int timeSize, const std::vector<SubBasin*>& subbasins, SettingsModel& modelSettings) {
+void Logger::InitContainers(int timeSize, const std::vector<Subbasin*>& subbasins, SettingsModel& modelSettings) {
     assert(!subbasins.empty());
 
-    // Sub basins in processing order; the hydro units follow, sub basin after sub basin.
+    // Subbasins in processing order; the hydro units follow, subbasin after subbasin.
     int subbasinCount = static_cast<int>(subbasins.size());
     _subbasinIds.clear();
     _subbasinDownstreamIds.clear();
@@ -35,12 +35,12 @@ void Logger::InitContainers(int timeSize, const std::vector<SubBasin*>& subbasin
     vecDouble hydroUnitAreas;
     double totalArea = 0;
     for (int i = 0; i < subbasinCount; ++i) {
-        SubBasin* subbasin = subbasins[i];
+        Subbasin* subbasin = subbasins[i];
         _subbasinIds.push_back(subbasin->GetId());
         _subbasinDownstreamIds.push_back(subbasin->GetDownstreamId());
         _subbasinStructureIds.push_back(subbasin->GetStructureId());
         _subbasinLocalAreas[i] = subbasin->GetLocalArea();
-        // A sub basin outside a network (built directly) has no drained area set: it is its own.
+        // A subbasin outside a network (built directly) has no drained area set: it is its own.
         _subbasinDrainedAreas[i] = subbasin->GetDrainedArea() > 0 ? subbasin->GetDrainedArea()
                                                                   : subbasin->GetLocalArea();
         totalArea += subbasin->GetLocalArea();
@@ -54,18 +54,18 @@ void Logger::InitContainers(int timeSize, const std::vector<SubBasin*>& subbasin
         hydroUnitStructureIds.insert(hydroUnitStructureIds.end(), structureIds.begin(), structureIds.end());
         hydroUnitAreas.insert(hydroUnitAreas.end(), areas.begin(), areas.end());
     }
-    // A single sub basin gets the weight 1.0 exactly (x / x), so its totals are unchanged.
+    // A single subbasin gets the weight 1.0 exactly (x / x), so its totals are unchanged.
     for (int i = 0; i < subbasinCount; ++i) {
         _subbasinWeights[i] = _subbasinLocalAreas[i] / totalArea;
     }
 
-    vecStr subBasinLabels = modelSettings.GetSubBasinLogLabels();
+    vecStr subbasinLabels = modelSettings.GetSubbasinLogLabels();
     vecStr hydroUnitLabels = modelSettings.GetHydroUnitLogLabels();
     _time.resize(timeSize);
-    _subBasinLabels = subBasinLabels;
-    _subBasinInitialValues = vecAxd(subBasinLabels.size(), axd::Ones(subbasinCount) * NAN_D);
-    _subBasinValues = vecAxxd(subBasinLabels.size(), axxd::Ones(timeSize, subbasinCount) * NAN_D);
-    _subBasinValuesPt = vector<vecDoublePt>(subBasinLabels.size(), vecDoublePt(subbasinCount, nullptr));
+    _subbasinLabels = subbasinLabels;
+    _subbasinInitialValues = vecAxd(subbasinLabels.size(), axd::Ones(subbasinCount) * NAN_D);
+    _subbasinValues = vecAxxd(subbasinLabels.size(), axxd::Ones(timeSize, subbasinCount) * NAN_D);
+    _subbasinValuesPt = vector<vecDoublePt>(subbasinLabels.size(), vecDoublePt(subbasinCount, nullptr));
     _hydroUnitIds = hydroUnitIds;
     _hydroUnitStructureIds = hydroUnitStructureIds;
     _hydroUnitAreas = Eigen::Map<axd>(hydroUnitAreas.data(), hydroUnitAreas.size());
@@ -73,7 +73,7 @@ void Logger::InitContainers(int timeSize, const std::vector<SubBasin*>& subbasin
     _hydroUnitInitialValues = vecAxd(hydroUnitLabels.size(), axd::Ones(hydroUnitIds.size()) * NAN_D);
     _hydroUnitValues = vecAxxd(hydroUnitLabels.size(), axxd::Ones(timeSize, hydroUnitIds.size()) * NAN_D);
     _hydroUnitValuesPt = vector<vecDoublePt>(hydroUnitLabels.size(), vecDoublePt(hydroUnitIds.size(), nullptr));
-    _subBasinEtIndices.clear();
+    _subbasinEtIndices.clear();
     _hydroUnitEtIndices.clear();
     if (_recordFractions) {
         _hydroUnitFractionLabels = modelSettings.GetLandCoverBricksNames();
@@ -88,10 +88,10 @@ void Logger::Reset() {
     _cursor = 0;
 }
 
-void Logger::SetSubBasinValuePointer(int iSubbasin, int iLabel, double* valPt) {
-    assert(_subBasinValuesPt.size() > iLabel);
-    assert(_subBasinValuesPt[iLabel].size() > iSubbasin);
-    _subBasinValuesPt[iLabel][iSubbasin] = valPt;
+void Logger::SetSubbasinValuePointer(int iSubbasin, int iLabel, double* valPt) {
+    assert(_subbasinValuesPt.size() > iLabel);
+    assert(_subbasinValuesPt[iLabel].size() > iSubbasin);
+    _subbasinValuesPt[iLabel][iSubbasin] = valPt;
 }
 
 void Logger::SetHydroUnitValuePointer(int iUnit, int iLabel, double* valPt) {
@@ -108,9 +108,9 @@ void Logger::SetHydroUnitFractionPointer(int iUnit, int iLabel, double* valPt) {
     }
 }
 
-void Logger::AddSubBasinEtIndex(int iLabel) {
-    if (std::find(_subBasinEtIndices.begin(), _subBasinEtIndices.end(), iLabel) == _subBasinEtIndices.end()) {
-        _subBasinEtIndices.push_back(iLabel);
+void Logger::AddSubbasinEtIndex(int iLabel) {
+    if (std::find(_subbasinEtIndices.begin(), _subbasinEtIndices.end(), iLabel) == _subbasinEtIndices.end()) {
+        _subbasinEtIndices.push_back(iLabel);
     }
 }
 
@@ -120,11 +120,11 @@ void Logger::SetDate(double date) {
 }
 
 void Logger::SaveInitialValues() {
-    for (int iLabel = 0; iLabel < static_cast<int>(_subBasinValuesPt.size()); ++iLabel) {
-        for (int iSubbasin = 0; iSubbasin < static_cast<int>(_subBasinValuesPt[iLabel].size()); ++iSubbasin) {
-            // A label absent from a sub basin is left unconnected (NaN).
-            if (_subBasinValuesPt[iLabel][iSubbasin] != nullptr) {
-                _subBasinInitialValues[iLabel](iSubbasin) = *_subBasinValuesPt[iLabel][iSubbasin];
+    for (int iLabel = 0; iLabel < static_cast<int>(_subbasinValuesPt.size()); ++iLabel) {
+        for (int iSubbasin = 0; iSubbasin < static_cast<int>(_subbasinValuesPt[iLabel].size()); ++iSubbasin) {
+            // A label absent from a subbasin is left unconnected (NaN).
+            if (_subbasinValuesPt[iLabel][iSubbasin] != nullptr) {
+                _subbasinInitialValues[iLabel](iSubbasin) = *_subbasinValuesPt[iLabel][iSubbasin];
             }
         }
     }
@@ -143,11 +143,11 @@ void Logger::SaveInitialValues() {
 void Logger::Record() {
     assert(_cursor < _time.size());
 
-    assert(_subBasinValues.size() == _subBasinValuesPt.size());
-    for (int iLabel = 0; iLabel < static_cast<int>(_subBasinValues.size()); ++iLabel) {
-        for (int iSubbasin = 0; iSubbasin < _subBasinValues[iLabel].cols(); ++iSubbasin) {
-            if (_subBasinValuesPt[iLabel][iSubbasin] != nullptr) {
-                _subBasinValues[iLabel](_cursor, iSubbasin) = *_subBasinValuesPt[iLabel][iSubbasin];
+    assert(_subbasinValues.size() == _subbasinValuesPt.size());
+    for (int iLabel = 0; iLabel < static_cast<int>(_subbasinValues.size()); ++iLabel) {
+        for (int iSubbasin = 0; iSubbasin < _subbasinValues[iLabel].cols(); ++iSubbasin) {
+            if (_subbasinValuesPt[iLabel][iSubbasin] != nullptr) {
+                _subbasinValues[iLabel](_cursor, iSubbasin) = *_subbasinValuesPt[iLabel][iSubbasin];
             }
         }
     }
@@ -183,14 +183,14 @@ bool Logger::DumpOutputs(const string& path) {
 
     return writer.WriteNetCDF(path, _time, _subbasinIds, _subbasinDownstreamIds, _subbasinStructureIds,
                               _subbasinLocalAreas, _subbasinDrainedAreas, _hydroUnitIds, _hydroUnitStructureIds,
-                              _hydroUnitAreas, _subBasinLabels, _subBasinValues, _hydroUnitLabels, _hydroUnitValues,
+                              _hydroUnitAreas, _subbasinLabels, _subbasinValues, _hydroUnitLabels, _hydroUnitValues,
                               _hydroUnitFractionLabels, _hydroUnitFractions);
 }
 
 int Logger::GetOutletLabelIndex() const {
-    assert(_subBasinLabels.size() == _subBasinValues.size());
-    for (int i = 0; i < static_cast<int>(_subBasinLabels.size()); ++i) {
-        if (_subBasinLabels[i] == "outlet") {
+    assert(_subbasinLabels.size() == _subbasinValues.size());
+    for (int i = 0; i < static_cast<int>(_subbasinLabels.size()); ++i) {
+        if (_subbasinLabels[i] == "outlet") {
             return i;
         }
     }
@@ -206,27 +206,27 @@ int Logger::GetSubbasinIndex(int subbasinId) const {
     throw ModelConfigError(std::format("No subbasin with the ID {} was found in the logger.", subbasinId));
 }
 
-vecAxd Logger::GetSubBasinValues() const {
+vecAxd Logger::GetSubbasinValues() const {
     vecAxd values;
-    values.reserve(_subBasinValues.size());
-    for (const auto& matrix : _subBasinValues) {
+    values.reserve(_subbasinValues.size());
+    for (const auto& matrix : _subbasinValues) {
         values.push_back(matrix.col(_outletIndex));
     }
     return values;
 }
 
 axd Logger::GetOutletDischarge() const {
-    return _subBasinValues[GetOutletLabelIndex()].col(_outletIndex);
+    return _subbasinValues[GetOutletLabelIndex()].col(_outletIndex);
 }
 
 axd Logger::GetSubbasinDischarge(int subbasinId) const {
-    return _subBasinValues[GetOutletLabelIndex()].col(GetSubbasinIndex(subbasinId));
+    return _subbasinValues[GetOutletLabelIndex()].col(GetSubbasinIndex(subbasinId));
 }
 
-vecInt Logger::GetIndicesForSubBasinElements(const string& item) const {
+vecInt Logger::GetIndicesForSubbasinElements(const string& item) const {
     vecInt indices;
-    for (int i = 0; i < _subBasinLabels.size(); ++i) {
-        size_t found = _subBasinLabels[i].find(item);
+    for (int i = 0; i < _subbasinLabels.size(); ++i) {
+        size_t found = _subbasinLabels[i].find(item);
         if (found != std::string::npos) {
             indices.push_back(i);
         }
@@ -248,10 +248,10 @@ vecInt Logger::GetIndicesForHydroUnitElements(const string& item) const {
 }
 
 double Logger::WeightedTotal(int iLabel) const {
-    // Sub basin values are in mm over each sub basin's local area: weight them by the local area share to
-    // express the sum over the catchment area. The weight is exactly 1.0 for a single sub basin.
+    // Subbasin values are in mm over each subbasin's local area: weight them by the local area share to
+    // express the sum over the catchment area. The weight is exactly 1.0 for a single subbasin.
     double sum = 0;
-    const axxd& values = _subBasinValues[iLabel];
+    const axxd& values = _subbasinValues[iLabel];
     for (int iSubbasin = 0; iSubbasin < values.cols(); ++iSubbasin) {
         sum += values.col(iSubbasin).unaryExpr(&NanToZero).sum() * _subbasinWeights[iSubbasin];
     }
@@ -259,8 +259,8 @@ double Logger::WeightedTotal(int iLabel) const {
     return sum;
 }
 
-double Logger::GetTotalSubBasin(const string& item) const {
-    vecInt indices = GetIndicesForSubBasinElements(item);
+double Logger::GetTotalSubbasin(const string& item) const {
+    vecInt indices = GetIndicesForSubbasinElements(item);
     double sum = 0;
     for (int index : indices) {
         sum += WeightedTotal(index);
@@ -314,9 +314,9 @@ double Logger::GetTotalHydroUnits(const string& item, bool needsAreaWeighting) c
 }
 
 double Logger::GetTotalOutletDischarge() const {
-    // The outlet discharge is already expressed over the drained area of the terminal sub basin, which is the
+    // The outlet discharge is already expressed over the drained area of the terminal subbasin, which is the
     // catchment: no weighting.
-    return _subBasinValues[GetOutletLabelIndex()].col(_outletIndex).unaryExpr(&NanToZero).sum();
+    return _subbasinValues[GetOutletLabelIndex()].col(_outletIndex).unaryExpr(&NanToZero).sum();
 }
 
 double Logger::GetTotalET() const {
@@ -324,8 +324,8 @@ double Logger::GetTotalET() const {
     // not by label matching: process names (e.g. "interception") need not contain "et".
     double sum = 0;
 
-    // Sub-basin ET: in mm over each sub basin's local area, weighted to the catchment.
-    for (int i : _subBasinEtIndices) {
+    // Subbasin ET: in mm over each subbasin's local area, weighted to the catchment.
+    for (int i : _subbasinEtIndices) {
         sum += WeightedTotal(i);
     }
 
@@ -362,21 +362,21 @@ int Logger::GetFractionIndexForComponent(const string& componentName) const {
     return -1;
 }
 
-double Logger::GetSubBasinInitialStorageState(const string& tag) const {
-    vecInt indices = GetIndicesForSubBasinElements(tag);
+double Logger::GetSubbasinInitialStorageState(const string& tag) const {
+    vecInt indices = GetIndicesForSubbasinElements(tag);
     double sum = 0;
     for (int index : indices) {
-        sum += (_subBasinInitialValues[index].unaryExpr(&NanToZero) * _subbasinWeights).sum();
+        sum += (_subbasinInitialValues[index].unaryExpr(&NanToZero) * _subbasinWeights).sum();
     }
 
     return sum;
 }
 
-double Logger::GetSubBasinFinalStorageState(const string& tag) const {
-    vecInt indices = GetIndicesForSubBasinElements(tag);
+double Logger::GetSubbasinFinalStorageState(const string& tag) const {
+    vecInt indices = GetIndicesForSubbasinElements(tag);
     double sum = 0;
     for (int index : indices) {
-        axd last = _subBasinValues[index](Eigen::placeholders::last, Eigen::placeholders::all).unaryExpr(&NanToZero);
+        axd last = _subbasinValues[index](Eigen::placeholders::last, Eigen::placeholders::all).unaryExpr(&NanToZero);
         sum += (last * _subbasinWeights).sum();
     }
 
@@ -421,16 +421,16 @@ double Logger::GetHydroUnitsFinalStorageState(const string& tag) const {
 }
 
 double Logger::GetTotalWaterStorageChanges() const {
-    return GetSubBasinFinalStorageState(":water_content") - GetSubBasinInitialStorageState(":water_content") +
+    return GetSubbasinFinalStorageState(":water_content") - GetSubbasinInitialStorageState(":water_content") +
            GetHydroUnitsFinalStorageState(":water_content") - GetHydroUnitsInitialStorageState(":water_content");
 }
 
 double Logger::GetTotalSnowStorageChanges() const {
-    return GetSubBasinFinalStorageState(":snow_content") - GetSubBasinInitialStorageState(":snow_content") +
+    return GetSubbasinFinalStorageState(":snow_content") - GetSubbasinInitialStorageState(":snow_content") +
            GetHydroUnitsFinalStorageState(":snow_content") - GetHydroUnitsInitialStorageState(":snow_content");
 }
 
 double Logger::GetTotalGlacierStorageChanges() const {
-    return GetSubBasinFinalStorageState(":ice_content") - GetSubBasinInitialStorageState(":ice_content") +
+    return GetSubbasinFinalStorageState(":ice_content") - GetSubbasinInitialStorageState(":ice_content") +
            GetHydroUnitsFinalStorageState(":ice_content") - GetHydroUnitsInitialStorageState(":ice_content");
 }

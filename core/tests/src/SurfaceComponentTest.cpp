@@ -86,10 +86,10 @@ TEST_F(GlacierComponentModel, HandlesPartialGlacierCoverWithSnowpack) {
     basinSettings.AddLandCover("ground", "", 0.5);
     basinSettings.AddLandCover("glacier", "", 0.5);
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     EXPECT_TRUE(model.Initialize(_model, basinSettings));
     EXPECT_TRUE(model.IsValid());
 
@@ -101,7 +101,7 @@ TEST_F(GlacierComponentModel, HandlesPartialGlacierCoverWithSnowpack) {
     EXPECT_TRUE(model.Run());
 
     // Check resulting discharge
-    vecAxd basinOutputs = model.GetLogger()->GetSubBasinValues();
+    vecAxd basinOutputs = model.GetLogger()->GetSubbasinValues();
 
     vecDouble expectedOutputs = {0.0, 0.0, 0.0, 5.0, 10.0, 13.0, 16.0, 19.0, 31.0, 16.0};
 

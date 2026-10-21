@@ -7,7 +7,7 @@
 #include "Includes.h"
 #include "Solver.h"
 
-class SubBasin;
+class Subbasin;
 class Splitter;
 
 class Processor {
@@ -28,7 +28,7 @@ class Processor {
      *
      * @param model model to set.
      */
-    void SetSubBasin(SubBasin* subBasin);
+    void SetSubbasin(Subbasin* subbasin);
 
     /**
      * Connect the processor to the elements to solve.
@@ -218,12 +218,12 @@ class Processor {
 
   protected:
     std::unique_ptr<Solver> _solver;  // owning
-    SubBasin* _subBasin;              // non-owning reference: the sub basin this processor integrates
+    Subbasin* _subbasin;              // non-owning reference: the subbasin this processor integrates
     int _solvableConnectionCount;
     int _directConnectionCount;
     int _directRateCount;  // size of the direct change-rate buffer (fixed slices)
     vecDoublePt _stateVariableChanges;
-    vector<Brick*> _iterableBricks;  // non-owning views into HydroUnits/SubBasin
+    vector<Brick*> _iterableBricks;  // non-owning views into HydroUnits/Subbasin
     // Flattened traversal of the solvable bricks and processes, built once at
     // initialization: the model structure is fixed after the build, so the
     // brick -> process -> connection hierarchy needs no virtual walk on every solver

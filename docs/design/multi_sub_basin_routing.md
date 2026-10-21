@@ -13,8 +13,7 @@ Companion documents: `solver_analysis.md` (the solver contract) and the gap revi
   All user-facing identifiers use it (`attach_to: subbasin`, `add_subbasin_brick`,
   `subbasin_values` in result files, `Results.list_subbasin_components`, the
   `subbasin` hydro-unit column). The old `sub_basin` spellings stay accepted on input
-  for one release. The C++ class `SubBasin` keeps its name (internal only); a separate
-  mechanical rename is possible later.
+  for one release. The C++ class and its members follow it too (`Subbasin`, `_subbasin`).
 - **"Channel routing", never "routing" alone.** The routing along the reaches is the
   *channel routing* (option `channel_routing`, parameter component `channel`, C++
   `ChannelRoutingSettings`), as opposed to the in-catchment `routing:*` processes of a
@@ -66,17 +65,17 @@ Non-goals (later tiers):
 
 Facts that constrain the design, with the code that establishes them:
 
-- `ModelHydro` holds exactly one `SubBasin` (`core/src/base/ModelHydro.h`,
-  `_subBasin`). `Processor::ConnectToElementsToSolve` and `ProcessTimeStep` walk that
+- `ModelHydro` holds exactly one `Subbasin` (`core/src/base/ModelHydro.h`,
+  `_subbasin`). `Processor::ConnectToElementsToSolve` and `ProcessTimeStep` walk that
   one basin (`core/src/base/Processor.cpp:62`, `:304`).
-- `Connector` (`core/src/spatial/Connector.h`) only stores two `SubBasin*` and registers
-  itself on both. Nothing calls it, and `SubBasin::HasIncomingFlow` is never true.
-- The outlet is a sum of `FluxToOutlet` amounts (`SubBasin::ComputeOutletDischarge`,
-  `core/src/spatial/SubBasin.cpp:322`). Hydro-unit fluxes are pre-weighted by
+- `Connector` (`core/src/spatial/Connector.h`) only stores two `Subbasin*` and registers
+  itself on both. Nothing calls it, and `Subbasin::HasIncomingFlow` is never true.
+- The outlet is a sum of `FluxToOutlet` amounts (`Subbasin::ComputeOutletDischarge`,
+  `core/src/spatial/Subbasin.cpp:322`). Hydro-unit fluxes are pre-weighted by
   `unit area / subbasin area` (`ModelBuilder.cpp:538`, `:706`), so the outlet total is
   in **mm per time step over the subbasin area**, not a volume.
 - The logger stores subbasin values as one series per label
-  (`Logger::_subBasinValues`, `vecAxd`) and the result file has no subbasin dimension
+  (`Logger::_subbasinValues`, `vecAxd`) and the result file has no subbasin dimension
   (`ResultWriter.cpp:30-77`).
 - `Logger::GetOutletDischarge` looks up the label `"outlet"`; Python evaluation and
   calibration read `model.get_outlet_discharge()` (`periods.py:360`, `trainer.py:1062`).
@@ -123,7 +122,7 @@ later as explicit network elements.
 
 The whole brick/process machinery works in mm over the subbasin area. Keep that.
 
-- `SubBasin::_outletTotal` stays the subbasin's local outflow in mm over its **local**
+- `Subbasin::_outletTotal` stays the subbasin's local outflow in mm over its **local**
   area (own hydro units only). For a single subbasin, nothing changes.
 - The network converts on transfer: `volume = outletTotal · localArea`. Reaches route
   volumes (m³ per step). Nothing downstream of the land phase is ever in mm.
@@ -135,7 +134,7 @@ The whole brick/process machinery works in mm over the subbasin area. Keep that.
   Observations in m³/s are converted with the drained area by the existing
   `DischargeTransform` layer.
 
-`SubBasin` gains `GetLocalArea()` (today's `_area`) and `GetDrainedArea()` (computed
+`Subbasin` gains `GetLocalArea()` (today's `_area`) and `GetDrainedArea()` (computed
 once from the tree). `GetArea()` keeps returning the local area, since that is what the
 flux weighting at `ModelBuilder.cpp:538` needs.
 
@@ -191,9 +190,9 @@ independent branches.
 
 ### D4. Execution: `RiverNetwork` runs subbasins upstream-first inside one time step
 
-A new `RiverNetwork` class (owned by `ModelHydro`, replacing `_ownedSubBasin`) holds:
+A new `RiverNetwork` class (owned by `ModelHydro`, replacing `_ownedSubbasin`) holds:
 
-- `vector<unique_ptr<SubBasin>>` plus an id map, each with its `Reach`;
+- `vector<unique_ptr<Subbasin>>` plus an id map, each with its `Reach`;
 - the topological order (upstream first), computed once; the drained areas;
 - a global hydro-unit id map so lateral snow connections may cross subbasin
   boundaries (they stay hydro-unit-to-hydro-unit and do not touch the network).
@@ -221,7 +220,7 @@ routing scheme adds the physical delay. Siblings in the tree can run in parallel
 - Hydro units keep global ids; only the `subbasin_id` property is new. Forcing
   attachment, land cover change, glacier evolution and snow redistribution work per
   unit and need no change.
-- `SubBasin::AssignFractions`, `Reset`, `SaveAsInitialState`,
+- `Subbasin::AssignFractions`, `Reset`, `SaveAsInitialState`,
   `RestoreInitialAreaFractions` are called per subbasin by `RiverNetwork`.
 - Spin-up (`RunSpinup`, `RewindAfterSpinup`) loops over time; each step goes through
   the same network loop as `Run`.
@@ -316,7 +315,7 @@ geometry and parameters.
 
 | PR | Content | Acceptance |
 | --- | --- | --- |
-| 1 | `subbasin` naming (user-facing, old spellings accepted), `SubbasinSettings` and `subbasin_id` on hydro units, `ValidateNetwork`, `hydro_units.nc` round trip, `RiverNetwork` owning the (single) `SubBasin` with topological order and drained areas, `HydroUnits.set_subbasins` and the `subbasin` column. A model with more than one subbasin is refused at initialization with a clear message. | All C++ and Python tests pass unchanged; new tests build a 4-subbasin tree from settings and check order, drained areas, cycle and root errors, cross-subbasin hydro-unit lookup, and the file round trip. |
+| 1 | `subbasin` naming (user-facing, old spellings accepted), `SubbasinSettings` and `subbasin_id` on hydro units, `ValidateNetwork`, `hydro_units.nc` round trip, `RiverNetwork` owning the (single) `Subbasin` with topological order and drained areas, `HydroUnits.set_subbasins` and the `subbasin` column. A model with more than one subbasin is refused at initialization with a clear message. | All C++ and Python tests pass unchanged; new tests build a 4-subbasin tree from settings and check order, drained areas, cycle and root errors, cross-subbasin hydro-unit lookup, and the file round trip. |
 | 2 | DONE. `Reach` with the `none` scheme, per-subbasin `Processor`, run loop over the network, volume transfer, logger and result file subbasin dimension, `Results` reader, `get_subbasin_discharge`. Subbasin-level structure variants were deferred to a later PR (every subbasin builds structure 1; hydro-unit variants work as before). | Sitter St. Gallen split into Appenzell + remainder with `none` routing reproduces the single-basin run's outlet series to 1e-10 (mass conservation); `subbasin_values` round-trips through `Results`. |
 | 3 | DONE. `lag` and `muskingum` schemes on `Reach`, `RoutingSettings` in `SettingsModel` (component `routing`), the `routing` model option and its `ParameterSet` entries, sub-stepping for the Muskingum stability bound, reach logging labels, per-reach `celerity` / `muskingum_x` property overrides. | Unit test against the analytical Muskingum response to a pulse; daily vs hourly convergence test like `test_time_step.py`. |
 | 4 | DONE. Gauge-aware `DischargeObservations` (`subbasin`, `units="m3/s"` + `drained_area`), scored at the subbasin outlet by `Model.eval`, `evaluate_periods` and `SpotpySetup` (primary or additional signal through the auxiliary-observation machinery); project YAML `subbasins` section and observation lists (`project.gauges`); validation in `load_project` (the CLI reuses it); docs. | Calibration example with two gauges on the Sitter runs; docs build clean. |

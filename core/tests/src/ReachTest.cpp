@@ -8,7 +8,7 @@
 #include "Reach.h"
 #include "SettingsBasin.h"
 #include "SettingsModel.h"
-#include "SubBasin.h"
+#include "Subbasin.h"
 
 namespace {
 
@@ -16,10 +16,10 @@ constexpr double kDay = 1.0;
 constexpr double kSecondsPerDay = 86400.0;
 
 /**
- * A sub basin carrying a reach of the given length, and the model-wide routing settings.
+ * A subbasin carrying a reach of the given length, and the model-wide routing settings.
  */
 struct Fixture {
-    SubBasin subbasin;
+    Subbasin subbasin;
     SettingsModel settings;
     std::unique_ptr<Reach> reach;
 
@@ -204,7 +204,7 @@ TEST(Reach, MuskingumRejectsAnInvalidWeightingFactor) {
 }
 
 TEST(Reach, SubbasinPropertiesOverrideTheParameters) {
-    SubBasin subbasin;
+    Subbasin subbasin;
     SubbasinSettings subbasinSettings;
     subbasinSettings.id = 3;
     subbasinSettings.propertiesDouble.push_back({"length", 1000.0, "m"});

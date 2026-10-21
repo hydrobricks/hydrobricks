@@ -60,7 +60,7 @@ optimization; see the sequence in `ci/pgo_training.py`).
 
 1. **C++ core** (`core/src/`) — the computation engine. Organized into:
    - `base/` — `ModelHydro`, `Forcing`, `TimeSeries`, `Parameter`, `Solver*`, `SettingsModel`, `SettingsBasin`
-   - `spatial/` — `SubBasin`, `HydroUnit` (spatial discretization)
+   - `spatial/` — `Subbasin`, `HydroUnit` (spatial discretization)
    - `bricks/` — land cover units: `Glacier`, `Snowpack`, `LandCover`, `Vegetation`, `Urban`, `Storage`
    - `processes/` — hydrological processes: melt (`ProcessMelt*`), ET (`ProcessET*`), outflow (`ProcessOutflow*`), infiltration, runoff, lateral flow
    - `fluxes/` — water flux connections between bricks (`FluxToBrick`, `FluxToOutlet`, `Splitter*`)
@@ -90,7 +90,7 @@ The Python API builds `SettingsModel` and `SettingsBasin` YAML/object configurat
 
 ### Model structure concept
 
-A model is a graph of **Bricks** connected by **Fluxes**. Each Brick represents a storage or land cover type. Each Brick has **Processes** that compute outflows. Fluxes route water between Bricks or to the basin outlet. **Splitters** partition precipitation (e.g., rain/snow split). The `SubBasin` owns `HydroUnit` objects, each of which holds a set of Bricks.
+A model is a graph of **Bricks** connected by **Fluxes**. Each Brick represents a storage or land cover type. Each Brick has **Processes** that compute outflows. Fluxes route water between Bricks or to the basin outlet. **Splitters** partition precipitation (e.g., rain/snow split). The `Subbasin` owns `HydroUnit` objects, each of which holds a set of Bricks.
 
 ## Code style
 

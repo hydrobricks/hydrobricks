@@ -3,12 +3,12 @@
 
 #include "Includes.h"
 #include "SettingsModel.h"
-#include "SubBasin.h"
+#include "Subbasin.h"
 
 /**
- * Records the model values over time: the sub-basin (aggregated) values per sub-basin, and the hydro unit
- * (distributed) values per unit. The sub-basins are indexed in processing order (upstream first, the outlet
- * last); the hydro units are indexed globally, in the order of the sub-basins.
+ * Records the model values over time: the subbasin (aggregated) values per subbasin, and the hydro unit
+ * (distributed) values per unit. The subbasins are indexed in processing order (upstream first, the outlet
+ * last); the hydro units are indexed globally, in the order of the subbasins.
  */
 class Logger {
   public:
@@ -17,13 +17,13 @@ class Logger {
     virtual ~Logger() = default;
 
     /**
-     * Initialize the logger with the size of the time vector and the sub-basins.
+     * Initialize the logger with the size of the time vector and the subbasins.
      *
      * @param timeSize size of the time vector.
-     * @param subbasins the sub-basins in processing order (upstream first, the outlet last).
+     * @param subbasins the subbasins in processing order (upstream first, the outlet last).
      * @param modelSettings settings of the model.
      */
-    void InitContainers(int timeSize, const std::vector<SubBasin*>& subbasins, SettingsModel& modelSettings);
+    void InitContainers(int timeSize, const std::vector<Subbasin*>& subbasins, SettingsModel& modelSettings);
 
     /**
      * Reset the logger.
@@ -31,18 +31,18 @@ class Logger {
     void Reset();
 
     /**
-     * Set a sub-basin value pointer in the logger array.
+     * Set a subbasin value pointer in the logger array.
      *
-     * @param iSubbasin index of the sub-basin (processing order).
-     * @param iLabel index of the sub-basin label.
+     * @param iSubbasin index of the subbasin (processing order).
+     * @param iLabel index of the subbasin label.
      * @param valPt pointer to the value.
      */
-    void SetSubBasinValuePointer(int iSubbasin, int iLabel, double* valPt);
+    void SetSubbasinValuePointer(int iSubbasin, int iLabel, double* valPt);
 
     /**
      * Set a hydro unit value pointer in the logger array.
      *
-     * @param iUnit index of the hydro unit (global, over all the sub-basins).
+     * @param iUnit index of the hydro unit (global, over all the subbasins).
      * @param iLabel index of the hydro unit label.
      * @param valPt pointer to the value.
      */
@@ -51,7 +51,7 @@ class Logger {
     /**
      * Set a hydro unit fraction pointer in the logger array.
      *
-     * @param iUnit index of the hydro unit (global, over all the sub-basins).
+     * @param iUnit index of the hydro unit (global, over all the subbasins).
      * @param iLabel index of the hydro unit label.
      * @param valPt pointer to the value.
      */
@@ -88,7 +88,7 @@ class Logger {
     bool DumpOutputs(const string& path);
 
     /**
-     * Get the outlet discharge series at the catchment outlet (the terminal sub-basin), in mm over the
+     * Get the outlet discharge series at the catchment outlet (the terminal subbasin), in mm over the
      * drained area.
      *
      * @return outlet discharge series.
@@ -96,20 +96,20 @@ class Logger {
     [[nodiscard]] axd GetOutletDischarge() const;
 
     /**
-     * Get the discharge series at the outlet of a sub-basin, in mm over its drained area.
+     * Get the discharge series at the outlet of a subbasin, in mm over its drained area.
      *
-     * @param subbasinId ID of the sub-basin.
+     * @param subbasinId ID of the subbasin.
      * @return discharge series.
      */
     [[nodiscard]] axd GetSubbasinDischarge(int subbasinId) const;
 
     /**
-     * Get the indices of the sub-basin elements for a given item.
+     * Get the indices of the subbasin elements for a given item.
      *
      * @param item item to search for.
      * @return vector of indices.
      */
-    [[nodiscard]] vecInt GetIndicesForSubBasinElements(const string& item) const;
+    [[nodiscard]] vecInt GetIndicesForSubbasinElements(const string& item) const;
 
     /**
      * Get the indices of the hydro unit elements for a given item.
@@ -120,13 +120,13 @@ class Logger {
     [[nodiscard]] vecInt GetIndicesForHydroUnitElements(const string& item) const;
 
     /**
-     * Get the sum of a sub-basin values for a given item, over time and over the sub-basins (each weighted by
+     * Get the sum of a subbasin values for a given item, over time and over the subbasins (each weighted by
      * its local area, so the total is in mm over the catchment area).
      *
      * @param item item to search for.
      * @return total value.
      */
-    [[nodiscard]] double GetTotalSubBasin(const string& item) const;
+    [[nodiscard]] double GetTotalSubbasin(const string& item) const;
 
     /**
      * Get the sum of hydro unit values for a given item.
@@ -152,20 +152,20 @@ class Logger {
     [[nodiscard]] double GetTotalET() const;
 
     /**
-     * Get the initial storage state of the sub-basins for a given tag (area-weighted over the sub-basins).
+     * Get the initial storage state of the subbasins for a given tag (area-weighted over the subbasins).
      *
      * @param tag tag to search for.
      * @return initial storage state.
      */
-    [[nodiscard]] double GetSubBasinInitialStorageState(const string& tag) const;
+    [[nodiscard]] double GetSubbasinInitialStorageState(const string& tag) const;
 
     /**
-     * Get the final storage state of the sub-basins for a given tag (area-weighted over the sub-basins).
+     * Get the final storage state of the subbasins for a given tag (area-weighted over the subbasins).
      *
      * @param tag tag to search for.
      * @return final storage state.
      */
-    [[nodiscard]] double GetSubBasinFinalStorageState(const string& tag) const;
+    [[nodiscard]] double GetSubbasinFinalStorageState(const string& tag) const;
 
     /**
      * Find the land-cover fraction series that weights a logged hydro-unit component
@@ -218,20 +218,20 @@ class Logger {
     [[nodiscard]] double GetTotalGlacierStorageChanges() const;
 
     /**
-     * Get all the sub-basin values at the catchment outlet (the terminal sub-basin).
+     * Get all the subbasin values at the catchment outlet (the terminal subbasin).
      *
-     * @return vector of sub-basin values (one series per label).
+     * @return vector of subbasin values (one series per label).
      */
-    [[nodiscard]] vecAxd GetSubBasinValues() const;
+    [[nodiscard]] vecAxd GetSubbasinValues() const;
 
     /**
-     * Get all the sub-basin values of every sub-basin.
+     * Get all the subbasin values of every subbasin.
      *
-     * @return vector of sub-basin values: one matrix per label, of shape (time steps x sub-basins), the
-     * sub-basins in processing order.
+     * @return vector of subbasin values: one matrix per label, of shape (time steps x subbasins), the
+     * subbasins in processing order.
      */
-    const vecAxxd& GetSubBasinValuesPerSubbasin() const {
-        return _subBasinValues;
+    const vecAxxd& GetSubbasinValuesPerSubbasin() const {
+        return _subbasinValues;
     }
 
     /**
@@ -253,25 +253,25 @@ class Logger {
     }
 
     /**
-     * Get the sub-basin IDs (processing order, the outlet last).
+     * Get the subbasin IDs (processing order, the outlet last).
      *
-     * @return vector of sub-basin IDs.
+     * @return vector of subbasin IDs.
      */
     const vecInt& GetSubbasinIds() const {
         return _subbasinIds;
     }
 
     /**
-     * Get the downstream sub-basin IDs (0 for the catchment outlet).
+     * Get the downstream subbasin IDs (0 for the catchment outlet).
      *
-     * @return vector of downstream sub-basin IDs.
+     * @return vector of downstream subbasin IDs.
      */
     const vecInt& GetSubbasinDownstreamIds() const {
         return _subbasinDownstreamIds;
     }
 
     /**
-     * Get the structure variant used by each sub basin's catchment-level components (processing order).
+     * Get the structure variant used by each subbasin's catchment-level components (processing order).
      *
      * @return vector of structure IDs.
      */
@@ -280,7 +280,7 @@ class Logger {
     }
 
     /**
-     * Get the local areas of the sub-basins (their own hydro units) [m2].
+     * Get the local areas of the subbasins (their own hydro units) [m2].
      *
      * @return vector of local areas.
      */
@@ -289,7 +289,7 @@ class Logger {
     }
 
     /**
-     * Get the areas drained at the sub-basin outlets (own plus upstream) [m2].
+     * Get the areas drained at the subbasin outlets (own plus upstream) [m2].
      *
      * @return vector of drained areas.
      */
@@ -298,9 +298,9 @@ class Logger {
     }
 
     /**
-     * Get the number of sub-basins.
+     * Get the number of subbasins.
      *
-     * @return number of sub-basins.
+     * @return number of subbasins.
      */
     [[nodiscard]] int GetSubbasinCount() const {
         return static_cast<int>(_subbasinIds.size());
@@ -325,12 +325,12 @@ class Logger {
     }
 
     /**
-     * Get the sub-basin labels.
+     * Get the subbasin labels.
      *
-     * @return vector of sub-basin labels.
+     * @return vector of subbasin labels.
      */
-    const vecStr& GetSubBasinLabels() const {
-        return _subBasinLabels;
+    const vecStr& GetSubbasinLabels() const {
+        return _subbasinLabels;
     }
 
     /**
@@ -368,12 +368,12 @@ class Logger {
     }
 
     /**
-     * Tag a sub-basin log label index as an evapotranspiration (to-atmosphere) flux. A label is tagged once
-     * (the same structure is built in every sub-basin).
+     * Tag a subbasin log label index as an evapotranspiration (to-atmosphere) flux. A label is tagged once
+     * (the same structure is built in every subbasin).
      *
-     * @param iLabel index of the sub-basin label.
+     * @param iLabel index of the subbasin label.
      */
-    void AddSubBasinEtIndex(int iLabel);
+    void AddSubbasinEtIndex(int iLabel);
 
     /**
      * Tag a hydro unit log label index as an evapotranspiration (to-atmosphere) flux.
@@ -393,12 +393,12 @@ class Logger {
     vecInt _subbasinStructureIds;
     axd _subbasinLocalAreas;
     axd _subbasinDrainedAreas;
-    axd _subbasinWeights;  // local area / catchment area, to sum sub-basin values over the catchment
-    int _outletIndex;      // index of the terminal sub-basin
-    vecStr _subBasinLabels;
-    vecAxd _subBasinInitialValues;          // [label](sub-basins)
-    vecAxxd _subBasinValues;                // [label](time x sub-basins)
-    vector<vecDoublePt> _subBasinValuesPt;  // [label][sub-basin]
+    axd _subbasinWeights;  // local area / catchment area, to sum subbasin values over the catchment
+    int _outletIndex;      // index of the terminal subbasin
+    vecStr _subbasinLabels;
+    vecAxd _subbasinInitialValues;          // [label](subbasins)
+    vecAxxd _subbasinValues;                // [label](time x subbasins)
+    vector<vecDoublePt> _subbasinValuesPt;  // [label][subbasin]
     vecInt _hydroUnitIds;
     vecInt _hydroUnitStructureIds;
     axd _hydroUnitAreas;
@@ -409,28 +409,28 @@ class Logger {
     vecStr _hydroUnitFractionLabels;
     vecAxxd _hydroUnitFractions;
     vector<vecDoublePt> _hydroUnitFractionsPt;
-    vecInt _subBasinEtIndices;   // indices into _subBasinValues that are ET (to-atmosphere) fluxes
+    vecInt _subbasinEtIndices;   // indices into _subbasinValues that are ET (to-atmosphere) fluxes
     vecInt _hydroUnitEtIndices;  // indices into _hydroUnitValues that are ET (to-atmosphere) fluxes
 
   private:
     /**
-     * Sum a sub-basin label over time and over the sub-basins, each weighted by its local area.
+     * Sum a subbasin label over time and over the subbasins, each weighted by its local area.
      *
-     * @param iLabel index of the sub-basin label.
+     * @param iLabel index of the subbasin label.
      * @return the catchment total [mm].
      */
     [[nodiscard]] double WeightedTotal(int iLabel) const;
 
     /**
-     * Get the index of a sub-basin in the logger from its ID.
+     * Get the index of a subbasin in the logger from its ID.
      *
-     * @param subbasinId ID of the sub-basin.
-     * @return index of the sub-basin (processing order).
+     * @param subbasinId ID of the subbasin.
+     * @return index of the subbasin (processing order).
      */
     [[nodiscard]] int GetSubbasinIndex(int subbasinId) const;
 
     /**
-     * Get the index of the 'outlet' label among the sub-basin labels.
+     * Get the index of the 'outlet' label among the subbasin labels.
      *
      * @return index of the outlet label.
      */

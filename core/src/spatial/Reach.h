@@ -3,23 +3,23 @@
 
 #include "Includes.h"
 
-class SubBasin;
+class Subbasin;
 struct ChannelRoutingSettings;
 
 /**
- * The channel reach of a sub basin: the main channel from the point where the upstream sub basins enter to
- * the sub basin outlet. It routes the volume arriving from upstream (m3 per time step) to the outlet, where the
- * sub basin's own runoff joins it.
+ * The channel reach of a subbasin: the main channel from the point where the upstream subbasins enter to
+ * the subbasin outlet. It routes the volume arriving from upstream (m3 per time step) to the outlet, where the
+ * subbasin's own runoff joins it.
  *
  * Four routing schemes exist: instantaneous (the inflow leaves the reach in the same step), a pure translation
  * (lag), the Muskingum method and Muskingum-Cunge. The first three use a celerity: the model-wide parameter
- * (which a sub basin property may override reach by reach), optionally varying with the discharge through a
+ * (which a subbasin property may override reach by reach), optionally varying with the discharge through a
  * power law. Muskingum-Cunge instead derives the celerity and the weighting factor from the channel geometry
  * (length, slope, width and Manning roughness) and the discharge of the step, so its parameters are measured
  * rather than calibrated. A Muskingum-Cunge reach is also divided into sub reaches short enough for the wave
  * to be resolved (the Ponce and Theurer criterion), the sub reaches being routed in series.
  *
- * The sub basin's own runoff joins at the outlet by default. With 'route_local_runoff' it is routed too,
+ * The subbasin's own runoff joins at the outlet by default. With 'route_local_runoff' it is routed too,
  * through half the reach: generated uniformly along the reach, it travels half of it on average.
  */
 class Reach {
@@ -35,11 +35,11 @@ class Reach {
     };
 
     /**
-     * Create the reach of a sub basin.
+     * Create the reach of a subbasin.
      *
-     * @param subbasin The sub basin the reach belongs to (its outlet is the reach outlet).
+     * @param subbasin The subbasin the reach belongs to (its outlet is the reach outlet).
      */
-    explicit Reach(SubBasin* subbasin);
+    explicit Reach(Subbasin* subbasin);
 
     virtual ~Reach() = default;
 
@@ -60,7 +60,7 @@ class Reach {
     static string SchemeToString(Scheme scheme);
 
     /**
-     * Read the reach geometry from the sub basin properties ('length' [m], 'slope' [-], 'width' [m] and
+     * Read the reach geometry from the subbasin properties ('length' [m], 'slope' [-], 'width' [m] and
      * 'manning' [s/m^(1/3)]) when present, as well as the reach-specific routing parameters ('celerity' [m/s]
      * and 'muskingum_x' [-]) overriding the model-wide ones.
      */
@@ -74,28 +74,28 @@ class Reach {
     void SetChannelRouting(const ChannelRoutingSettings& settings);
 
     /**
-     * Route the volume arriving from the upstream sub basins through the reach, for the current time step.
-     * Called once per step, before the sub basin is processed.
+     * Route the volume arriving from the upstream subbasins through the reach, for the current time step.
+     * Called once per step, before the subbasin is processed.
      *
      * @param inflowVolume The volume entering the reach from upstream [m3 per time step].
      * @param timeStepInDays The time step [days].
-     * @return the volume leaving the reach at the sub basin outlet [m3 per time step].
+     * @return the volume leaving the reach at the subbasin outlet [m3 per time step].
      */
     double RouteUpstream(double inflowVolume, double timeStepInDays);
 
     /**
-     * Route the sub basin's own runoff, for the current time step. Called once per step, after the sub basin
+     * Route the subbasin's own runoff, for the current time step. Called once per step, after the subbasin
      * is processed. Without 'route_local_runoff' the runoff is returned unchanged (it joins at the outlet);
      * with it, the runoff travels half the reach.
      *
-     * @param localVolume The sub basin's own runoff [m3 per time step].
+     * @param localVolume The subbasin's own runoff [m3 per time step].
      * @param timeStepInDays The time step [days].
      * @return the volume of that runoff reaching the outlet [m3 per time step].
      */
     double RouteLocal(double localVolume, double timeStepInDays);
 
     /**
-     * Check whether the sub basin's own runoff is routed through (half) the reach.
+     * Check whether the subbasin's own runoff is routed through (half) the reach.
      *
      * @return true when the local runoff is routed.
      */
@@ -114,11 +114,11 @@ class Reach {
     void SaveAsInitialState();
 
     /**
-     * Get the sub basin the reach belongs to.
+     * Get the subbasin the reach belongs to.
      *
-     * @return the sub basin.
+     * @return the subbasin.
      */
-    [[nodiscard]] SubBasin* GetSubbasin() const {
+    [[nodiscard]] Subbasin* GetSubbasin() const {
         return _subbasin;
     }
 
@@ -132,7 +132,7 @@ class Reach {
     }
 
     /**
-     * Get the reach length [m] (0 when the sub basin has no 'length' property).
+     * Get the reach length [m] (0 when the subbasin has no 'length' property).
      *
      * @return the reach length.
      */
@@ -141,7 +141,7 @@ class Reach {
     }
 
     /**
-     * Get the reach slope [m/m] (0 when the sub basin has no 'slope' property).
+     * Get the reach slope [m/m] (0 when the subbasin has no 'slope' property).
      *
      * @return the reach slope.
      */
@@ -150,7 +150,7 @@ class Reach {
     }
 
     /**
-     * Get the channel width in use for this reach [m]: the sub basin property when present, else the
+     * Get the channel width in use for this reach [m]: the subbasin property when present, else the
      * model-wide parameter. Used by the Muskingum-Cunge scheme only.
      *
      * @return the channel width.
@@ -158,7 +158,7 @@ class Reach {
     [[nodiscard]] double GetWidth() const;
 
     /**
-     * Get the Manning roughness in use for this reach [s/m^(1/3)]: the sub basin property when present, else
+     * Get the Manning roughness in use for this reach [s/m^(1/3)]: the subbasin property when present, else
      * the model-wide parameter. Used by the Muskingum-Cunge scheme only.
      *
      * @return the Manning roughness.
@@ -166,7 +166,7 @@ class Reach {
     [[nodiscard]] double GetManning() const;
 
     /**
-     * Get the celerity of this reach at the reference discharge [m/s]: the sub basin property when present,
+     * Get the celerity of this reach at the reference discharge [m/s]: the subbasin property when present,
      * else the model-wide parameter, else 1.
      *
      * @return the reference celerity.
@@ -187,7 +187,7 @@ class Reach {
     [[nodiscard]] double GetCelerityForDischarge(double dischargeM3s) const;
 
     /**
-     * Get the Muskingum weighting factor in use for this reach [-]: the sub basin property when present, else
+     * Get the Muskingum weighting factor in use for this reach [-]: the subbasin property when present, else
      * the model-wide parameter, else 0.2. The Muskingum-Cunge scheme computes its own instead.
      *
      * @return the weighting factor.
@@ -244,7 +244,7 @@ class Reach {
   protected:
     /**
      * The state of one routing branch: the main channel (the upstream inflow over the whole reach) or the
-     * local-runoff branch (the sub basin's own runoff over half of it). Holds the delivery schedule of the lag
+     * local-runoff branch (the subbasin's own runoff over half of it). Holds the delivery schedule of the lag
      * scheme, the Muskingum coefficients and the volume in transit.
      */
     struct RoutingState {
@@ -276,7 +276,7 @@ class Reach {
         double lastTimeStep = -1;
     };
 
-    SubBasin* _subbasin;  // non-owning
+    Subbasin* _subbasin;  // non-owning
     Scheme _scheme = Scheme::None;
     bool _routeLocal = false;
     double _length = 0;  // m
@@ -290,7 +290,7 @@ class Reach {
     const float* _width = nullptr;
     const float* _manning = nullptr;
 
-    // Reach-specific values from the sub basin properties (NaN when absent).
+    // Reach-specific values from the subbasin properties (NaN when absent).
     double _celerityOverride = NAN_D;
     double _xOverride = NAN_D;
     double _widthOverride = NAN_D;
@@ -300,7 +300,7 @@ class Reach {
     double _outflow = 0;
 
     RoutingState _main;   // the upstream inflow, over the whole reach
-    RoutingState _local;  // the sub basin's own runoff, over half the reach
+    RoutingState _local;  // the subbasin's own runoff, over half the reach
 
   private:
     /**

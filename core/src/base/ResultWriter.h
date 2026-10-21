@@ -24,8 +24,8 @@ class ResultWriter {
      * @param hydroUnitIds Vector of hydro unit IDs.
      * @param hydroUnitStructureIds Vector of the model-structure variant ID used by each hydro unit.
      * @param hydroUnitAreas Vector of hydro unit areas.
-     * @param subBasinLabels Labels for sub-basin aggregated values.
-     * @param subBasinValues Vector of sub-basin value arrays.
+     * @param subbasinLabels Labels for subbasin aggregated values.
+     * @param subbasinValues Vector of subbasin value arrays.
      * @param hydroUnitLabels Labels for distributed hydro unit values.
      * @param hydroUnitValues Vector of 2D hydro unit value arrays.
      * @param hydroUnitFractionLabels Labels for land cover fractions (optional).
@@ -35,8 +35,8 @@ class ResultWriter {
     bool WriteNetCDF(const string& path, const axd& time, const vecInt& subbasinIds,
                      const vecInt& subbasinDownstreamIds, const vecInt& subbasinStructureIds,
                      const axd& subbasinLocalAreas, const axd& subbasinDrainedAreas, const vecInt& hydroUnitIds,
-                     const vecInt& hydroUnitStructureIds, const axd& hydroUnitAreas, const vecStr& subBasinLabels,
-                     const vecAxxd& subBasinValues, const vecStr& hydroUnitLabels, const vecAxxd& hydroUnitValues,
+                     const vecInt& hydroUnitStructureIds, const axd& hydroUnitAreas, const vecStr& subbasinLabels,
+                     const vecAxxd& subbasinValues, const vecStr& hydroUnitLabels, const vecAxxd& hydroUnitValues,
                      const vecStr& hydroUnitFractionLabels = vecStr(), const vecAxxd& hydroUnitFractions = vecAxxd());
 
     /**
@@ -57,12 +57,12 @@ class ResultWriter {
      * @param filePath Full path to the NetCDF file.
      * @param timeStep Current time step index.
      * @param time Current time value.
-     * @param subBasinValues Current sub-basin values.
+     * @param subbasinValues Current subbasin values.
      * @param hydroUnitValues Current hydro unit values.
      * @param hydroUnitFractions Current fraction values (optional).
      * @return true if successful, false otherwise.
      */
-    bool AppendToNetCDF(const string& filePath, int timeStep, double time, const axd& subBasinValues,
+    bool AppendToNetCDF(const string& filePath, int timeStep, double time, const axd& subbasinValues,
                         const axxd& hydroUnitValues, const axxd& hydroUnitFractions = axxd());
 
     /**
@@ -72,13 +72,13 @@ class ResultWriter {
      * @param timeSize Total number of time steps.
      * @param hydroUnitIds Vector of hydro unit IDs.
      * @param hydroUnitAreas Vector of hydro unit areas.
-     * @param subBasinLabels Labels for sub-basin values.
+     * @param subbasinLabels Labels for subbasin values.
      * @param hydroUnitLabels Labels for hydro unit values.
      * @param hydroUnitFractionLabels Labels for fractions (optional).
      * @return Full path to the created file, or empty string on failure.
      */
     string InitializeStreamingNetCDF(const string& path, int timeSize, const vecInt& hydroUnitIds,
-                                     const axd& hydroUnitAreas, const vecStr& subBasinLabels,
+                                     const axd& hydroUnitAreas, const vecStr& subbasinLabels,
                                      const vecStr& hydroUnitLabels, const vecStr& hydroUnitFractionLabels = vecStr());
 
   protected:
@@ -88,19 +88,19 @@ class ResultWriter {
      * @param filePath Full path to the file.
      * @param timeSize Size of time dimension.
      * @param numHydroUnits Number of hydro units.
-     * @param numSubBasinItems Number of aggregated items.
+     * @param numSubbasinItems Number of aggregated items.
      * @param numHydroUnitItems Number of distributed items.
      * @param numFractions Number of land cover fractions.
      * @param hydroUnitIds Vector of hydro unit IDs.
      * @param hydroUnitAreas Vector of hydro unit areas.
-     * @param subBasinLabels Labels for sub-basin values.
+     * @param subbasinLabels Labels for subbasin values.
      * @param hydroUnitLabels Labels for hydro unit values.
      * @param hydroUnitFractionLabels Labels for fractions.
      * @return true if successful, false otherwise.
      */
-    bool CreateNetCDFStructure(const string& filePath, int timeSize, int numHydroUnits, int numSubBasinItems,
+    bool CreateNetCDFStructure(const string& filePath, int timeSize, int numHydroUnits, int numSubbasinItems,
                                int numHydroUnitItems, int numFractions, const vecInt& hydroUnitIds,
-                               const axd& hydroUnitAreas, const vecStr& subBasinLabels, const vecStr& hydroUnitLabels,
+                               const axd& hydroUnitAreas, const vecStr& subbasinLabels, const vecStr& hydroUnitLabels,
                                const vecStr& hydroUnitFractionLabels);
 };
 

@@ -10,12 +10,12 @@
 #include "Processor.h"
 #include "RiverNetwork.h"
 #include "SettingsModel.h"
-#include "SubBasin.h"
+#include "Subbasin.h"
 #include "TimeSeries.h"
 
 class ModelHydro {
   public:
-    ModelHydro(SubBasin* subBasin = nullptr);
+    ModelHydro(Subbasin* subbasin = nullptr);
 
     virtual ~ModelHydro();
 
@@ -100,9 +100,9 @@ class ModelHydro {
     axd GetOutletDischarge() const;
 
     /**
-     * Get the discharge at the outlet of a sub basin [mm over its drained area].
+     * Get the discharge at the outlet of a subbasin [mm over its drained area].
      *
-     * @param subbasinId The ID of the sub basin.
+     * @param subbasinId The ID of the subbasin.
      * @return the discharge time series.
      */
     [[nodiscard]] axd GetSubbasinDischarge(int subbasinId) const;
@@ -118,21 +118,21 @@ class ModelHydro {
     [[nodiscard]] axd GetSubbasinDrainedAreas() const;
 
     /**
-     * Get the length of the reach of every sub basin [m], in the order of GetSubbasinIds().
+     * Get the length of the reach of every subbasin [m], in the order of GetSubbasinIds().
      *
      * @return the reach lengths.
      */
     [[nodiscard]] axd GetReachLengths() const;
 
     /**
-     * Get the slope of the reach of every sub basin [m/m], in the order of GetSubbasinIds().
+     * Get the slope of the reach of every subbasin [m/m], in the order of GetSubbasinIds().
      *
      * @return the reach slopes.
      */
     [[nodiscard]] axd GetReachSlopes() const;
 
     /**
-     * Get the travel time of the reach of every sub basin [days], at the reference discharge, in the order of
+     * Get the travel time of the reach of every subbasin [days], at the reference discharge, in the order of
      * GetSubbasinIds(). With the discharge-dependent schemes the travel time of a step differs from it.
      *
      * @return the reach travel times.
@@ -140,7 +140,7 @@ class ModelHydro {
     [[nodiscard]] axd GetReachTravelTimes() const;
 
     /**
-     * Get the number of sub reaches the reach of every sub basin is divided into, in the order of
+     * Get the number of sub reaches the reach of every subbasin is divided into, in the order of
      * GetSubbasinIds(). Always 1 except with Muskingum-Cunge, and only once the model has run a step.
      *
      * @return the sub reach counts.
@@ -155,7 +155,7 @@ class ModelHydro {
     [[nodiscard]] string GetChannelRoutingScheme() const;
 
     /**
-     * Get a hydro unit by ID, in any sub basin.
+     * Get a hydro unit by ID, in any subbasin.
      *
      * @param id The ID of the hydro unit.
      * @return the hydro unit, or nullptr if the ID is unknown.
@@ -163,7 +163,7 @@ class ModelHydro {
     [[nodiscard]] HydroUnit* GetHydroUnitById(int id) const;
 
     /**
-     * Get every hydro unit of the model, sub basin after sub basin in processing order.
+     * Get every hydro unit of the model, subbasin after subbasin in processing order.
      *
      * @return the hydro units.
      */
@@ -258,28 +258,28 @@ class ModelHydro {
     bool AttachTimeSeriesToHydroUnits();
 
     /**
-     * Get the sub basin.
+     * Get the subbasin.
      *
-     * @return pointer to the sub basin.
+     * @return pointer to the subbasin.
      */
-    SubBasin* GetSubBasin() const {
-        return _subBasin;  // Return raw pointer from unique_ptr
+    Subbasin* GetSubbasin() const {
+        return _subbasin;  // Return raw pointer from unique_ptr
     }
 
     /**
-     * Set the sub basin (non-owning; caller retains ownership).
+     * Set the subbasin (non-owning; caller retains ownership).
      *
-     * @param subBasin pointer to the sub basin.
+     * @param subbasin pointer to the subbasin.
      */
-    void SetSubBasin(SubBasin* subBasin) {
+    void SetSubbasin(Subbasin* subbasin) {
         _network.reset();
-        _subBasin = subBasin;
+        _subbasin = subbasin;
     }
 
     /**
-     * Get the river network (the tree of sub basins), owned by the model once InitializeWithBasin has run.
+     * Get the river network (the tree of subbasins), owned by the model once InitializeWithBasin has run.
      *
-     * @return the river network, or nullptr when the sub basin was provided externally.
+     * @return the river network, or nullptr when the subbasin was provided externally.
      */
     RiverNetwork* GetNetwork() const {
         return _network.get();
@@ -300,7 +300,7 @@ class ModelHydro {
      * @return pointer to the processor.
      */
     /**
-     * Get the processor of the outlet sub basin (the only one for a single sub basin).
+     * Get the processor of the outlet subbasin (the only one for a single subbasin).
      *
      * @return the processor, or nullptr before initialization.
      */
@@ -374,10 +374,10 @@ class ModelHydro {
     [[nodiscard]] axd GetHydroUnitAreas() const;
 
   protected:
-    std::vector<std::unique_ptr<Processor>> _processors;  // owning: one per sub basin, in processing order
+    std::vector<std::unique_ptr<Processor>> _processors;  // owning: one per subbasin, in processing order
     std::unique_ptr<RiverNetwork> _network;  // owning: set only when ModelHydro builds the network from settings
-    SubBasin* _subBasin;                     // non-owning view (the network outlet or an external SubBasin)
-    std::vector<SubBasin*> _subbasins;       // non-owning: the sub basins to process, upstream first
+    Subbasin* _subbasin;                     // non-owning view (the network outlet or an external Subbasin)
+    std::vector<Subbasin*> _subbasins;       // non-owning: the subbasins to process, upstream first
     TimeMachine _timer;
     Logger _logger;
     ActionsManager _actionsManager;
@@ -387,7 +387,7 @@ class ModelHydro {
 
   private:
     /**
-     * Get a property of the reach of every sub basin, in the order of GetSubbasinIds(). Sub basins without a
+     * Get a property of the reach of every subbasin, in the order of GetSubbasinIds(). Subbasins without a
      * reach (no network) give 0.
      *
      * @param get The property of a reach to read.
@@ -396,12 +396,12 @@ class ModelHydro {
     [[nodiscard]] axd GetReachProperty(const std::function<double(const Reach&)>& get) const;
 
     /**
-     * Get the sub basins to process, upstream first: the network's order, or the single external sub basin.
+     * Get the subbasins to process, upstream first: the network's order, or the single external subbasin.
      */
-    [[nodiscard]] std::vector<SubBasin*> CollectSubbasins() const;
+    [[nodiscard]] std::vector<Subbasin*> CollectSubbasins() const;
 
     /**
-     * Process one time step: every sub basin in order, each receiving the volume routed from upstream first.
+     * Process one time step: every subbasin in order, each receiving the volume routed from upstream first.
      *
      * @return true on success.
      */

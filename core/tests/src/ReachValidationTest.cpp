@@ -26,7 +26,7 @@
 #include "Reach.h"
 #include "SettingsBasin.h"
 #include "SettingsModel.h"
-#include "SubBasin.h"
+#include "Subbasin.h"
 
 namespace {
 
@@ -36,7 +36,7 @@ constexpr double kSecondsPerDay = 86400.0;
  * A reach with the given geometry, built from the settings exactly as the model builds it.
  */
 struct ValidationReach {
-    SubBasin subbasin;
+    Subbasin subbasin;
     SettingsModel settings;
     std::unique_ptr<Reach> reach;
 

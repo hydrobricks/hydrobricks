@@ -47,10 +47,10 @@ TEST_F(LinearThresholdStorage, DrainsOnlyAboveThreshold) {
     SettingsBasin basinSettings;
     basinSettings.AddHydroUnit(1, 100);
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     ASSERT_TRUE(model.Initialize(_model, basinSettings));
 
     ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));
@@ -58,7 +58,7 @@ TEST_F(LinearThresholdStorage, DrainsOnlyAboveThreshold) {
 
     EXPECT_TRUE(model.Run());
 
-    vecAxd basinOutputs = model.GetLogger()->GetSubBasinValues();
+    vecAxd basinOutputs = model.GetLogger()->GetSubbasinValues();
 
     // Explicit Euler, daily: out_t = k max(0, S_t - threshold); S_{t+1} = S_t + P_t - out_t
     vecDouble expectedOutputs = {0.000000, 0.000000, 1.500000, 4.050000, 2.835000,
@@ -83,14 +83,14 @@ TEST_F(LinearThresholdStorage, AnalyticSolverDecaysExponentiallyToTheThreshold) 
     SettingsBasin basinSettings;
     basinSettings.AddHydroUnit(1, 100);
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
     // PREVAH integrates its reservoirs analytically (Viviroli et al., 2007, Eq. 4.5-5):
     // the content above the threshold decays as exp(-dt / K0).
     _model.SetSolver("analytic_linear");
 
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     ASSERT_TRUE(model.Initialize(_model, basinSettings));
 
     ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));
@@ -98,7 +98,7 @@ TEST_F(LinearThresholdStorage, AnalyticSolverDecaysExponentiallyToTheThreshold) 
 
     EXPECT_TRUE(model.Run());
 
-    vecAxd basinOutputs = model.GetLogger()->GetSubBasinValues();
+    vecAxd basinOutputs = model.GetLogger()->GetSubbasinValues();
     vecAxxd unitContent = model.GetLogger()->GetHydroUnitValues();
 
     double decay = std::exp(-0.3);  // exp(-k dt), k = 0.3 1/d, dt = 1 d
@@ -124,8 +124,8 @@ TEST_F(LinearThresholdStorage, AnalyticSolverZeroThresholdMatchesLinearReservoir
     SettingsBasin basinSettings;
     basinSettings.AddHydroUnit(1, 100);
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
     // With a zero threshold the affine response must reduce exactly to the plain
     // linear reservoir the analytic solver already integrates.
@@ -134,7 +134,7 @@ TEST_F(LinearThresholdStorage, AnalyticSolverZeroThresholdMatchesLinearReservoir
     _model.SelectProcess("outflow");
     _model.SetProcessParameterValue("threshold", 0.0f);
 
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     ASSERT_TRUE(model.Initialize(_model, basinSettings));
 
     ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));
@@ -142,7 +142,7 @@ TEST_F(LinearThresholdStorage, AnalyticSolverZeroThresholdMatchesLinearReservoir
 
     EXPECT_TRUE(model.Run());
 
-    vecAxd basinOutputs = model.GetLogger()->GetSubBasinValues();
+    vecAxd basinOutputs = model.GetLogger()->GetSubbasinValues();
     vecAxxd unitContent = model.GetLogger()->GetHydroUnitValues();
 
     double decay = std::exp(-0.3);
@@ -158,14 +158,14 @@ TEST_F(LinearThresholdStorage, ZeroThresholdMatchesLinearReservoir) {
     SettingsBasin basinSettings;
     basinSettings.AddHydroUnit(1, 100);
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
     _model.SelectHydroUnitBrick("storage");
     _model.SelectProcess("outflow");
     _model.SetProcessParameterValue("threshold", 0.0f);
 
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     ASSERT_TRUE(model.Initialize(_model, basinSettings));
 
     ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));
@@ -173,7 +173,7 @@ TEST_F(LinearThresholdStorage, ZeroThresholdMatchesLinearReservoir) {
 
     EXPECT_TRUE(model.Run());
 
-    vecAxd basinOutputs = model.GetLogger()->GetSubBasinValues();
+    vecAxd basinOutputs = model.GetLogger()->GetSubbasinValues();
 
     // With a zero threshold the process reduces to outflow:linear (out = k S).
     vecDouble expectedOutputs = {0.000000, 0.000000, 3.000000, 5.100000, 3.570000,
@@ -243,9 +243,9 @@ class PrevahPercolationTwoGates : public ::testing::Test {
         _tsPrecip->SetData(std::move(data));
     }
 
-    vecAxd Run(SubBasin& subBasin, ModelHydro& model) {
+    vecAxd Run(Subbasin& subbasin, ModelHydro& model) {
         EXPECT_TRUE(model.Run());
-        return model.GetLogger()->GetSubBasinValues();
+        return model.GetLogger()->GetSubbasinValues();
     }
 };
 
@@ -257,10 +257,10 @@ TEST_F(PrevahPercolationTwoGates, ASingleSaturatedStoreDoesNotOpenTheGate) {
 
     SettingsBasin basinSettings;
     basinSettings.AddHydroUnit(1, 100);
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     ASSERT_TRUE(model.Initialize(_model, basinSettings));
     ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
@@ -270,7 +270,7 @@ TEST_F(PrevahPercolationTwoGates, ASingleSaturatedStoreDoesNotOpenTheGate) {
     EXPECT_NEAR(unitValues[0](9, 0), 90.0, 0.0001);
     EXPECT_NEAR(unitValues[1](9, 0), 90.0, 0.0001);
 
-    vecAxd basinOutputs = model.GetLogger()->GetSubBasinValues();
+    vecAxd basinOutputs = model.GetLogger()->GetSubbasinValues();
     for (int j = 0; j < basinOutputs[0].size(); ++j) {
         EXPECT_NEAR(basinOutputs[0][j], 0.0, 0.0001);
     }
@@ -283,16 +283,16 @@ TEST_F(PrevahPercolationTwoGates, TheSummedSaturationOpensTheGate) {
 
     SettingsBasin basinSettings;
     basinSettings.AddHydroUnit(1, 100);
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     ASSERT_TRUE(model.Initialize(_model, basinSettings));
     ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
     EXPECT_TRUE(model.Run());
 
-    vecAxd basinOutputs = model.GetLogger()->GetSubBasinValues();
+    vecAxd basinOutputs = model.GetLogger()->GetSubbasinValues();
     double expected = 2.0 * (0.9 - 0.7) / 0.3;
     EXPECT_NEAR(basinOutputs[0][9], expected, 0.0001);
 }
@@ -332,10 +332,10 @@ TEST_F(PrevahUpperZone, ThresholdAndLinearOutflowsCoexist) {
     SettingsBasin basinSettings;
     basinSettings.AddHydroUnit(1, 100);
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     ASSERT_TRUE(model.Initialize(_model, basinSettings));
 
     ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));
@@ -343,7 +343,7 @@ TEST_F(PrevahUpperZone, ThresholdAndLinearOutflowsCoexist) {
 
     EXPECT_TRUE(model.Run());
 
-    vecAxd basinOutputs = model.GetLogger()->GetSubBasinValues();
+    vecAxd basinOutputs = model.GetLogger()->GetSubbasinValues();
 
     // out_t = 0.4 max(0, S_t - 10) + 0.1 S_t; S_{t+1} = S_t + P_t - out_t
     vecDouble expectedOutputs = {0.000000, 0.000000, 6.000000, 3.000000, 1.500000,
@@ -411,12 +411,12 @@ class SplitStorage : public ::testing::Test {
         SettingsBasin basinSettings;
         basinSettings.AddHydroUnit(1, 100);
 
-        SubBasin subBasin;
-        EXPECT_TRUE(subBasin.Initialize(basinSettings));
+        Subbasin subbasin;
+        EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
         _model.SetSolver(solver);
 
-        ModelHydro model(&subBasin);
+        ModelHydro model(&subbasin);
         ASSERT_TRUE(model.Initialize(_model, basinSettings));
 
         ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));
@@ -424,7 +424,7 @@ class SplitStorage : public ::testing::Test {
 
         EXPECT_TRUE(model.Run());
 
-        vecAxd basinOutputs = model.GetLogger()->GetSubBasinValues();
+        vecAxd basinOutputs = model.GetLogger()->GetSubbasinValues();
         vecAxxd unitContent = model.GetLogger()->GetHydroUnitValues();
 
         // Total received by each reservoir = final content + everything it released.
@@ -497,10 +497,10 @@ TEST_F(PrevahPercolation, PercolationGatedBySoilMoisture) {
     SettingsBasin basinSettings;
     basinSettings.AddHydroUnit(1, 100);
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     ASSERT_TRUE(model.Initialize(_model, basinSettings));
 
     ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));
@@ -508,7 +508,7 @@ TEST_F(PrevahPercolation, PercolationGatedBySoilMoisture) {
 
     EXPECT_TRUE(model.Run());
 
-    vecAxd basinOutputs = model.GetLogger()->GetSubBasinValues();
+    vecAxd basinOutputs = model.GetLogger()->GetSubbasinValues();
 
     // Soil content (start of day): 0, 0, 50, 50, 50, 80, 80, 99, 99, 99 (no losses).
     // Gating: 0 below 70 (= 0.7 x 100); (SM/FC - 0.7)/0.3 above:
@@ -532,16 +532,16 @@ TEST_F(PrevahPercolation, ConductivityFactorScalesTheRamp) {
 
     SettingsBasin basinSettings;
     basinSettings.AddHydroUnit(1, 100);
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinSettings));
-    ModelHydro model(&subBasin);
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinSettings));
+    ModelHydro model(&subbasin);
     ASSERT_TRUE(model.Initialize(_model, basinSettings));
     ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
     EXPECT_TRUE(model.Run());
 
     vecDouble expectedOutputs = {0.0, 0.0, 0.0, 0.0, 0.0, 0.333333, 0.333333, 0.966667, 0.966667, 0.966667};
-    for (auto& basinOutput : model.GetLogger()->GetSubBasinValues()) {
+    for (auto& basinOutput : model.GetLogger()->GetSubbasinValues()) {
         ASSERT_EQ(basinOutput.size(), expectedOutputs.size());
         for (int j = 0; j < basinOutput.size(); ++j) {
             EXPECT_NEAR(basinOutput[j], expectedOutputs[j], 0.000001);
@@ -559,15 +559,15 @@ TEST_F(PrevahPercolation, ConstantBranchIgnoresTheSoilMoisture) {
 
     SettingsBasin basinSettings;
     basinSettings.AddHydroUnit(1, 100);
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinSettings));
-    ModelHydro model(&subBasin);
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinSettings));
+    ModelHydro model(&subbasin);
     ASSERT_TRUE(model.Initialize(_model, basinSettings));
     ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
     EXPECT_TRUE(model.Run());
 
-    for (auto& basinOutput : model.GetLogger()->GetSubBasinValues()) {
+    for (auto& basinOutput : model.GetLogger()->GetSubbasinValues()) {
         ASSERT_EQ(basinOutput.size(), 10);
         EXPECT_NEAR(basinOutput[0], 0.0, 0.000001);  // empty upper zone
         for (int j = 2; j < basinOutput.size(); ++j) {
@@ -580,8 +580,8 @@ TEST_F(PrevahPercolation, MissingGateBrickFailsInitialization) {
     SettingsBasin basinSettings;
     basinSettings.AddHydroUnit(1, 100);
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
     // Same structure but without the gate brick declaration.
     SettingsModel settings;
@@ -597,7 +597,7 @@ TEST_F(PrevahPercolation, MissingGateBrickFailsInitialization) {
     settings.AddProcessOutput("outlet");
     settings.AddLoggingToItem("outlet");
 
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     EXPECT_FALSE(model.Initialize(settings, basinSettings));
 }
 
@@ -650,10 +650,10 @@ class SeasonalMeltSnowpack : public ::testing::Test {
         SettingsBasin basinSettings;
         basinSettings.AddHydroUnit(1, 100);
 
-        SubBasin subBasin;
-        EXPECT_TRUE(subBasin.Initialize(basinSettings));
+        Subbasin subbasin;
+        EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
-        ModelHydro model(&subBasin);
+        ModelHydro model(&subbasin);
         ASSERT_TRUE(model.Initialize(_model, basinSettings));
 
         auto precipData = std::make_unique<TimeSeriesDataRegular>(startMjd, endMjd, 1, TimeUnit::Day);
@@ -764,10 +764,10 @@ class EtPrevahCanopy : public ::testing::Test {
         SettingsBasin basinSettings;
         basinSettings.AddHydroUnit(1, 100);
 
-        SubBasin subBasin;
-        EXPECT_TRUE(subBasin.Initialize(basinSettings));
+        Subbasin subbasin;
+        EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
-        ModelHydro model(&subBasin);
+        ModelHydro model(&subbasin);
         EXPECT_TRUE(model.Initialize(_model, basinSettings));
 
         EXPECT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));
@@ -850,10 +850,10 @@ TEST_F(SublimationPrevah, EvaporatesAtAgedAlbedoReducedPet) {
     SettingsBasin basinSettings;
     basinSettings.AddHydroUnit(1, 100);
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     ASSERT_TRUE(model.Initialize(_model, basinSettings));
 
     auto precip = std::make_unique<TimeSeriesDataRegular>(GetMJD(2020, 1, 1), GetMJD(2020, 1, 5), 1, TimeUnit::Day);
@@ -901,10 +901,10 @@ TEST_F(SublimationPrevah, HasPriorityOverMeltWhenPackDrains) {
     SettingsBasin basinSettings;
     basinSettings.AddHydroUnit(1, 100);
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     ASSERT_TRUE(model.Initialize(_model, basinSettings));
 
     auto precip = std::make_unique<TimeSeriesDataRegular>(GetMJD(2020, 1, 1), GetMJD(2020, 1, 5), 1, TimeUnit::Day);
@@ -981,9 +981,9 @@ class SnowHoldingPrevahCexliq : public ::testing::Test {
     vecAxxd Run() {
         SettingsBasin basinSettings;
         basinSettings.AddHydroUnit(1, 100);
-        SubBasin subBasin;
-        EXPECT_TRUE(subBasin.Initialize(basinSettings));
-        ModelHydro model(&subBasin);
+        Subbasin subbasin;
+        EXPECT_TRUE(subbasin.Initialize(basinSettings));
+        ModelHydro model(&subbasin);
         EXPECT_TRUE(model.Initialize(_model, basinSettings));
 
         auto precip = std::make_unique<TimeSeriesDataRegular>(GetMJD(2020, 1, 1), GetMJD(2020, 1, 4), 1, TimeUnit::Day);
@@ -1076,10 +1076,10 @@ TEST_F(SlowcompOverflow, DivertsExcessInflowBelowCap) {
     SettingsBasin basinSettings;
     basinSettings.AddHydroUnit(1, 100);
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     ASSERT_TRUE(model.Initialize(_model, basinSettings));
 
     auto precip = std::make_unique<TimeSeriesDataRegular>(GetMJD(2020, 1, 1), GetMJD(2020, 1, 4), 1, TimeUnit::Day);
@@ -1244,10 +1244,10 @@ class EtPrevahSoil : public ::testing::Test {
             basinSettings.AddLandCover(name, "generic_land_cover", fraction);
         }
 
-        SubBasin subBasin;
-        EXPECT_TRUE(subBasin.Initialize(basinSettings));
+        Subbasin subbasin;
+        EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
-        ModelHydro model(&subBasin);
+        ModelHydro model(&subbasin);
         EXPECT_TRUE(model.Initialize(_model, basinSettings));
 
         EXPECT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));
@@ -1318,10 +1318,10 @@ TEST_F(MenzelCanopy, CanopyContentFollowsMenzelFilling) {
     SettingsBasin basinSettings;
     basinSettings.AddHydroUnit(1, 100);
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     ASSERT_TRUE(model.Initialize(_model, basinSettings));
 
     ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));
@@ -1390,10 +1390,10 @@ class WetSurfacePrevah : public ::testing::Test {
         basinSettings.AddLandCover("ground", "generic_land_cover", 1.0 - wetlandFraction);
         basinSettings.AddLandCover("wetland", "generic_land_cover", wetlandFraction);
 
-        SubBasin subBasin;
-        EXPECT_TRUE(subBasin.Initialize(basinSettings));
+        Subbasin subbasin;
+        EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
-        ModelHydro model(&subBasin);
+        ModelHydro model(&subbasin);
         EXPECT_TRUE(model.Initialize(_model, basinSettings));
 
         // Day 1: 20 mm of warm rain fills SLZ1 through the wetland. Days 3-5: PET = 2.

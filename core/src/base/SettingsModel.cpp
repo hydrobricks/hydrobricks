@@ -77,15 +77,15 @@ void SettingsModel::AddHydroUnitBrick(const string& name, const string& type) {
     }
 }
 
-void SettingsModel::AddSubBasinBrick(const string& name, const string& type) {
+void SettingsModel::AddSubbasinBrick(const string& name, const string& type) {
     assert(_selectedStructure);
 
     BrickSettings brick;
     brick.name = name;
     brick.type = type;
 
-    _selectedStructure->subBasinBricks.push_back(brick);
-    _selectedBrick = &_selectedStructure->subBasinBricks[_selectedStructure->subBasinBricks.size() - 1];
+    _selectedStructure->subbasinBricks.push_back(brick);
+    _selectedBrick = &_selectedStructure->subbasinBricks[_selectedStructure->subbasinBricks.size() - 1];
 
     if (_logAll) {
         AddBrickLogging("water_content");
@@ -334,15 +334,15 @@ void SettingsModel::AddHydroUnitSplitter(const string& name, const string& type)
     _selectedSplitter = &_selectedStructure->hydroUnitSplitters[_selectedStructure->hydroUnitSplitters.size() - 1];
 }
 
-void SettingsModel::AddSubBasinSplitter(const string& name, const string& type) {
+void SettingsModel::AddSubbasinSplitter(const string& name, const string& type) {
     assert(_selectedStructure);
 
     SplitterSettings splitter;
     splitter.name = name;
     splitter.type = type;
 
-    _selectedStructure->subBasinSplitters.push_back(splitter);
-    _selectedSplitter = &_selectedStructure->subBasinSplitters[_selectedStructure->subBasinSplitters.size() - 1];
+    _selectedStructure->subbasinSplitters.push_back(splitter);
+    _selectedSplitter = &_selectedStructure->subbasinSplitters[_selectedStructure->subbasinSplitters.size() - 1];
 }
 
 void SettingsModel::AddSplitterParameter(const string& name, float value, const string& type) {
@@ -708,10 +708,10 @@ void SettingsModel::SelectHydroUnitBrick(int index) {
     _selectedProcess = nullptr;
 }
 
-void SettingsModel::SelectSubBasinBrick(int index) {
+void SettingsModel::SelectSubbasinBrick(int index) {
     assert(_selectedStructure);
 
-    _selectedBrick = &_selectedStructure->subBasinBricks[index];
+    _selectedBrick = &_selectedStructure->subbasinBricks[index];
     _selectedProcess = nullptr;
 }
 
@@ -728,9 +728,9 @@ bool SettingsModel::SelectHydroUnitBrickIfFound(const string& name) {
     return false;
 }
 
-bool SettingsModel::SelectSubBasinBrickIfFound(const string& name) {
+bool SettingsModel::SelectSubbasinBrickIfFound(const string& name) {
     assert(_selectedStructure);
-    for (auto& brick : _selectedStructure->subBasinBricks) {
+    for (auto& brick : _selectedStructure->subbasinBricks) {
         if (brick.name == name) {
             _selectedBrick = &brick;
             _selectedProcess = nullptr;
@@ -752,9 +752,9 @@ void SettingsModel::SelectHydroUnitBrickByName(const string& name) {
     SelectHydroUnitBrick(name);
 }
 
-void SettingsModel::SelectSubBasinBrick(const string& name) {
-    if (!SelectSubBasinBrickIfFound(name)) {
-        throw ModelConfigError(std::format("The sub-basin brick '{}' was not found", name));
+void SettingsModel::SelectSubbasinBrick(const string& name) {
+    if (!SelectSubbasinBrickIfFound(name)) {
+        throw ModelConfigError(std::format("The subbasin brick '{}' was not found", name));
     }
     _selectedProcess = nullptr;
 }
@@ -798,10 +798,10 @@ void SettingsModel::SelectHydroUnitSplitter(int index) {
     _selectedSplitter = &_selectedStructure->hydroUnitSplitters[index];
 }
 
-void SettingsModel::SelectSubBasinSplitter(int index) {
+void SettingsModel::SelectSubbasinSplitter(int index) {
     assert(_selectedStructure);
 
-    _selectedSplitter = &_selectedStructure->subBasinSplitters[index];
+    _selectedSplitter = &_selectedStructure->subbasinSplitters[index];
 }
 
 bool SettingsModel::SelectHydroUnitSplitterIfFound(const string& name) {
@@ -816,9 +816,9 @@ bool SettingsModel::SelectHydroUnitSplitterIfFound(const string& name) {
     return false;
 }
 
-bool SettingsModel::SelectSubBasinSplitterIfFound(const string& name) {
+bool SettingsModel::SelectSubbasinSplitterIfFound(const string& name) {
     assert(_selectedStructure);
-    for (auto& splitter : _selectedStructure->subBasinSplitters) {
+    for (auto& splitter : _selectedStructure->subbasinSplitters) {
         if (splitter.name == name) {
             _selectedSplitter = &splitter;
             return true;
@@ -834,9 +834,9 @@ void SettingsModel::SelectHydroUnitSplitter(const string& name) {
     }
 }
 
-void SettingsModel::SelectSubBasinSplitter(const string& name) {
-    if (!SelectSubBasinSplitterIfFound(name)) {
-        throw ModelConfigError(std::format("The sub-basin splitter '{}' was not found", name));
+void SettingsModel::SelectSubbasinSplitter(const string& name) {
+    if (!SelectSubbasinSplitterIfFound(name)) {
+        throw ModelConfigError(std::format("The subbasin splitter '{}' was not found", name));
     }
 }
 
@@ -905,11 +905,11 @@ vecStr SettingsModel::GetSelectedStructureLandCoverNames() const {
     return names;
 }
 
-vecStr SettingsModel::GetSubBasinLogLabels() const {
+vecStr SettingsModel::GetSubbasinLogLabels() const {
     assert(_selectedStructure);
 
-    // Union of the sub-basin log labels across structure variants (first-seen
-    // order). The sub-basin is catchment-level and normally shared, so this is
+    // Union of the subbasin log labels across structure variants (first-seen
+    // order). The subbasin is catchment-level and normally shared, so this is
     // typically a single structure's worth of labels.
     vecStr logNames;
     std::set<string> seen;
@@ -920,7 +920,7 @@ vecStr SettingsModel::GetSubBasinLogLabels() const {
     };
 
     for (auto& modelStructure : _modelStructures) {
-        for (auto& brick : modelStructure.subBasinBricks) {
+        for (auto& brick : modelStructure.subbasinBricks) {
             for (const auto& label : brick.logItems) {
                 add(brick.name + ":" + label);
             }
@@ -930,7 +930,7 @@ vecStr SettingsModel::GetSubBasinLogLabels() const {
                 }
             }
         }
-        for (auto& splitter : modelStructure.subBasinSplitters) {
+        for (auto& splitter : modelStructure.subbasinSplitters) {
             for (const auto& label : splitter.logItems) {
                 add(splitter.name + ":" + label);
             }
@@ -943,7 +943,7 @@ vecStr SettingsModel::GetSubBasinLogLabels() const {
     return logNames;
 }
 
-vecStr SettingsModel::GetSubBasinGenericLogLabels() const {
+vecStr SettingsModel::GetSubbasinGenericLogLabels() const {
     assert(_selectedStructure);
 
     vecStr logNames;
@@ -1012,7 +1012,7 @@ bool SettingsModel::SetParameterValue(const string& component, const string& nam
 
 bool SettingsModel::SetParameterValueInSelectedStructure(const string& component, const string& name, float value) {
     // Get target object
-    if (SelectHydroUnitBrickIfFound(component) || SelectSubBasinBrickIfFound(component)) {
+    if (SelectHydroUnitBrickIfFound(component) || SelectSubbasinBrickIfFound(component)) {
         if (BrickHasParameter(name)) {
             SetBrickParameterValue(name, value);
         } else {
@@ -1020,7 +1020,7 @@ bool SettingsModel::SetParameterValueInSelectedStructure(const string& component
             SetProcessParameterValue(name, value);
         }
         return true;
-    } else if (SelectHydroUnitSplitterIfFound(component) || SelectSubBasinSplitterIfFound(component)) {
+    } else if (SelectHydroUnitSplitterIfFound(component) || SelectSubbasinSplitterIfFound(component)) {
         SetSplitterParameterValue(name, value);
         return true;
     } else if (component.find("type:") != string::npos) {
@@ -1055,7 +1055,7 @@ bool SettingsModel::SetParameterValueInSelectedStructure(const string& component
         }
 
         // Set the parameter for all matching bricks - subbasins
-        for (auto& brick : _selectedStructure->subBasinBricks) {
+        for (auto& brick : _selectedStructure->subbasinBricks) {
             if (typeMatches(brick.type)) {
                 SelectHydroUnitBrick(brick.name);
                 if (BrickHasParameter(name)) {
@@ -1077,7 +1077,7 @@ bool SettingsModel::SetParameterValueInSelectedStructure(const string& component
 }
 
 Parameter* SettingsModel::FindParameterInSelectedStructure(const string& component, const string& name) {
-    if (SelectHydroUnitBrickIfFound(component) || SelectSubBasinBrickIfFound(component)) {
+    if (SelectHydroUnitBrickIfFound(component) || SelectSubbasinBrickIfFound(component)) {
         for (auto& parameter : _selectedBrick->parameters) {
             if (parameter.GetName() == name) {
                 return &parameter;
@@ -1093,7 +1093,7 @@ Parameter* SettingsModel::FindParameterInSelectedStructure(const string& compone
         return nullptr;
     }
 
-    if (SelectHydroUnitSplitterIfFound(component) || SelectSubBasinSplitterIfFound(component)) {
+    if (SelectHydroUnitSplitterIfFound(component) || SelectSubbasinSplitterIfFound(component)) {
         for (auto& parameter : _selectedSplitter->parameters) {
             if (parameter.GetName() == name) {
                 return &parameter;
@@ -1240,9 +1240,9 @@ vector<Parameter*> SettingsModel::GetParametersWithModifier() {
 
     for (auto& modelStructure : _modelStructures) {
         collectBricks(modelStructure.hydroUnitBricks);
-        collectBricks(modelStructure.subBasinBricks);
+        collectBricks(modelStructure.subbasinBricks);
         collectSplitters(modelStructure.hydroUnitSplitters);
-        collectSplitters(modelStructure.subBasinSplitters);
+        collectSplitters(modelStructure.subbasinSplitters);
     }
 
     return result;

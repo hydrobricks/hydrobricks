@@ -61,10 +61,10 @@ TEST_F(ActionsInModel, LandCoverChangeWorks) {
     basinSettings.AddLandCover("ground", "", 0.5);
     basinSettings.AddLandCover("glacier", "", 0.5);
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     EXPECT_TRUE(model.Initialize(_model, basinSettings));
     EXPECT_TRUE(model.IsValid());
 
@@ -85,10 +85,10 @@ TEST_F(ActionsInModel, LandCoverChangeWorks) {
 
     EXPECT_TRUE(model.Run());
 
-    EXPECT_NEAR(subBasin.GetHydroUnit(0)->GetLandCover("glacier")->GetAreaFraction(), 0.5, 0.0000001);
-    EXPECT_NEAR(subBasin.GetHydroUnit(1)->GetLandCover("glacier")->GetAreaFraction(), 0.8f, 0.0000001);
-    EXPECT_NEAR(subBasin.GetHydroUnit(1)->GetLandCover("ground")->GetAreaFraction(), 0.2f, 0.0000001);
-    EXPECT_NEAR(subBasin.GetHydroUnit(2)->GetLandCover("glacier")->GetAreaFraction(), 0.4f, 0.0000001);
+    EXPECT_NEAR(subbasin.GetHydroUnit(0)->GetLandCover("glacier")->GetAreaFraction(), 0.5, 0.0000001);
+    EXPECT_NEAR(subbasin.GetHydroUnit(1)->GetLandCover("glacier")->GetAreaFraction(), 0.8f, 0.0000001);
+    EXPECT_NEAR(subbasin.GetHydroUnit(1)->GetLandCover("ground")->GetAreaFraction(), 0.2f, 0.0000001);
+    EXPECT_NEAR(subbasin.GetHydroUnit(2)->GetLandCover("glacier")->GetAreaFraction(), 0.4f, 0.0000001);
 }
 
 TEST_F(ActionsInModel, LandCoverChangeConservesWaterBalance) {
@@ -97,10 +97,10 @@ TEST_F(ActionsInModel, LandCoverChangeConservesWaterBalance) {
     basinSettings.AddLandCover("ground", "", 0.5);
     basinSettings.AddLandCover("glacier", "", 0.5);
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     EXPECT_TRUE(model.Initialize(_model, basinSettings));
     EXPECT_TRUE(model.IsValid());
 
@@ -167,10 +167,10 @@ TEST_F(ActionsInModel, GlacierEvolutionDeltaHWorks) {
     basinSettings.AddLandCover("ground", "", 0.5);
     basinSettings.AddLandCover("glacier", "", 0.5);
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     EXPECT_TRUE(model.Initialize(_model, basinSettings));
     EXPECT_TRUE(model.IsValid());
 
@@ -194,10 +194,10 @@ TEST_F(ActionsInModel, GlacierEvolutionDeltaHWorks) {
 
     EXPECT_TRUE(model.Run());
 
-    EXPECT_NEAR(subBasin.GetHydroUnit(0)->GetLandCover("glacier")->GetAreaFraction(), 0.0, 0.0000001);
-    EXPECT_NEAR(subBasin.GetHydroUnit(1)->GetLandCover("glacier")->GetAreaFraction(), 0.0, 0.0000001);
-    EXPECT_NEAR(subBasin.GetHydroUnit(1)->GetLandCover("ground")->GetAreaFraction(), 1.0, 0.0000001);
-    EXPECT_NEAR(subBasin.GetHydroUnit(2)->GetLandCover("glacier")->GetAreaFraction(), 0.0, 0.0000001);
+    EXPECT_NEAR(subbasin.GetHydroUnit(0)->GetLandCover("glacier")->GetAreaFraction(), 0.0, 0.0000001);
+    EXPECT_NEAR(subbasin.GetHydroUnit(1)->GetLandCover("glacier")->GetAreaFraction(), 0.0, 0.0000001);
+    EXPECT_NEAR(subbasin.GetHydroUnit(1)->GetLandCover("ground")->GetAreaFraction(), 1.0, 0.0000001);
+    EXPECT_NEAR(subbasin.GetHydroUnit(2)->GetLandCover("glacier")->GetAreaFraction(), 0.0, 0.0000001);
 }
 
 TEST_F(ActionsInModel, LandCoverChangeIsRestoredOnRerun) {
@@ -214,10 +214,10 @@ TEST_F(ActionsInModel, LandCoverChangeIsRestoredOnRerun) {
     basinSettings.AddLandCover("ground", "", 0.5);
     basinSettings.AddLandCover("glacier", "", 0.5);
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     EXPECT_TRUE(model.Initialize(_model, basinSettings));
     EXPECT_TRUE(model.IsValid());
 
@@ -245,10 +245,10 @@ TEST_F(ActionsInModel, LandCoverChangeIsRestoredOnRerun) {
     double discharge2 = model.GetLogger()->GetTotalOutletDischarge();
 
     EXPECT_NEAR(discharge1, discharge2, 1e-8);
-    EXPECT_NEAR(subBasin.GetHydroUnit(0)->GetLandCover("glacier")->GetAreaFraction(), 0.5, 0.0000001);
-    EXPECT_NEAR(subBasin.GetHydroUnit(1)->GetLandCover("glacier")->GetAreaFraction(), 0.8, 0.0000001);
-    EXPECT_NEAR(subBasin.GetHydroUnit(1)->GetLandCover("ground")->GetAreaFraction(), 0.2, 0.0000001);
-    EXPECT_NEAR(subBasin.GetHydroUnit(2)->GetLandCover("glacier")->GetAreaFraction(), 0.4, 0.0000001);
+    EXPECT_NEAR(subbasin.GetHydroUnit(0)->GetLandCover("glacier")->GetAreaFraction(), 0.5, 0.0000001);
+    EXPECT_NEAR(subbasin.GetHydroUnit(1)->GetLandCover("glacier")->GetAreaFraction(), 0.8, 0.0000001);
+    EXPECT_NEAR(subbasin.GetHydroUnit(1)->GetLandCover("ground")->GetAreaFraction(), 0.2, 0.0000001);
+    EXPECT_NEAR(subbasin.GetHydroUnit(2)->GetLandCover("glacier")->GetAreaFraction(), 0.4, 0.0000001);
 }
 
 TEST_F(ActionsInModel, GlacierEvolutionDeltaHIsRestoredOnRerun) {
@@ -281,10 +281,10 @@ TEST_F(ActionsInModel, GlacierEvolutionDeltaHIsRestoredOnRerun) {
         basinSettings.AddLandCover("glacier", "", 0.5);
     }
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     EXPECT_TRUE(model.Initialize(_model, basinSettings));
     EXPECT_TRUE(model.IsValid());
 
@@ -316,10 +316,10 @@ TEST_F(ActionsInModel, GlacierEvolutionDeltaHIsRestoredOnRerun) {
     double discharge2 = model.GetLogger()->GetTotalOutletDischarge();
 
     EXPECT_NEAR(discharge1, discharge2, 1e-6);
-    EXPECT_NEAR(subBasin.GetHydroUnit(0)->GetLandCover("glacier")->GetAreaFraction(), 0.0, 0.0000001);
-    EXPECT_NEAR(subBasin.GetHydroUnit(1)->GetLandCover("glacier")->GetAreaFraction(), 0.0, 0.0000001);
-    EXPECT_NEAR(subBasin.GetHydroUnit(1)->GetLandCover("ground")->GetAreaFraction(), 1.0, 0.0000001);
-    EXPECT_NEAR(subBasin.GetHydroUnit(2)->GetLandCover("glacier")->GetAreaFraction(), 0.0, 0.0000001);
+    EXPECT_NEAR(subbasin.GetHydroUnit(0)->GetLandCover("glacier")->GetAreaFraction(), 0.0, 0.0000001);
+    EXPECT_NEAR(subbasin.GetHydroUnit(1)->GetLandCover("glacier")->GetAreaFraction(), 0.0, 0.0000001);
+    EXPECT_NEAR(subbasin.GetHydroUnit(1)->GetLandCover("ground")->GetAreaFraction(), 1.0, 0.0000001);
+    EXPECT_NEAR(subbasin.GetHydroUnit(2)->GetLandCover("glacier")->GetAreaFraction(), 0.0, 0.0000001);
 }
 
 class ActionsInModel2LandCovers : public ::testing::Test {
@@ -376,10 +376,10 @@ TEST_F(ActionsInModel2LandCovers, LandCoverChangeWorks) {
     basinSettings.AddLandCover("glacier_ice", "", 0.3);
     basinSettings.AddLandCover("glacier_debris", "", 0.2);
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     EXPECT_TRUE(model.Initialize(_model, basinSettings));
     EXPECT_TRUE(model.IsValid());
 
@@ -401,15 +401,15 @@ TEST_F(ActionsInModel2LandCovers, LandCoverChangeWorks) {
 
     EXPECT_TRUE(model.Run());
 
-    EXPECT_NEAR(subBasin.GetHydroUnit(0)->GetLandCover("ground")->GetAreaFraction(), 0.5, 0.0000001);
-    EXPECT_NEAR(subBasin.GetHydroUnit(0)->GetLandCover("glacier_ice")->GetAreaFraction(), 0.0, 0.0000001);
-    EXPECT_NEAR(subBasin.GetHydroUnit(0)->GetLandCover("glacier_debris")->GetAreaFraction(), 0.5, 0.0000001);
-    EXPECT_NEAR(subBasin.GetHydroUnit(1)->GetLandCover("ground")->GetAreaFraction(), 0.5, 0.0000001);
-    EXPECT_NEAR(subBasin.GetHydroUnit(1)->GetLandCover("glacier_ice")->GetAreaFraction(), 0.1, 0.0000001);
-    EXPECT_NEAR(subBasin.GetHydroUnit(1)->GetLandCover("glacier_debris")->GetAreaFraction(), 0.4, 0.0000001);
-    EXPECT_NEAR(subBasin.GetHydroUnit(2)->GetLandCover("ground")->GetAreaFraction(), 0.5, 0.0000001);
-    EXPECT_NEAR(subBasin.GetHydroUnit(2)->GetLandCover("glacier_ice")->GetAreaFraction(), 0.2, 0.0000001);
-    EXPECT_NEAR(subBasin.GetHydroUnit(2)->GetLandCover("glacier_debris")->GetAreaFraction(), 0.3, 0.0000001);
+    EXPECT_NEAR(subbasin.GetHydroUnit(0)->GetLandCover("ground")->GetAreaFraction(), 0.5, 0.0000001);
+    EXPECT_NEAR(subbasin.GetHydroUnit(0)->GetLandCover("glacier_ice")->GetAreaFraction(), 0.0, 0.0000001);
+    EXPECT_NEAR(subbasin.GetHydroUnit(0)->GetLandCover("glacier_debris")->GetAreaFraction(), 0.5, 0.0000001);
+    EXPECT_NEAR(subbasin.GetHydroUnit(1)->GetLandCover("ground")->GetAreaFraction(), 0.5, 0.0000001);
+    EXPECT_NEAR(subbasin.GetHydroUnit(1)->GetLandCover("glacier_ice")->GetAreaFraction(), 0.1, 0.0000001);
+    EXPECT_NEAR(subbasin.GetHydroUnit(1)->GetLandCover("glacier_debris")->GetAreaFraction(), 0.4, 0.0000001);
+    EXPECT_NEAR(subbasin.GetHydroUnit(2)->GetLandCover("ground")->GetAreaFraction(), 0.5, 0.0000001);
+    EXPECT_NEAR(subbasin.GetHydroUnit(2)->GetLandCover("glacier_ice")->GetAreaFraction(), 0.2, 0.0000001);
+    EXPECT_NEAR(subbasin.GetHydroUnit(2)->GetLandCover("glacier_debris")->GetAreaFraction(), 0.3, 0.0000001);
 
     Logger* logger = model.GetLogger();
 
@@ -438,10 +438,10 @@ TEST_F(ActionsInModel2LandCovers, DatesGetSortedCorrectly) {
     basinSettings.AddLandCover("glacier_ice", "", 0.3);
     basinSettings.AddLandCover("glacier_debris", "", 0.2);
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     EXPECT_TRUE(model.Initialize(_model, basinSettings));
     EXPECT_TRUE(model.IsValid());
 
@@ -478,10 +478,10 @@ TEST_F(ActionsInModel, GlacierSnowToIceTransformationWorks) {
 
     _model.SetTimer("2020-09-25", "2020-10-04", 1, "day");
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     EXPECT_TRUE(model.Initialize(_model, basinSettings));
     EXPECT_TRUE(model.IsValid());
 
@@ -501,7 +501,7 @@ TEST_F(ActionsInModel, GlacierSnowToIceTransformationWorks) {
     auto tsPet = std::make_unique<TimeSeriesUniform>(VariableType::PET);
     tsPet->SetData(std::move(pet));
 
-    subBasin.GetHydroUnit(0)->GetLandCover("glacier")->UpdateContent(10000.0f, ContentType::Ice);
+    subbasin.GetHydroUnit(0)->GetLandCover("glacier")->UpdateContent(10000.0f, ContentType::Ice);
 
     ASSERT_TRUE(model.AddTimeSeries(std::move(tsPrecip)));
     ASSERT_TRUE(model.AddTimeSeries(std::move(tsTemp)));
@@ -515,6 +515,6 @@ TEST_F(ActionsInModel, GlacierSnowToIceTransformationWorks) {
 
     EXPECT_TRUE(model.Run());
 
-    EXPECT_NEAR(subBasin.GetHydroUnit(0)->GetBrick("glacier_snowpack")->GetContent(ContentType::Snow), 0.0, 0.0000001);
-    EXPECT_NEAR(subBasin.GetHydroUnit(0)->GetLandCover("glacier")->GetContent(ContentType::Ice), 10100.0, 0.0000001);
+    EXPECT_NEAR(subbasin.GetHydroUnit(0)->GetBrick("glacier_snowpack")->GetContent(ContentType::Snow), 0.0, 0.0000001);
+    EXPECT_NEAR(subbasin.GetHydroUnit(0)->GetLandCover("glacier")->GetContent(ContentType::Ice), 10100.0, 0.0000001);
 }

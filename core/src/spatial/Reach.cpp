@@ -4,7 +4,7 @@
 #include <numeric>
 
 #include "SettingsModel.h"
-#include "SubBasin.h"
+#include "Subbasin.h"
 
 namespace {
 constexpr double kSecondsPerDay = 86400.0;
@@ -19,7 +19,7 @@ constexpr double kMaxCelerity = 10.0;  // m/s
 constexpr double kMinDischarge = 1e-9;  // m3/s
 }  // namespace
 
-Reach::Reach(SubBasin* subbasin)
+Reach::Reach(Subbasin* subbasin)
     : _subbasin(subbasin) {
     assert(subbasin);
 }

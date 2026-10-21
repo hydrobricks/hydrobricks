@@ -110,10 +110,10 @@ TEST_F(SnowRedistributionFreyModel, ConstantDensityConservesMass) {
 
     SettingsBasin basinSettings = BuildBasin();
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     EXPECT_TRUE(model.Initialize(_model, basinSettings, false));
 
     ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));
@@ -150,10 +150,10 @@ TEST_F(SnowRedistributionFreyModel, DynamicDensityConservesMass) {
 
     SettingsBasin basinSettings = BuildBasin();
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     EXPECT_TRUE(model.Initialize(_model, basinSettings, false));
 
     ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));

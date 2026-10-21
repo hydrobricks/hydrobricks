@@ -286,9 +286,9 @@ class SettingsBasin {
     }
 
     /**
-     * Get the total area of the sub basin (all hydro units).
+     * Get the total area of the subbasin (all hydro units).
      *
-     * @return total area of the sub basin.
+     * @return total area of the subbasin.
      */
     [[nodiscard]] double GetTotalArea() const;
 

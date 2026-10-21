@@ -16,7 +16,7 @@
 #include "ParameterModifier.h"
 #include "SettingsBasin.h"
 #include "SettingsModel.h"
-#include "SubBasin.h"
+#include "Subbasin.h"
 #include "Utils.h"
 
 namespace py = pybind11;
@@ -99,16 +99,16 @@ py::dict BrickToDict(const BrickSettings& brick, const string& attach, bool isLa
     return d;
 }
 
-py::list SplittersToList(SettingsModel& settings, bool subBasin) {
+py::list SplittersToList(SettingsModel& settings, bool subbasin) {
     py::list list;
-    int count = subBasin ? settings.GetSubBasinSplitterCount() : settings.GetHydroUnitSplitterCount();
+    int count = subbasin ? settings.GetSubbasinSplitterCount() : settings.GetHydroUnitSplitterCount();
     for (int i = 0; i < count; ++i) {
-        const SplitterSettings& s = subBasin ? settings.GetSubBasinSplitterSettings(i)
+        const SplitterSettings& s = subbasin ? settings.GetSubbasinSplitterSettings(i)
                                              : settings.GetHydroUnitSplitterSettings(i);
         py::dict d;
         d["name"] = s.name;
         d["kind"] = s.type;
-        d["attach"] = subBasin ? "subbasin" : "hydro_unit";
+        d["attach"] = subbasin ? "subbasin" : "hydro_unit";
         d["forcing"] = ForcingToList(s.forcing);
         d["outputs"] = OutputsToList(s.outputs);
         list.append(d);
@@ -137,15 +137,15 @@ py::list ExportStructure(SettingsModel& settings) {
                                                landCoverIdx.count(i) > 0, surfaceIdx.count(i) > 0));
         }
 
-        py::list subBasinBricks;
-        for (int i = 0; i < settings.GetSubBasinBrickCount(); ++i) {
-            subBasinBricks.append(BrickToDict(settings.GetSubBasinBrickSettings(i), "subbasin", false, false));
+        py::list subbasinBricks;
+        for (int i = 0; i < settings.GetSubbasinBrickCount(); ++i) {
+            subbasinBricks.append(BrickToDict(settings.GetSubbasinBrickSettings(i), "subbasin", false, false));
         }
 
         py::dict structure;
         structure["id"] = id;
         structure["hydro_unit_bricks"] = hydroUnitBricks;
-        structure["subbasin_bricks"] = subBasinBricks;
+        structure["subbasin_bricks"] = subbasinBricks;
         structure["hydro_unit_splitters"] = SplittersToList(settings, false);
         structure["subbasin_splitters"] = SplittersToList(settings, true);
         structures.append(structure);
@@ -199,7 +199,7 @@ PYBIND11_MODULE(_hydrobricks, m) {
         .def("add_land_cover_brick", &SettingsModel::AddLandCoverBrick, "Add a land cover brick.", "name"_a, "kind"_a)
         .def("add_hydro_unit_brick", &SettingsModel::AddHydroUnitBrick, "Add a hydro unit brick.", "name"_a,
              "kind"_a = "storage")
-        .def("add_subbasin_brick", &SettingsModel::AddSubBasinBrick, "Add a subbasin brick.", "name"_a,
+        .def("add_subbasin_brick", &SettingsModel::AddSubbasinBrick, "Add a subbasin brick.", "name"_a,
              "kind"_a = "storage")
         .def("select_hydro_unit_brick", &SettingsModel::SelectHydroUnitBrickByName, "Select a hydro unit brick.",
              "name"_a)
@@ -330,11 +330,11 @@ PYBIND11_MODULE(_hydrobricks, m) {
              "Get the number of lateral connections.")
         .def("clear", &SettingsBasin::Clear, "Clear the basin settings.");
 
-    py::class_<SubBasin>(m, "SubBasin")
+    py::class_<Subbasin>(m, "Subbasin")
         .def(py::init<>())
         .def(
             "init",
-            [](SubBasin& s, SettingsBasin& bs) {
+            [](Subbasin& s, SettingsBasin& bs) {
                 auto r = s.Initialize(bs);
                 if (!r) throw py::value_error(r.error());
             },
@@ -386,7 +386,7 @@ PYBIND11_MODULE(_hydrobricks, m) {
                 auto r = m.InitializeWithBasin(ms, bs);
                 if (!r) throw py::value_error(r.error());
             },
-            "Initialize the model and create the sub basin.", "model_settings"_a, "basin_settings"_a)
+            "Initialize the model and create the subbasin.", "model_settings"_a, "basin_settings"_a)
         .def("add_action", &ModelHydro::AddAction, "Adding a action to the model.", "action"_a)
         .def("get_action_count", &ModelHydro::GetActionCount, "Get the number of actions.")
         .def("get_sporadic_action_item_count", &ModelHydro::GetSporadicActionItemCount,

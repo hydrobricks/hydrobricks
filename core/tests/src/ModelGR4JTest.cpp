@@ -36,11 +36,11 @@ TEST_F(ModelGR4JBasic, ModelBuildsCorrectly) {
     basinSettings.AddHydroUnit(1, 100);
     basinSettings.AddLandCover("ground", "", 1.0);
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
     GenerateStructureGR4J(_model);
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     EXPECT_TRUE(model.Initialize(_model, basinSettings));
     EXPECT_TRUE(model.IsValid());
 }
@@ -50,11 +50,11 @@ TEST_F(ModelGR4JBasic, ModelRunsCorrectly) {
     basinSettings.AddHydroUnit(1, 100);
     basinSettings.AddLandCover("ground", "", 1.0);
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
     GenerateStructureGR4J(_model);
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     EXPECT_TRUE(model.Initialize(_model, basinSettings));
     EXPECT_TRUE(model.IsValid());
 
@@ -70,11 +70,11 @@ TEST_F(ModelGR4JBasic, WaterBalanceClosesX2Zero) {
     basinSettings.AddHydroUnit(1, 100);
     basinSettings.AddLandCover("ground", "", 1.0);
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
     GenerateStructureGR4J(_model);
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     EXPECT_TRUE(model.Initialize(_model, basinSettings));
     EXPECT_TRUE(model.IsValid());
 
@@ -96,11 +96,11 @@ TEST_F(ModelGR4JBasic, WaterBalanceClosesX2ZeroWithSolver) {
     basinSettings.AddHydroUnit(1, 100);
     basinSettings.AddLandCover("ground", "", 1.0);
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
     GenerateStructureGR4J(_model, false);
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     EXPECT_TRUE(model.Initialize(_model, basinSettings));
     EXPECT_TRUE(model.IsValid());
 
@@ -122,11 +122,11 @@ TEST_F(ModelGR4JBasic, WaterBalanceClosesNoPrecip) {
     basinSettings.AddHydroUnit(1, 100);
     basinSettings.AddLandCover("ground", "", 1.0);
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
     GenerateStructureGR4J(_model);
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     EXPECT_TRUE(model.Initialize(_model, basinSettings));
     EXPECT_TRUE(model.IsValid());
 
@@ -153,11 +153,11 @@ TEST_F(ModelGR4JBasic, WaterBalanceClosesNoPrecipWithSolver) {
     basinSettings.AddHydroUnit(1, 100);
     basinSettings.AddLandCover("ground", "", 1.0);
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
     GenerateStructureGR4J(_model, false);
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     EXPECT_TRUE(model.Initialize(_model, basinSettings));
     EXPECT_TRUE(model.IsValid());
 
@@ -184,11 +184,11 @@ TEST_F(ModelGR4JBasic, WaterBalanceClosesNoPET) {
     basinSettings.AddHydroUnit(1, 100);
     basinSettings.AddLandCover("ground", "", 1.0);
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
     GenerateStructureGR4J(_model);
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     EXPECT_TRUE(model.Initialize(_model, basinSettings));
     EXPECT_TRUE(model.IsValid());
 
@@ -215,11 +215,11 @@ TEST_F(ModelGR4JBasic, WaterBalanceClosesNoPETWithSolver) {
     basinSettings.AddHydroUnit(1, 100);
     basinSettings.AddLandCover("ground", "", 1.0);
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
     GenerateStructureGR4J(_model, false);
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     EXPECT_TRUE(model.Initialize(_model, basinSettings));
     EXPECT_TRUE(model.IsValid());
 
@@ -246,15 +246,15 @@ TEST_F(ModelGR4JBasic, PositiveExchangeRunsSuccessfully) {
     basinSettings.AddHydroUnit(1, 100);
     basinSettings.AddLandCover("ground", "", 1.0);
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
     GenerateStructureGR4J(_model);
     _model.SelectHydroUnitBrick("uh_input");
     _model.SelectProcess("routing");
     _model.SetProcessParameterValue("exchange_factor", 1.0f);
 
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     EXPECT_TRUE(model.Initialize(_model, basinSettings));
     EXPECT_TRUE(model.IsValid());
 
@@ -271,15 +271,15 @@ TEST_F(ModelGR4JBasic, NegativeExchangeDischargeNonNegative) {
     basinSettings.AddHydroUnit(1, 100);
     basinSettings.AddLandCover("ground", "", 1.0);
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
     GenerateStructureGR4J(_model);
     _model.SelectHydroUnitBrick("uh_input");
     _model.SelectProcess("routing");
     _model.SetProcessParameterValue("exchange_factor", -5.0f);
 
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     EXPECT_TRUE(model.Initialize(_model, basinSettings));
     EXPECT_TRUE(model.IsValid());
 
@@ -296,15 +296,15 @@ TEST_F(ModelGR4JBasic, SmallX4Works) {
     basinSettings.AddHydroUnit(1, 100);
     basinSettings.AddLandCover("ground", "", 1.0);
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
     GenerateStructureGR4J(_model);
     _model.SelectHydroUnitBrick("uh_input");
     _model.SelectProcess("routing");
     _model.SetProcessParameterValue("uh_base_time", 0.51f);
 
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     EXPECT_TRUE(model.Initialize(_model, basinSettings));
     EXPECT_TRUE(model.IsValid());
 
@@ -321,14 +321,14 @@ TEST_F(ModelGR4JBasic, LargeX1BalanceCloses) {
     basinSettings.AddHydroUnit(1, 100);
     basinSettings.AddLandCover("ground", "", 1.0);
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
     GenerateStructureGR4J(_model);
     _model.SelectHydroUnitBrick("production_store");
     _model.SetBrickParameterValue("capacity", 1000.0f);
 
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     EXPECT_TRUE(model.Initialize(_model, basinSettings));
     EXPECT_TRUE(model.IsValid());
 
@@ -350,15 +350,15 @@ TEST_F(ModelGR4JBasic, SmallX3Works) {
     basinSettings.AddHydroUnit(1, 100);
     basinSettings.AddLandCover("ground", "", 1.0);
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
     GenerateStructureGR4J(_model);
     _model.SelectHydroUnitBrick("uh_input");
     _model.SelectProcess("routing");
     _model.SetProcessParameterValue("routing_capacity", 1.0f);
 
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     EXPECT_TRUE(model.Initialize(_model, basinSettings));
     EXPECT_TRUE(model.IsValid());
 
@@ -375,8 +375,8 @@ TEST_F(ModelGR4JBasic, GivesSameResultsAsReferenceNoExchange) {
     basinSettings.AddHydroUnit(1, 100);
     basinSettings.AddLandCover("ground", "", 1.0);
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
     GenerateStructureGR4J(_model);
     _model.SelectHydroUnitBrick("production_store");
@@ -387,7 +387,7 @@ TEST_F(ModelGR4JBasic, GivesSameResultsAsReferenceNoExchange) {
     _model.SetProcessParameterValue("routing_capacity", 100.0f);  // X3
     _model.SetProcessParameterValue("uh_base_time", 2.0f);        // X4
 
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     EXPECT_TRUE(model.Initialize(_model, basinSettings));
     EXPECT_TRUE(model.IsValid());
 
@@ -412,8 +412,8 @@ TEST_F(ModelGR4JBasic, SolverGetsCloseToReferenceNoExchange) {
     basinSettings.AddHydroUnit(1, 100);
     basinSettings.AddLandCover("ground", "", 1.0);
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
     GenerateStructureGR4J(_model, false);
     _model.SelectHydroUnitBrick("production_store");
@@ -424,7 +424,7 @@ TEST_F(ModelGR4JBasic, SolverGetsCloseToReferenceNoExchange) {
     _model.SetProcessParameterValue("routing_capacity", 100.0f);  // X3
     _model.SetProcessParameterValue("uh_base_time", 2.0f);        // X4
 
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     EXPECT_TRUE(model.Initialize(_model, basinSettings));
     EXPECT_TRUE(model.IsValid());
 
@@ -449,8 +449,8 @@ TEST_F(ModelGR4JBasic, GivesSameResultsAsReferencePosExchange) {
     basinSettings.AddHydroUnit(1, 100);
     basinSettings.AddLandCover("ground", "", 1.0);
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
     GenerateStructureGR4J(_model);
     _model.SelectHydroUnitBrick("production_store");
@@ -461,7 +461,7 @@ TEST_F(ModelGR4JBasic, GivesSameResultsAsReferencePosExchange) {
     _model.SetProcessParameterValue("routing_capacity", 90.0f);  // X3
     _model.SetProcessParameterValue("uh_base_time", 1.7f);       // X4
 
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     EXPECT_TRUE(model.Initialize(_model, basinSettings));
     EXPECT_TRUE(model.IsValid());
 
@@ -486,8 +486,8 @@ TEST_F(ModelGR4JBasic, GivesSameResultsAsReferenceNegExchange) {
     basinSettings.AddHydroUnit(1, 100);
     basinSettings.AddLandCover("ground", "", 1.0);
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
     GenerateStructureGR4J(_model);
     _model.SelectHydroUnitBrick("production_store");
@@ -498,7 +498,7 @@ TEST_F(ModelGR4JBasic, GivesSameResultsAsReferenceNegExchange) {
     _model.SetProcessParameterValue("routing_capacity", 90.0f);  // X3
     _model.SetProcessParameterValue("uh_base_time", 1.7f);       // X4
 
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     EXPECT_TRUE(model.Initialize(_model, basinSettings));
     EXPECT_TRUE(model.IsValid());
 
@@ -527,12 +527,12 @@ TEST_F(ModelGR4JBasic, RejectsASubDailyTimeStep) {
     basinSettings.AddHydroUnit(1, 100);
     basinSettings.AddLandCover("ground", "", 1.0);
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
     _model.SetTimer("2020-01-01", "2020-01-15", 1, "hour");
     GenerateStructureGR4J(_model);
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
 
     auto result = model.Initialize(_model, basinSettings);
     ASSERT_FALSE(result);
@@ -544,12 +544,12 @@ TEST_F(ModelGR4JBasic, AcceptsADailyStepSpelledInHours) {
     basinSettings.AddHydroUnit(1, 100);
     basinSettings.AddLandCover("ground", "", 1.0);
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
     _model.SetTimer("2020-01-01", "2020-01-15", 24, "hour");
     GenerateStructureGR4J(_model);
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
 
     EXPECT_TRUE(model.Initialize(_model, basinSettings));
 }

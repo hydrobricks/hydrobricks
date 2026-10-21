@@ -76,11 +76,11 @@ struct ModelStructure {
     int id;
     vecStr logItems;
     vector<BrickSettings> hydroUnitBricks;
-    vector<BrickSettings> subBasinBricks;
+    vector<BrickSettings> subbasinBricks;
     vecInt landCoverBricks;
     vecInt surfaceComponentBricks;
     vector<SplitterSettings> hydroUnitSplitters;
-    vector<SplitterSettings> subBasinSplitters;
+    vector<SplitterSettings> subbasinSplitters;
 };
 
 class SettingsModel {
@@ -102,7 +102,7 @@ class SettingsModel {
      * discharge 1 m3/s, x 0.2, width 10 m, Manning roughness 0.035).
      *
      * @param scheme name of the routing scheme.
-     * @param routeLocalRunoff whether the sub basin's own runoff is routed through half of its reach, instead
+     * @param routeLocalRunoff whether the subbasin's own runoff is routed through half of its reach, instead
      * of joining at the outlet.
      */
     void SetChannelRouting(const string& scheme, bool routeLocalRunoff = false);
@@ -137,12 +137,12 @@ class SettingsModel {
     void AddHydroUnitBrick(const string& name, const std::string& type = "storage");
 
     /**
-     * Add a sub-basin brick to the model (e.g. lumped storage).
+     * Add a subbasin brick to the model (e.g. lumped storage).
      *
-     * @param name name of the sub-basin brick.
-     * @param type type of the sub-basin brick.
+     * @param name name of the subbasin brick.
+     * @param type type of the subbasin brick.
      */
-    void AddSubBasinBrick(const string& name, const std::string& type = "storage");
+    void AddSubbasinBrick(const string& name, const std::string& type = "storage");
 
     /**
      * Add a land cover brick to the model (e.g. glacier).
@@ -283,12 +283,12 @@ class SettingsModel {
     void AddHydroUnitSplitter(const string& name, const string& type);
 
     /**
-     * Add a sub-basin splitter to the selected structure.
+     * Add a subbasin splitter to the selected structure.
      *
-     * @param name name of the sub-basin splitter.
-     * @param type type of the sub-basin splitter.
+     * @param name name of the subbasin splitter.
+     * @param type type of the subbasin splitter.
      */
-    void AddSubBasinSplitter(const string& name, const string& type);
+    void AddSubbasinSplitter(const string& name, const string& type);
 
     /**
      * Add a parameter to the selected splitter.
@@ -487,11 +487,11 @@ class SettingsModel {
     void SelectHydroUnitBrick(int index);
 
     /**
-     * Select a sub-basin brick by its index.
+     * Select a subbasin brick by its index.
      *
-     * @param index index of the sub-basin brick.
+     * @param index index of the subbasin brick.
      */
-    void SelectSubBasinBrick(int index);
+    void SelectSubbasinBrick(int index);
 
     /**
      * Select a hydro unit brick by its name. Tolerate if the brick is not found.
@@ -502,12 +502,12 @@ class SettingsModel {
     bool SelectHydroUnitBrickIfFound(const string& name);
 
     /**
-     * Select a sub-basin brick by its name. Tolerate if the brick is not found.
+     * Select a subbasin brick by its name. Tolerate if the brick is not found.
      *
-     * @param name name of the sub-basin brick.
-     * @return true if the sub-basin brick is found, false otherwise.
+     * @param name name of the subbasin brick.
+     * @return true if the subbasin brick is found, false otherwise.
      */
-    bool SelectSubBasinBrickIfFound(const string& name);
+    bool SelectSubbasinBrickIfFound(const string& name);
 
     /**
      * Select a hydro unit brick by its name. Raise an exception if the brick is not found.
@@ -525,11 +525,11 @@ class SettingsModel {
     void SelectHydroUnitBrickByName(const string& name);
 
     /**
-     * Select a sub-basin brick by its name. Raise an exception if the brick is not found.
+     * Select a subbasin brick by its name. Raise an exception if the brick is not found.
      *
-     * @param name name of the sub-basin brick.
+     * @param name name of the subbasin brick.
      */
-    void SelectSubBasinBrick(const string& name);
+    void SelectSubbasinBrick(const string& name);
 
     /**
      * Select a process by its index.
@@ -560,11 +560,11 @@ class SettingsModel {
     void SelectHydroUnitSplitter(int index);
 
     /**
-     * Select a sub-basin splitter by its index.
+     * Select a subbasin splitter by its index.
      *
-     * @param index index of the sub-basin splitter.
+     * @param index index of the subbasin splitter.
      */
-    void SelectSubBasinSplitter(int index);
+    void SelectSubbasinSplitter(int index);
 
     /**
      * Select a hydro unit splitter by its name. Tolerate if the splitter is not found.
@@ -575,12 +575,12 @@ class SettingsModel {
     bool SelectHydroUnitSplitterIfFound(const string& name);
 
     /**
-     * Select a sub-basin splitter by its name. Tolerate if the splitter is not found.
+     * Select a subbasin splitter by its name. Tolerate if the splitter is not found.
      *
-     * @param name name of the sub-basin splitter.
-     * @return true if the sub-basin splitter is found, false otherwise.
+     * @param name name of the subbasin splitter.
+     * @return true if the subbasin splitter is found, false otherwise.
      */
-    bool SelectSubBasinSplitterIfFound(const string& name);
+    bool SelectSubbasinSplitterIfFound(const string& name);
 
     /**
      * Select a hydro unit splitter by its name. Raise an exception if the splitter is not found.
@@ -590,11 +590,11 @@ class SettingsModel {
     void SelectHydroUnitSplitter(const string& name);
 
     /**
-     * Select a sub-basin splitter by its name. Raise an exception if the splitter is not found.
+     * Select a subbasin splitter by its name. Raise an exception if the splitter is not found.
      *
-     * @param name name of the sub-basin splitter.
+     * @param name name of the subbasin splitter.
      */
-    void SelectSubBasinSplitter(const string& name);
+    void SelectSubbasinSplitter(const string& name);
 
     /**
      * Set parameter value for a component.
@@ -700,13 +700,13 @@ class SettingsModel {
     }
 
     /**
-     * Get the number of sub-basin bricks in the selected structure.
+     * Get the number of subbasin bricks in the selected structure.
      *
-     * @return number of sub-basin bricks.
+     * @return number of subbasin bricks.
      */
-    int GetSubBasinBrickCount() const {
+    int GetSubbasinBrickCount() const {
         assert(_selectedStructure);
-        return static_cast<int>(_selectedStructure->subBasinBricks.size());
+        return static_cast<int>(_selectedStructure->subbasinBricks.size());
     }
 
     /**
@@ -740,13 +740,13 @@ class SettingsModel {
     }
 
     /**
-     * Get the number of sub-basin splitters in the selected structure.
+     * Get the number of subbasin splitters in the selected structure.
      *
-     * @return number of sub-basin splitters.
+     * @return number of subbasin splitters.
      */
-    int GetSubBasinSplitterCount() const {
+    int GetSubbasinSplitterCount() const {
         assert(_selectedStructure);
-        return static_cast<int>(_selectedStructure->subBasinSplitters.size());
+        return static_cast<int>(_selectedStructure->subbasinSplitters.size());
     }
 
     /**
@@ -853,14 +853,14 @@ class SettingsModel {
     vecStr GetSelectedStructureLandCoverNames() const;
 
     /**
-     * Get the sub basin brick settings by index.
+     * Get the subbasin brick settings by index.
      *
-     * @param index index of the sub basin brick.
-     * @return sub basin brick settings (const reference).
+     * @param index index of the subbasin brick.
+     * @return subbasin brick settings (const reference).
      */
-    const BrickSettings& GetSubBasinBrickSettings(int index) const {
+    const BrickSettings& GetSubbasinBrickSettings(int index) const {
         assert(_selectedStructure);
-        return _selectedStructure->subBasinBricks[index];
+        return _selectedStructure->subbasinBricks[index];
     }
 
     /**
@@ -886,29 +886,29 @@ class SettingsModel {
     }
 
     /**
-     * Get the sub basin splitter settings by index.
+     * Get the subbasin splitter settings by index.
      *
-     * @param index index of the sub basin splitter.
-     * @return sub basin splitter settings (const reference).
+     * @param index index of the subbasin splitter.
+     * @return subbasin splitter settings (const reference).
      */
-    const SplitterSettings& GetSubBasinSplitterSettings(int index) const {
+    const SplitterSettings& GetSubbasinSplitterSettings(int index) const {
         assert(_selectedStructure);
-        return _selectedStructure->subBasinSplitters[index];
+        return _selectedStructure->subbasinSplitters[index];
     }
 
     /**
-     * Get the logging labels for the sub basin components
+     * Get the logging labels for the subbasin components
      *
-     * @return logging labels for the sub basin components.
+     * @return logging labels for the subbasin components.
      */
-    vecStr GetSubBasinLogLabels() const;
+    vecStr GetSubbasinLogLabels() const;
 
     /**
-     * Get the generic logging labels for the sub basin components
+     * Get the generic logging labels for the subbasin components
      *
-     * @return generic logging labels for the sub basin components.
+     * @return generic logging labels for the subbasin components.
      */
-    vecStr GetSubBasinGenericLogLabels() const;
+    vecStr GetSubbasinGenericLogLabels() const;
 
     /**
      * Get the logging labels for the hydro unit components

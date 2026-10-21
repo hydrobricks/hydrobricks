@@ -17,12 +17,12 @@ void ActionGlacierEvolutionAreaScaling::AddLookupTables(int month, const string&
 }
 
 bool ActionGlacierEvolutionAreaScaling::Init() {
-    if (_manager->GetSubBasin() == nullptr) {
-        LogError("The model is likely not initialized (setup()) as the sub-basin is not defined.");
+    if (_manager->GetSubbasin() == nullptr) {
+        LogError("The model is likely not initialized (setup()) as the subbasin is not defined.");
         return false;
     }
-    if (!_manager->GetSubBasin()->HasHydroUnits()) {
-        LogError("The model is likely not initialized (setup()) as no hydro unit is defined in the sub-basin.");
+    if (!_manager->GetSubbasin()->HasHydroUnits()) {
+        LogError("The model is likely not initialized (setup()) as no hydro unit is defined in the subbasin.");
         return false;
     }
 

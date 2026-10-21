@@ -3,7 +3,7 @@
 
 #include "Includes.h"
 
-class SubBasin;
+class Subbasin;
 
 class Connector {
   public:
@@ -12,16 +12,16 @@ class Connector {
     virtual ~Connector() = default;
 
     /**
-     * Connect two sub-basins.
+     * Connect two subbasins.
      *
-     * @param in The input sub-basin.
-     * @param out The output sub-basin.
+     * @param in The input subbasin.
+     * @param out The output subbasin.
      */
-    void Connect(SubBasin* in, SubBasin* out);
+    void Connect(Subbasin* in, Subbasin* out);
 
   protected:
-    SubBasin* _in;   // non-owning reference
-    SubBasin* _out;  // non-owning reference
+    Subbasin* _in;   // non-owning reference
+    Subbasin* _out;  // non-owning reference
 };
 
 #endif  // HYDROBRICKS_CONNECTOR_H

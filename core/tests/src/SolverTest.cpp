@@ -73,10 +73,10 @@ TEST(Solver, RejectsSolvedBrickFeedingDirectBrick) {
     SettingsBasin basinSettings;
     basinSettings.AddHydroUnit(1, 100);
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     auto result = model.Initialize(settings, basinSettings);
     ASSERT_FALSE(result);
     EXPECT_TRUE(result.error().find("computed directly") != string::npos);
@@ -104,10 +104,10 @@ TEST(Solver, AcceptsDirectBrickDeclaredAfterSolvedBrick) {
     SettingsBasin basinSettings;
     basinSettings.AddHydroUnit(1, 100);
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     EXPECT_TRUE(model.Initialize(settings, basinSettings));
 }
 
@@ -149,12 +149,12 @@ TEST_F(SolverLinearStorage, UsingEulerExplicit) {
     SettingsBasin basinSettings;
     basinSettings.AddHydroUnit(1, 100);
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
     _model.SetSolver("euler_explicit");
 
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     ASSERT_TRUE(model.Initialize(_model, basinSettings));
 
     ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));
@@ -163,7 +163,7 @@ TEST_F(SolverLinearStorage, UsingEulerExplicit) {
     EXPECT_TRUE(model.Run());
 
     // Check resulting discharge
-    vecAxd basinOutputs = model.GetLogger()->GetSubBasinValues();
+    vecAxd basinOutputs = model.GetLogger()->GetSubbasinValues();
 
     vecDouble expectedOutputs = {0.000000, 0.000000, 3.000000, 5.100000, 6.570000, 4.599000, 3.219300,
                                  2.253510, 1.577457, 1.104220, 0.772954, 0.541068, 0.378747, 0.265123,
@@ -186,12 +186,12 @@ TEST_F(SolverLinearStorage, UsingHeunExplicit) {
     SettingsBasin basinSettings;
     basinSettings.AddHydroUnit(1, 100);
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
     _model.SetSolver("heun_explicit");
 
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     ASSERT_TRUE(model.Initialize(_model, basinSettings));
 
     ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));
@@ -200,7 +200,7 @@ TEST_F(SolverLinearStorage, UsingHeunExplicit) {
     EXPECT_TRUE(model.Run());
 
     // Check resulting discharge
-    vecAxd basinOutputs = model.GetLogger()->GetSubBasinValues();
+    vecAxd basinOutputs = model.GetLogger()->GetSubbasinValues();
 
     vecDouble expectedOutputs = {0.000000, 1.500000, 3.667500, 5.282288, 4.985304, 3.714052, 2.766968,
                                  2.061392, 1.535737, 1.144124, 0.852372, 0.635017, 0.473088, 0.352450,
@@ -223,12 +223,12 @@ TEST_F(SolverLinearStorage, UsingRungeKutta) {
     SettingsBasin basinSettings;
     basinSettings.AddHydroUnit(1, 100);
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
     _model.SetSolver("runge_kutta");
 
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     ASSERT_TRUE(model.Initialize(_model, basinSettings));
 
     ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));
@@ -237,7 +237,7 @@ TEST_F(SolverLinearStorage, UsingRungeKutta) {
     EXPECT_TRUE(model.Run());
 
     // Check resulting discharge
-    vecAxd basinOutputs = model.GetLogger()->GetSubBasinValues();
+    vecAxd basinOutputs = model.GetLogger()->GetSubbasinValues();
 
     vecDouble expectedOutputs = {0.000000, 1.361250, 3.600090, 5.258707, 5.126222, 3.797698, 2.813477,
                                  2.084329, 1.544149, 1.143964, 0.847491, 0.627853, 0.465137, 0.344591,
@@ -260,12 +260,12 @@ TEST_F(SolverLinearStorage, UsingAnalyticLinear) {
     SettingsBasin basinSettings;
     basinSettings.AddHydroUnit(1, 100);
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
     _model.SetSolver("analytic_linear");
 
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     ASSERT_TRUE(model.Initialize(_model, basinSettings));
 
     ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));
@@ -275,7 +275,7 @@ TEST_F(SolverLinearStorage, UsingAnalyticLinear) {
 
     // Check resulting discharge against the closed-form solution of dS/dt = I - k S
     // with the inflow constant over each step.
-    vecAxd basinOutputs = model.GetLogger()->GetSubBasinValues();
+    vecAxd basinOutputs = model.GetLogger()->GetSubbasinValues();
 
     vecDouble precip = {0.0, 10.0, 10.0, 10.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
                         0.0, 0.0,  0.0,  0.0,  0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
@@ -305,12 +305,12 @@ TEST_F(SolverLinearStorage, UsingImplicitEuler) {
     SettingsBasin basinSettings;
     basinSettings.AddHydroUnit(1, 100);
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
     _model.SetSolver("implicit_euler");
 
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     ASSERT_TRUE(model.Initialize(_model, basinSettings));
 
     ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));
@@ -320,7 +320,7 @@ TEST_F(SolverLinearStorage, UsingImplicitEuler) {
 
     // Check resulting discharge against the closed form of the implicit step for a
     // linear storage: S(t+h) = (S(t) + I h) / (1 + k h), outflow = k S(t+h) h.
-    vecAxd basinOutputs = model.GetLogger()->GetSubBasinValues();
+    vecAxd basinOutputs = model.GetLogger()->GetSubbasinValues();
 
     vecDouble precip = {0.0, 10.0, 10.0, 10.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
                         0.0, 0.0,  0.0,  0.0,  0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
@@ -349,12 +349,12 @@ TEST_F(SolverLinearStorage, UsingCrankNicolson) {
     SettingsBasin basinSettings;
     basinSettings.AddHydroUnit(1, 100);
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
     _model.SetSolver("crank_nicolson");
 
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     ASSERT_TRUE(model.Initialize(_model, basinSettings));
 
     ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));
@@ -365,7 +365,7 @@ TEST_F(SolverLinearStorage, UsingCrankNicolson) {
     // Check resulting discharge against the closed form of the trapezoidal step for a
     // linear storage: S(t+h) = (S(t)(1 - kh/2) + I h) / (1 + kh/2),
     // outflow = k (S(t) + S(t+h)) / 2 h.
-    vecAxd basinOutputs = model.GetLogger()->GetSubBasinValues();
+    vecAxd basinOutputs = model.GetLogger()->GetSubbasinValues();
 
     vecDouble precip = {0.0, 10.0, 10.0, 10.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
                         0.0, 0.0,  0.0,  0.0,  0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
@@ -394,12 +394,12 @@ TEST_F(SolverLinearStorage, UsingExponentialEuler) {
     SettingsBasin basinSettings;
     basinSettings.AddHydroUnit(1, 100);
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
     _model.SetSolver("exponential_euler");
 
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     ASSERT_TRUE(model.Initialize(_model, basinSettings));
 
     ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));
@@ -409,7 +409,7 @@ TEST_F(SolverLinearStorage, UsingExponentialEuler) {
 
     // For a linear storage the linearization is the reservoir itself, so the
     // exponential Euler solver must reproduce the exact (analytic) solution.
-    vecAxd basinOutputs = model.GetLogger()->GetSubBasinValues();
+    vecAxd basinOutputs = model.GetLogger()->GetSubbasinValues();
 
     vecDouble precip = {0.0, 10.0, 10.0, 10.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
                         0.0, 0.0,  0.0,  0.0,  0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
@@ -436,8 +436,8 @@ TEST_F(SolverLinearStorage, ImplicitEulerIsStableForFastReservoir) {
     SettingsBasin basinSettings;
     basinSettings.AddHydroUnit(1, 100);
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
     // k h = 2.5: explicit Euler diverges (stability limit k h = 2); the implicit
     // scheme must remain stable and match its closed form.
@@ -446,7 +446,7 @@ TEST_F(SolverLinearStorage, ImplicitEulerIsStableForFastReservoir) {
     _model.SelectProcess("outflow");
     _model.SetProcessParameterValue("response_factor", 2.5f);
 
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     ASSERT_TRUE(model.Initialize(_model, basinSettings));
 
     ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));
@@ -454,7 +454,7 @@ TEST_F(SolverLinearStorage, ImplicitEulerIsStableForFastReservoir) {
 
     EXPECT_TRUE(model.Run());
 
-    vecAxd basinOutputs = model.GetLogger()->GetSubBasinValues();
+    vecAxd basinOutputs = model.GetLogger()->GetSubbasinValues();
 
     vecDouble precip = {0.0, 10.0, 10.0, 10.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
                         0.0, 0.0,  0.0,  0.0,  0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
@@ -518,12 +518,12 @@ TEST_F(Solver2LinearStorages, UsingEulerExplicit) {
     SettingsBasin basinSettings;
     basinSettings.AddHydroUnit(1, 100);
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
     _model.SetSolver("euler_explicit");
 
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     ASSERT_TRUE(model.Initialize(_model, basinSettings));
 
     ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));
@@ -532,7 +532,7 @@ TEST_F(Solver2LinearStorages, UsingEulerExplicit) {
     EXPECT_TRUE(model.Run());
 
     // Check resulting discharge
-    vecAxd basinOutputs = model.GetLogger()->GetSubBasinValues();
+    vecAxd basinOutputs = model.GetLogger()->GetSubbasinValues();
 
     vecDouble expectedOutputs = {0.000000, 0.000000, 0.000000, 1.500000, 3.300000, 4.935000, 4.767000,
                                  3.993150, 3.123330, 2.350394, 1.727307, 1.250130, 0.895599, 0.637173,
@@ -557,12 +557,12 @@ TEST_F(Solver2LinearStorages, UsingHeunExplicit) {
     SettingsBasin basinSettings;
     basinSettings.AddHydroUnit(1, 100);
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
     _model.SetSolver("heun_explicit");
 
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     ASSERT_TRUE(model.Initialize(_model, basinSettings));
 
     ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));
@@ -571,7 +571,7 @@ TEST_F(Solver2LinearStorages, UsingHeunExplicit) {
     EXPECT_TRUE(model.Run());
 
     // Check resulting discharge
-    vecAxd basinOutputs = model.GetLogger()->GetSubBasinValues();
+    vecAxd basinOutputs = model.GetLogger()->GetSubbasinValues();
 
     vecDouble expectedOutputs = {0.000000, 0.000000, 1.200000, 2.600250, 3.959843, 3.970493, 3.595773,
                                  3.077449, 2.541823, 2.049360, 1.624087, 1.270766, 0.984734, 0.757385,
@@ -596,12 +596,12 @@ TEST_F(Solver2LinearStorages, UsingRungeKutta) {
     SettingsBasin basinSettings;
     basinSettings.AddHydroUnit(1, 100);
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
     _model.SetSolver("runge_kutta");
 
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     ASSERT_TRUE(model.Initialize(_model, basinSettings));
 
     ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));
@@ -610,7 +610,7 @@ TEST_F(Solver2LinearStorages, UsingRungeKutta) {
     EXPECT_TRUE(model.Run());
 
     // Check resulting discharge
-    vecAxd basinOutputs = model.GetLogger()->GetSubBasinValues();
+    vecAxd basinOutputs = model.GetLogger()->GetSubbasinValues();
 
     vecDouble expectedOutputs = {0.000000, 0.200000, 1.158225, 2.490032, 3.654047, 3.935308, 3.660692,
                                  3.164185, 2.618533, 2.106397, 1.661518, 1.292212, 0.994512, 0.759339,
@@ -635,12 +635,12 @@ TEST_F(Solver2LinearStorages, UsingAnalyticLinear) {
     SettingsBasin basinSettings;
     basinSettings.AddHydroUnit(1, 100);
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
     _model.SetSolver("analytic_linear");
 
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     ASSERT_TRUE(model.Initialize(_model, basinSettings));
 
     ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));
@@ -651,7 +651,7 @@ TEST_F(Solver2LinearStorages, UsingAnalyticLinear) {
     // Check resulting discharge against the closed-form solution: each storage is
     // exact for a constant inflow over the step, and the second storage receives the
     // first one's average outflow rate (sequential forward substitution).
-    vecAxd basinOutputs = model.GetLogger()->GetSubBasinValues();
+    vecAxd basinOutputs = model.GetLogger()->GetSubbasinValues();
 
     vecDouble precip = {0.0, 10.0, 10.0, 10.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
                         0.0, 0.0,  0.0,  0.0,  0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
@@ -745,12 +745,12 @@ TEST_F(SolverLinearStorageWithET, UsingEulerExplicit) {
     SettingsBasin basinSettings;
     basinSettings.AddHydroUnit(1, 100);
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
     _model.SetSolver("euler_explicit");
 
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     ASSERT_TRUE(model.Initialize(_model, basinSettings));
 
     ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));
@@ -760,7 +760,7 @@ TEST_F(SolverLinearStorageWithET, UsingEulerExplicit) {
     EXPECT_TRUE(model.Run());
 
     // Check resulting discharge
-    vecAxd basinOutputs = model.GetLogger()->GetSubBasinValues();
+    vecAxd basinOutputs = model.GetLogger()->GetSubbasinValues();
 
     vecDouble expectedOutputs = {0.000000, 0.000000, 1.000000, 7.336523, 2.000000, 1.700000, 1.437805,
                                  1.209236, 1.010555, 0.838417, 0.689829, 0.562117, 0.452890, 0.360015,
@@ -783,12 +783,12 @@ TEST_F(SolverLinearStorageWithET, UsingHeunExplicit) {
     SettingsBasin basinSettings;
     basinSettings.AddHydroUnit(1, 100);
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
     _model.SetSolver("heun_explicit");
 
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     ASSERT_TRUE(model.Initialize(_model, basinSettings));
 
     ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));
@@ -798,7 +798,7 @@ TEST_F(SolverLinearStorageWithET, UsingHeunExplicit) {
     EXPECT_TRUE(model.Run());
 
     // Check resulting discharge
-    vecAxd basinOutputs = model.GetLogger()->GetSubBasinValues();
+    vecAxd basinOutputs = model.GetLogger()->GetSubbasinValues();
 
     vecDouble expectedOutputs = {0.000000, 0.500000, 1.335100, 6.043728, 1.850000, 1.586604, 1.354805,
                                  1.151282, 0.973043, 0.817396, 0.681921, 0.564437, 0.462986, 0.375808,
@@ -854,10 +854,10 @@ double RunLinearStorageAtTimeStep(const string& solverName, int timeStepHours) {
     SettingsBasin basinSettings;
     basinSettings.AddHydroUnit(1, 100);
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     EXPECT_TRUE(model.Initialize(settings, basinSettings));
     EXPECT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(tsPrecip))));
     EXPECT_TRUE(model.AttachTimeSeriesToHydroUnits());
@@ -940,12 +940,12 @@ TEST_F(SolverLinearStorageWithET, UsingCrankNicolson) {
     SettingsBasin basinSettings;
     basinSettings.AddHydroUnit(1, 100);
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
     _model.SetSolver("crank_nicolson");
 
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     ASSERT_TRUE(model.Initialize(_model, basinSettings));
 
     ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));
@@ -956,7 +956,7 @@ TEST_F(SolverLinearStorageWithET, UsingCrankNicolson) {
 
     // Exercises the trapezoidal path with a non-linear process (ET) and the
     // capacity/overflow constraint.
-    vecAxd basinOutputs = model.GetLogger()->GetSubBasinValues();
+    vecAxd basinOutputs = model.GetLogger()->GetSubbasinValues();
 
     // The overflow fires while the storage approaches its 20 mm capacity.
     EXPECT_GT(basinOutputs[0][3], 1.0);
@@ -971,12 +971,12 @@ TEST_F(SolverLinearStorageWithET, UsingExponentialEuler) {
     SettingsBasin basinSettings;
     basinSettings.AddHydroUnit(1, 100);
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
     _model.SetSolver("exponential_euler");
 
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     ASSERT_TRUE(model.Initialize(_model, basinSettings));
 
     ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));
@@ -987,7 +987,7 @@ TEST_F(SolverLinearStorageWithET, UsingExponentialEuler) {
 
     // Exercises the linearized path with a non-linear process (ET) and the
     // capacity/overflow constraint.
-    vecAxd basinOutputs = model.GetLogger()->GetSubBasinValues();
+    vecAxd basinOutputs = model.GetLogger()->GetSubbasinValues();
 
     // The overflow fires while the storage approaches its 20 mm capacity.
     EXPECT_GT(basinOutputs[0][3], 1.0);
@@ -1002,12 +1002,12 @@ TEST_F(SolverLinearStorageWithET, UsingImplicitEuler) {
     SettingsBasin basinSettings;
     basinSettings.AddHydroUnit(1, 100);
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
     _model.SetSolver("implicit_euler");
 
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     ASSERT_TRUE(model.Initialize(_model, basinSettings));
 
     ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));
@@ -1018,7 +1018,7 @@ TEST_F(SolverLinearStorageWithET, UsingImplicitEuler) {
 
     // Exercises the implicit path with a non-linear process (ET evaluated at the
     // end-of-step content) and the capacity/overflow constraint.
-    vecAxd basinOutputs = model.GetLogger()->GetSubBasinValues();
+    vecAxd basinOutputs = model.GetLogger()->GetSubbasinValues();
 
     // The overflow fires while the storage approaches its 20 mm capacity.
     EXPECT_GT(basinOutputs[0][3], 1.0);
@@ -1033,12 +1033,12 @@ TEST_F(SolverLinearStorageWithET, UsingAnalyticLinear) {
     SettingsBasin basinSettings;
     basinSettings.AddHydroUnit(1, 100);
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
     _model.SetSolver("analytic_linear");
 
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     ASSERT_TRUE(model.Initialize(_model, basinSettings));
 
     ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));
@@ -1049,7 +1049,7 @@ TEST_F(SolverLinearStorageWithET, UsingAnalyticLinear) {
 
     // Exercises the mixed path: linear outflow integrated exactly, ET frozen at its
     // start-of-step rate, capacity excess booked through the overflow process.
-    vecAxd basinOutputs = model.GetLogger()->GetSubBasinValues();
+    vecAxd basinOutputs = model.GetLogger()->GetSubbasinValues();
 
     // The overflow fires while the storage approaches its 20 mm capacity.
     EXPECT_GT(basinOutputs[0][3], 1.0);
@@ -1064,12 +1064,12 @@ TEST_F(SolverLinearStorageWithET, UsingRungeKutta) {
     SettingsBasin basinSettings;
     basinSettings.AddHydroUnit(1, 100);
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
     _model.SetSolver("runge_kutta");
 
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     ASSERT_TRUE(model.Initialize(_model, basinSettings));
 
     ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));
@@ -1079,7 +1079,7 @@ TEST_F(SolverLinearStorageWithET, UsingRungeKutta) {
     EXPECT_TRUE(model.Run());
 
     // Check resulting discharge
-    vecAxd basinOutputs = model.GetLogger()->GetSubBasinValues();
+    vecAxd basinOutputs = model.GetLogger()->GetSubbasinValues();
 
     vecDouble expectedOutputs = {0.000000, 0.467928, 1.312188, 5.989134, 1.856077, 1.591276, 1.358295,
                                  1.153782, 0.974723, 0.818401, 0.682377, 0.564453, 0.462655, 0.375211,

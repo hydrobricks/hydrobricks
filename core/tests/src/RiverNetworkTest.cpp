@@ -43,7 +43,7 @@ SettingsBasin BuildTreeSettings() {
     return settings;
 }
 
-int IndexInOrder(const std::vector<SubBasin*>& order, int id) {
+int IndexInOrder(const std::vector<Subbasin*>& order, int id) {
     for (int i = 0; i < static_cast<int>(order.size()); ++i) {
         if (order[i]->GetId() == id) return i;
     }
@@ -144,7 +144,7 @@ TEST(RiverNetwork, TreeSubbasinPropertiesAreAvailable) {
     RiverNetwork network;
     ASSERT_TRUE(network.Initialize(settings));
 
-    SubBasin* head = network.GetSubbasinById(4);
+    Subbasin* head = network.GetSubbasinById(4);
     EXPECT_TRUE(head->HasProperty("length"));
     EXPECT_FALSE(head->HasProperty("slope"));
     EXPECT_DOUBLE_EQ(head->GetPropertyDouble("length"), 4000.0);
@@ -197,9 +197,9 @@ TEST(ModelHydro, DeclaredSingleSubbasinBuildsAsBefore) {
     ASSERT_TRUE(model.InitializeWithBasin(modelSettings, basinSettings));
     ASSERT_NE(model.GetNetwork(), nullptr);
     EXPECT_EQ(model.GetNetwork()->GetSubbasinCount(), 1);
-    EXPECT_EQ(model.GetSubBasin(), model.GetNetwork()->GetOutlet());
-    EXPECT_EQ(model.GetSubBasin()->GetId(), 7);
-    EXPECT_EQ(model.GetSubBasin()->GetName(), "gauge");
-    EXPECT_EQ(model.GetSubBasin()->GetHydroUnitCount(), 2);
-    EXPECT_DOUBLE_EQ(model.GetSubBasin()->GetDrainedArea(), 400.0);
+    EXPECT_EQ(model.GetSubbasin(), model.GetNetwork()->GetOutlet());
+    EXPECT_EQ(model.GetSubbasin()->GetId(), 7);
+    EXPECT_EQ(model.GetSubbasin()->GetName(), "gauge");
+    EXPECT_EQ(model.GetSubbasin()->GetHydroUnitCount(), 2);
+    EXPECT_DOUBLE_EQ(model.GetSubbasin()->GetDrainedArea(), 400.0);
 }

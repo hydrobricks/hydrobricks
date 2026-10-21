@@ -14,30 +14,30 @@
 
 class Reach;
 
-class SubBasin {
+class Subbasin {
   public:
-    SubBasin();
+    Subbasin();
 
-    virtual ~SubBasin();
+    virtual ~Subbasin();
 
     /**
-     * Initialize the sub-basin with the given settings.
+     * Initialize the subbasin with the given settings.
      *
-     * @param basinSettings The settings to initialize the sub-basin with.
+     * @param basinSettings The settings to initialize the subbasin with.
      * @return True if the initialization was successful, false otherwise.
      */
     [[nodiscard]] ModelResult Initialize(SettingsBasin& basinSettings);
 
     /**
-     * Create a hydro unit from its settings and add it to the sub basin.
+     * Create a hydro unit from its settings and add it to the subbasin.
      *
      * @param unitSettings The settings of the hydro unit.
-     * @return the created hydro unit (owned by the sub basin).
+     * @return the created hydro unit (owned by the subbasin).
      */
     HydroUnit* AddHydroUnitFromSettings(HydroUnitSettings& unitSettings);
 
     /**
-     * Set the network properties of the sub basin (ID, downstream link, name, properties).
+     * Set the network properties of the subbasin (ID, downstream link, name, properties).
      *
      * @param subbasinSettings The settings of the subbasin.
      */
@@ -56,9 +56,9 @@ class SubBasin {
     }
 
     /**
-     * Get the ID of the downstream sub basin (0: terminal outlet of the network).
+     * Get the ID of the downstream subbasin (0: terminal outlet of the network).
      *
-     * @return the downstream sub basin ID.
+     * @return the downstream subbasin ID.
      */
     [[nodiscard]] int GetDownstreamId() const {
         return _downstreamId;
@@ -77,7 +77,7 @@ class SubBasin {
     }
 
     /**
-     * Set the model-structure variant used to build the sub basin-level components (bricks, splitters).
+     * Set the model-structure variant used to build the subbasin-level components (bricks, splitters).
      *
      * @param structureId The structure ID (1 = the primary structure).
      */
@@ -90,7 +90,7 @@ class SubBasin {
     }
 
     /**
-     * Get the area of the sub basin's own hydro units [m2] (same as GetArea()).
+     * Get the area of the subbasin's own hydro units [m2] (same as GetArea()).
      *
      * @return the local area.
      */
@@ -103,8 +103,8 @@ class SubBasin {
     }
 
     /**
-     * Get the area drained at the sub basin outlet [m2]: the local area plus the area of every upstream sub basin.
-     * Set by the river network; equals the local area for a single sub basin.
+     * Get the area drained at the subbasin outlet [m2]: the local area plus the area of every upstream subbasin.
+     * Set by the river network; equals the local area for a single subbasin.
      *
      * @return the drained area.
      */
@@ -113,7 +113,7 @@ class SubBasin {
     }
 
     /**
-     * Declare whether other sub basins drain into this one (set by the river network). With an upstream
+     * Declare whether other subbasins drain into this one (set by the river network). With an upstream
      * inflow, the outlet discharge is expressed over the drained area instead of the local one.
      */
     void SetHasUpstream(bool value) {
@@ -133,7 +133,7 @@ class SubBasin {
     }
 
     /**
-     * Set the volume routed from the upstream sub basins for the current time step [m3].
+     * Set the volume routed from the upstream subbasins for the current time step [m3].
      *
      * @param volume The routed inflow volume.
      */
@@ -146,7 +146,7 @@ class SubBasin {
     }
 
     /**
-     * Get the sub basin's own runoff of the current time step [mm over the local area].
+     * Get the subbasin's own runoff of the current time step [mm over the local area].
      *
      * @return the local outlet total.
      */
@@ -155,7 +155,7 @@ class SubBasin {
     }
 
     /**
-     * Get the volume leaving the sub basin outlet in the current time step [m3]: the local runoff plus the
+     * Get the volume leaving the subbasin outlet in the current time step [m3]: the local runoff plus the
      * routed upstream inflow.
      *
      * @return the outlet volume.
@@ -166,7 +166,7 @@ class SubBasin {
 
     /**
      * Get the outlet discharge of the current time step [mm over the drained area]. Equals the local outlet
-     * total for a sub basin without upstream inflow.
+     * total for a subbasin without upstream inflow.
      *
      * @return the outlet discharge.
      */
@@ -175,17 +175,17 @@ class SubBasin {
     }
 
     /**
-     * Check if a hydro unit with the given ID belongs to this sub basin.
+     * Check if a hydro unit with the given ID belongs to this subbasin.
      *
      * @param id The hydro unit ID.
-     * @return true if the unit is in this sub basin.
+     * @return true if the unit is in this subbasin.
      */
     [[nodiscard]] bool HasHydroUnit(int id) const {
         return _hydroUnitMap.contains(id);
     }
 
     /**
-     * Check if the sub basin has a property with the given name.
+     * Check if the subbasin has a property with the given name.
      *
      * @param name The property name.
      * @return true if the property exists.
@@ -193,7 +193,7 @@ class SubBasin {
     [[nodiscard]] bool HasProperty(std::string_view name) const;
 
     /**
-     * Get a numeric property of the sub basin (e.g. the reach length).
+     * Get a numeric property of the subbasin (e.g. the reach length).
      *
      * @param name The property name.
      * @param unit The unit to convert the value to (optional).
@@ -202,7 +202,7 @@ class SubBasin {
     [[nodiscard]] double GetPropertyDouble(std::string_view name, std::string_view unit = "") const;
 
     /**
-     * Get a string property of the sub basin.
+     * Get a string property of the subbasin.
      *
      * @param name The property name.
      * @return the property value.
@@ -217,7 +217,7 @@ class SubBasin {
     void BuildBasin(SettingsBasin& basinSettings);
 
     /**
-     * Reserve space for a number of hydro units in the sub-basin.
+     * Reserve space for a number of hydro units in the subbasin.
      *
      * @param count The number of hydro units to reserve space for.
      */
@@ -226,7 +226,7 @@ class SubBasin {
     }
 
     /**
-     * Reserve space for a number of bricks in the sub-basin.
+     * Reserve space for a number of bricks in the subbasin.
      *
      * @param count The number of bricks to reserve space for.
      */
@@ -235,7 +235,7 @@ class SubBasin {
     }
 
     /**
-     * Reserve space for a number of splitters in the sub-basin.
+     * Reserve space for a number of splitters in the subbasin.
      *
      * @param count The number of splitters to reserve space for.
      */
@@ -244,7 +244,7 @@ class SubBasin {
     }
 
     /**
-     * Reserve space for a number of input connectors in the sub-basin.
+     * Reserve space for a number of input connectors in the subbasin.
      *
      * @param count The number of input connectors to reserve space for.
      */
@@ -253,7 +253,7 @@ class SubBasin {
     }
 
     /**
-     * Reserve space for a number of output connectors in the sub-basin.
+     * Reserve space for a number of output connectors in the subbasin.
      *
      * @param count The number of output connectors to reserve space for.
      */
@@ -262,7 +262,7 @@ class SubBasin {
     }
 
     /**
-     * Reserve space for a number of outlet fluxes in the sub-basin.
+     * Reserve space for a number of outlet fluxes in the subbasin.
      *
      * @param count The number of outlet fluxes to reserve space for.
      */
@@ -271,7 +271,7 @@ class SubBasin {
     }
 
     /**
-     * Reserve space for a number of lateral connections for hydro units in the sub-basin.
+     * Reserve space for a number of lateral connections for hydro units in the subbasin.
      *
      * @param basinSettings The settings to reserve the lateral connections with.
      */
@@ -286,12 +286,12 @@ class SubBasin {
     [[nodiscard]] ModelResult AssignFractions(SettingsBasin& basinSettings);
 
     /**
-     * Reset the sub-basin to its initial state.
+     * Reset the subbasin to its initial state.
      */
     void Reset();
 
     /**
-     * Save the current state of the sub-basin as the initial state.
+     * Save the current state of the subbasin as the initial state.
      */
     void SaveAsInitialState();
 
@@ -302,14 +302,14 @@ class SubBasin {
     void RestoreInitialAreaFractions();
 
     /**
-     * Check if the sub basin is correctly defined.
+     * Check if the subbasin is correctly defined.
      *
      * @return True if everything is correctly defined, false otherwise.
      */
     [[nodiscard]] bool IsValid(bool checkProcesses = true) const;
 
     /**
-     * Validate that the sub basin is correctly defined.
+     * Validate that the subbasin is correctly defined.
      * Throws an exception if validation fails.
      *
      * @throws ModelConfigError if validation fails.
@@ -317,28 +317,28 @@ class SubBasin {
     void Validate() const;
 
     /**
-     * Add a brick to the sub basin.
+     * Add a brick to the subbasin.
      *
      * @param brick The brick to add (ownership transferred).
      */
     void AddBrick(std::unique_ptr<Brick> brick);
 
     /**
-     * Add a splitter to the sub-basin.
+     * Add a splitter to the subbasin.
      *
      * @param splitter The splitter to add (ownership transferred).
      */
     void AddSplitter(std::unique_ptr<Splitter> splitter);
 
     /**
-     * Add a hydro unit to the sub-basin.
+     * Add a hydro unit to the subbasin.
      *
      * @param unit The hydro unit to add (ownership transferred).
      */
     void AddHydroUnit(std::unique_ptr<HydroUnit> unit);
 
     /**
-     * Get the number of hydro units in the sub-basin.
+     * Get the number of hydro units in the subbasin.
      *
      * @return The number of hydro units.
      */
@@ -358,9 +358,9 @@ class SubBasin {
     [[nodiscard]] HydroUnit* GetHydroUnit(size_t index) const;
 
     /**
-     * Check if the sub-basin has any hydro units.
+     * Check if the subbasin has any hydro units.
      *
-     * @return True if the sub-basin has hydro units, false otherwise.
+     * @return True if the subbasin has hydro units, false otherwise.
      */
     [[nodiscard]] bool HasHydroUnits() const noexcept {
         return !_hydroUnits.empty();
@@ -375,35 +375,35 @@ class SubBasin {
     [[nodiscard]] HydroUnit* GetHydroUnitById(int id) const;
 
     /**
-     * Get the IDs of all hydro units in the sub-basin.
+     * Get the IDs of all hydro units in the subbasin.
      *
      * @return A vector of hydro unit IDs.
      */
     [[nodiscard]] vecInt GetHydroUnitIds() const;
 
     /**
-     * Get the areas of all hydro units in the sub-basin.
+     * Get the areas of all hydro units in the subbasin.
      *
      * @return A vector of hydro unit areas.
      */
     [[nodiscard]] vecDouble GetHydroUnitAreas() const;
 
     /**
-     * Get the model-structure ID of each hydro unit in the sub-basin.
+     * Get the model-structure ID of each hydro unit in the subbasin.
      *
      * @return A vector of hydro unit structure IDs (defaults to 1).
      */
     [[nodiscard]] vecInt GetHydroUnitStructureIds() const;
 
     /**
-     * Get the number of bricks in the sub-basin.
+     * Get the number of bricks in the subbasin.
      *
      * @return The number of bricks.
      */
     [[nodiscard]] int GetBrickCount() const;
 
     /**
-     * Get the number of splitters in the sub-basin.
+     * Get the number of splitters in the subbasin.
      *
      * @return The number of splitters.
      */
@@ -418,10 +418,10 @@ class SubBasin {
     [[nodiscard]] Brick* GetBrick(size_t index) const;
 
     /**
-     * Check if the sub-basin has a brick with a specific name.
+     * Check if the subbasin has a brick with a specific name.
      *
      * @param name The name of the brick to check for.
-     * @return True if the sub-basin has the brick, false otherwise.
+     * @return True if the subbasin has the brick, false otherwise.
      */
     [[nodiscard]] bool HasBrick(std::string_view name) const;
 
@@ -442,10 +442,10 @@ class SubBasin {
     [[nodiscard]] Splitter* GetSplitter(size_t index) const;
 
     /**
-     * Check if the sub-basin has a splitter with a specific name.
+     * Check if the subbasin has a splitter with a specific name.
      *
      * @param name The name of the splitter to check for.
-     * @return True if the sub-basin has the splitter, false otherwise.
+     * @return True if the subbasin has the splitter, false otherwise.
      */
     [[nodiscard]] bool HasSplitter(std::string_view name) const;
 
@@ -458,28 +458,28 @@ class SubBasin {
     [[nodiscard]] Splitter* GetSplitter(std::string_view name) const;
 
     /**
-     * Check if the sub-basin has an incoming flow.
+     * Check if the subbasin has an incoming flow.
      *
-     * @return True if the sub-basin has an incoming flow, false otherwise.
+     * @return True if the subbasin has an incoming flow, false otherwise.
      */
     [[nodiscard]] bool HasIncomingFlow() const;
 
     /**
-     * Add an input connector to the sub-basin.
+     * Add an input connector to the subbasin.
      *
      * @param connector The input connector to add.
      */
     void AddInputConnector(Connector* connector);
 
     /**
-     * Add an output connector to the sub-basin.
+     * Add an output connector to the subbasin.
      *
      * @param connector The output connector to add.
      */
     void AddOutputConnector(Connector* connector);
 
     /**
-     * Attach an outlet flux to the sub-basin.
+     * Attach an outlet flux to the subbasin.
      *
      * @param pFlux The outlet flux to attach.
      */
@@ -494,7 +494,7 @@ class SubBasin {
     double* GetValuePointer(std::string_view name);
 
     /**
-     * Compute the outlet discharge of the current time step: the sub basin's own runoff, routed through half
+     * Compute the outlet discharge of the current time step: the subbasin's own runoff, routed through half
      * of its reach when the channel routing does so, plus the volume already routed from upstream.
      *
      * @param timeStepInDays The time step [days].
@@ -503,9 +503,9 @@ class SubBasin {
     [[nodiscard]] bool ComputeOutletDischarge(double timeStepInDays);
 
     /**
-     * Get the area of the sub-basin.
+     * Get the area of the subbasin.
      *
-     * @return The area of the sub-basin in square meters.
+     * @return The area of the subbasin in square meters.
      */
     [[nodiscard]] double GetArea() const {
         return _area;
@@ -515,10 +515,10 @@ class SubBasin {
     int _id = 1;
     int _downstreamId = 0;  // 0: terminal outlet of the network
     string _name;
-    int _structureId = 1;         // model-structure variant of the sub basin-level components
+    int _structureId = 1;         // model-structure variant of the subbasin-level components
     double _area;                 // m2, own hydro units
     double _drainedArea = 0;      // m2, own + upstream (set by the network)
-    bool _hasUpstream = false;    // other sub basins drain into this one
+    bool _hasUpstream = false;    // other subbasins drain into this one
     Reach* _reach = nullptr;      // non-owning: owned by the river network
     double _outletTotal;          // mm over the local area, own runoff
     double _inflowVolume = 0;     // m3 per step, routed from upstream
@@ -528,9 +528,9 @@ class SubBasin {
     double _reachOutflow = 0;     // mm over the drained area: the routed volume reaching the outlet
     double _reachStorage = 0;     // mm over the drained area: the volume in transit in the reach
     std::vector<std::unique_ptr<HydroUnitProperty>> _properties;  // owning
-    std::vector<std::unique_ptr<Brick>> _bricks;                  // owning: SubBasin-level bricks
+    std::vector<std::unique_ptr<Brick>> _bricks;                  // owning: Subbasin-level bricks
     std::unordered_map<string, Brick*> _brickMap;                 // non-owning views into _bricks
-    std::vector<std::unique_ptr<Splitter>> _splitters;            // owning: SubBasin-level splitters
+    std::vector<std::unique_ptr<Splitter>> _splitters;            // owning: Subbasin-level splitters
     std::unordered_map<string, Splitter*> _splitterMap;           // non-owning views into _splitters
     std::vector<std::unique_ptr<HydroUnit>> _hydroUnits;          // owning
     std::unordered_map<int, HydroUnit*> _hydroUnitMap;            // non-owning views into _hydroUnits

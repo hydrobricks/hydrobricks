@@ -18,7 +18,7 @@ namespace {
 constexpr int kSteps = 12;
 
 /**
- * A minimal structure with a sub basin-level store: every hydro unit's ground cover drains directly into a
+ * A minimal structure with a subbasin-level store: every hydro unit's ground cover drains directly into a
  * catchment-level linear storage, which drains to the outlet. Linear stores make the lumped and the split
  * catchments equivalent (superposition), which the tests rely on.
  */
@@ -32,8 +32,8 @@ void BuildStructure(SettingsModel& settings) {
     settings.SelectHydroUnitBrick("ground");
     settings.AddBrickProcess("outflow", "outflow:direct", "store");
 
-    settings.AddSubBasinBrick("store", "storage");
-    settings.SelectSubBasinBrick("store");
+    settings.AddSubbasinBrick("store", "storage");
+    settings.SelectSubbasinBrick("store");
     settings.AddBrickProcess("outflow", "outflow:linear", "outlet");
     settings.AddProcessParameter("response_factor", 0.3f);
 
@@ -285,11 +285,11 @@ TEST(ModelNetwork, ReachValuesAreLoggedWhenRequested) {
     AttachForcing(model, kUnitIds);
     ASSERT_TRUE(model.Run());
 
-    const vecStr& labels = model.GetLogger()->GetSubBasinLabels();
+    const vecStr& labels = model.GetLogger()->GetSubbasinLabels();
     auto index = [&labels](const string& name) {
         return static_cast<int>(std::find(labels.begin(), labels.end(), name) - labels.begin());
     };
-    const vecAxxd& values = model.GetLogger()->GetSubBasinValuesPerSubbasin();
+    const vecAxxd& values = model.GetLogger()->GetSubbasinValuesPerSubbasin();
     ASSERT_LT(index("reach:inflow"), static_cast<int>(labels.size()));
     axd inflow = values[index("reach:inflow")].col(1);  // the outlet subbasin (last)
     axd outflow = values[index("reach:outflow")].col(1);
@@ -325,8 +325,8 @@ TEST(ModelNetwork, SubbasinsBuildTheVariantMatchingTheirLandCovers) {
     settings.AddLandCoverBrick("forest", "generic_land_cover");
     settings.SelectHydroUnitBrick("forest");
     settings.AddBrickProcess("outflow", "outflow:direct", "store");
-    settings.AddSubBasinBrick("store", "storage");
-    settings.SelectSubBasinBrick("store");
+    settings.AddSubbasinBrick("store", "storage");
+    settings.SelectSubbasinBrick("store");
     settings.AddBrickProcess("outflow", "outflow:linear", "outlet");
     settings.AddProcessParameter("response_factor", 0.3f);
     settings.AddLoggingToItem("outlet");
@@ -363,11 +363,11 @@ TEST(ModelNetwork, SubbasinsBuildTheVariantMatchingTheirLandCovers) {
     // The store label is recorded for the outlet subbasin only (NaN for the upstream one), and the
     // subbasin structure ids are reported in processing order (upstream first).
     Logger* logger = model.GetLogger();
-    const vecStr& labels = logger->GetSubBasinLabels();
+    const vecStr& labels = logger->GetSubbasinLabels();
     auto it = std::find(labels.begin(), labels.end(), "store:water_content");
     ASSERT_NE(it, labels.end());
     int iStore = static_cast<int>(it - labels.begin());
-    const axxd& store = logger->GetSubBasinValuesPerSubbasin()[iStore];
+    const axxd& store = logger->GetSubbasinValuesPerSubbasin()[iStore];
     EXPECT_TRUE(std::isnan(store(kSteps - 1, 0)));   // upstream (subbasin 2)
     EXPECT_FALSE(std::isnan(store(kSteps - 1, 1)));  // outlet (subbasin 1)
     EXPECT_GT(store(3, 1), 0.0);

@@ -285,12 +285,14 @@ PROCESS_PARAM_SPECS: dict[str, list[ParamSpec]] = {
         # These correct gauge undercatch, which raises the measured amount and
         # is worse for snow: a few per cent for rain in summer, occasionally
         # over 40 % for snowfall at altitude (Sevruk 1985, and the MeteoSwiss
-        # RhiresD product documentation). The bounds follow that asymmetry.
+        # RhiresD product documentation). The bounds follow that asymmetry, but
+        # stay open below 1 because a calibrated factor also absorbs the bias of
+        # the interpolation onto the catchment (PREVAH Ticino calibrates 0.78).
         ParamSpec(
             name="rain_correction_factor",
             unit="-",
             aliases=["rain_correction_factor", "rain_corr_factor", "rfcf", "rcf"],
-            min=0.8,
+            min=0.7,
             max=1.3,
             default=1.0,
             mandatory=False,
@@ -311,7 +313,7 @@ PROCESS_PARAM_SPECS: dict[str, list[ParamSpec]] = {
             name="rain_correction_factor",
             unit="-",
             aliases=["rain_correction_factor", "rain_corr_factor", "rfcf", "rcf"],
-            min=0.8,
+            min=0.7,
             max=1.3,
             default=1.0,
             mandatory=False,

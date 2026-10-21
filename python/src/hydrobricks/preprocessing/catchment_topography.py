@@ -296,7 +296,12 @@ class CatchmentTopography:
         float
             Mean aspect in degrees (0-360).
         """
-        aspect_rad = np.radians(self.aspect[mask_unit])
+        aspect_unit = self.aspect[mask_unit]
+        # Drop the cells with no aspect: xarray-spatial marks flat cells with -1,
+        # which would otherwise enter the mean as an angle of -1° and pull it north.
+        aspect_rad = np.radians(aspect_unit[~(aspect_unit < 0)])
+        if aspect_rad.size == 0:  # an entirely flat unit has no mean direction
+            return float("nan")
         # Use nanmean: xarray-spatial produces NaN aspect along the DEM edges,
         # which would otherwise yield a NaN mean for units touching the border.
         circular_mean_aspect_rad = math.atan2(

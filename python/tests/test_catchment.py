@@ -200,7 +200,106 @@ def test_discretize_by_elevation_and_aspect():
         elevation_method="equal_intervals",
         elevation_distance=100,
     )
-    assert len(catchment.hydro_units.hydro_units) == 72  # 4 classes were empty
+    # 4 combinations are empty; 'FLAT' gathers the cells with no aspect.
+    assert len(catchment.hydro_units.hydro_units) == 73
+
+
+def test_discretize_by_aspect_conserves_the_area():
+    """The aspect classes must cover the catchment: the cells with no aspect (flat
+    terrain, marked -1 by the aspect computation) used to match no class and were
+    silently dropped, so the hydro units covered less than the catchment."""
+    if not has_required_packages():
+        return
+    areas = {}
+    for criteria in (["elevation"], ["elevation", "aspect"]):
+        catchment = hb.Catchment(SITTER_OUTLINE)
+        catchment.extract_dem(SITTER_DEM)
+        catchment.discretize_by(
+            criteria=criteria,
+            elevation_method="equal_intervals",
+            elevation_distance=100,
+        )
+        units = catchment.hydro_units.hydro_units
+        areas[criteria[-1]] = float(np.sum(units["area"].values))
+
+    assert areas["aspect"] == pytest.approx(areas["elevation"])
+
+
+def test_discretize_by_aspect_eight_classes():
+    if not has_required_packages():
+        return
+    catchment = hb.Catchment(SITTER_OUTLINE)
+    catchment.extract_dem(SITTER_DEM)
+    catchment.discretize_by(
+        criteria=["elevation", "aspect"],
+        elevation_method="equal_intervals",
+        elevation_distance=100,
+        aspect_classes=8,
+    )
+    units = catchment.hydro_units.hydro_units
+    classes = set(units["aspect_class"].values.ravel())
+    assert {"N", "NE", "E", "SE", "S", "SW", "W", "NW"} <= classes
+
+    # Each unit's cells must fall in the 45° sector centred on its direction.
+    centres = {
+        "N": 0,
+        "NE": 45,
+        "E": 90,
+        "SE": 135,
+        "S": 180,
+        "SW": 225,
+        "W": 270,
+        "NW": 315,
+    }
+    aspect = catchment.topography.aspect
+    for _, row in units.iterrows():
+        aspect_class = row["aspect_class"].values[0]
+        if aspect_class == "FLAT":
+            continue
+        aspects = aspect[catchment.map_unit_ids == int(row["id"].values[0])]
+        # Angular distance to the sector centre, wrapped to [-180, 180].
+        offset = (aspects - centres[aspect_class] + 180) % 360 - 180
+        assert np.all(np.abs(offset) <= 22.5)
+
+
+def test_discretize_by_aspect_flat_slope_threshold():
+    """Below the threshold a cell goes to 'FLAT' rather than to a direction, so the
+    flat class grows and the directional ones shrink, without losing any area."""
+    if not has_required_packages():
+        return
+    areas = {}
+    for threshold in (0.0, 2.0):
+        catchment = hb.Catchment(SITTER_OUTLINE)
+        catchment.extract_dem(SITTER_DEM)
+        catchment.discretize_by(
+            criteria=["elevation", "aspect"],
+            elevation_method="equal_intervals",
+            elevation_distance=100,
+            flat_slope_threshold=threshold,
+        )
+        units = catchment.hydro_units.hydro_units
+        flat = units["aspect_class"].values.ravel() == "FLAT"
+        areas[threshold] = (
+            float(np.sum(units["area"].values[flat])),
+            float(np.sum(units["area"].values)),
+        )
+
+    assert areas[2.0][0] > areas[0.0][0]
+    assert areas[2.0][1] == pytest.approx(areas[0.0][1])
+
+
+def test_discretize_by_aspect_rejects_other_class_counts():
+    if not has_required_packages():
+        return
+    catchment = hb.Catchment(SITTER_OUTLINE)
+    catchment.extract_dem(SITTER_DEM)
+    with pytest.raises(hb.ConfigurationError):
+        catchment.discretize_by(
+            criteria=["elevation", "aspect"],
+            elevation_method="equal_intervals",
+            elevation_distance=100,
+            aspect_classes=6,
+        )
 
 
 def test_solar_declination_jan():
@@ -435,7 +534,7 @@ def test_connectivity_on_discontinuous_hydro_units():
 
 
 def _discretize_sitter(**kwargs) -> "hb.Catchment":
-    """Discretize the Sitter catchment by elevation and aspect (72 units)."""
+    """Discretize the Sitter catchment by elevation and aspect (73 units)."""
     catchment = hb.Catchment(SITTER_OUTLINE)
     catchment.extract_dem(SITTER_DEM)
     catchment.discretize_by(
@@ -515,11 +614,13 @@ def test_split_discontinuous_preserves_criteria_columns():
         aspects = aspect[mask]
         aspect_class = row["aspect_class"].values[0]
         if aspect_class == "N":
-            assert np.all((aspects >= 315) | (aspects < 45))
+            assert np.all((aspects >= 315) | ((aspects >= 0) & (aspects < 45)))
         elif aspect_class == "E":
             assert np.all((aspects >= 45) & (aspects < 135))
         elif aspect_class == "S":
             assert np.all((aspects >= 135) & (aspects < 225))
+        elif aspect_class == "FLAT":
+            assert np.all(~(aspects >= 0))
         else:
             assert np.all((aspects >= 225) & (aspects < 315))
 
@@ -642,3 +743,185 @@ def test_split_units_connectivity():
         0,
         0,
     ]
+
+
+# ---------------------------------------------------------------------------
+# Soil properties from rasters
+# ---------------------------------------------------------------------------
+
+
+def _write_raster(path, data, like) -> None:
+    """Write an array on the grid of an existing raster (for synthetic soil maps)."""
+    import rasterio
+
+    with rasterio.open(like) as src:
+        profile = src.profile
+    profile.update(dtype="float32", count=1, nodata=None, tiled=False)
+    for key in ("blockxsize", "blockysize"):
+        profile.pop(key, None)
+    with rasterio.open(path, "w", **profile) as dst:
+        dst.write(data.astype("float32"), 1)
+
+
+def _sitter_with_soil(tmp_dir, data_by_name):
+    """Discretize the Sitter and write synthetic soil rasters on the DEM grid."""
+    catchment = hb.Catchment(SITTER_OUTLINE)
+    catchment.extract_dem(SITTER_DEM)
+    catchment.create_elevation_bands(method="equal_intervals", distance=100)
+    paths = {}
+    for name, data in data_by_name.items():
+        paths[name] = Path(tmp_dir) / f"{name}.tif"
+        _write_raster(paths[name], data, SITTER_DEM)
+    return catchment, paths
+
+
+def test_extract_unit_property_from_raster_mean():
+    if not has_required_packages():
+        return
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        catchment = hb.Catchment(SITTER_OUTLINE)
+        catchment.extract_dem(SITTER_DEM)
+        catchment.create_elevation_bands(method="equal_intervals", distance=100)
+
+        # A raster holding the elevation itself: the per-unit mean must match the
+        # mean elevation hydrobricks computes on its own.
+        path = Path(tmp_dir) / "elev.tif"
+        _write_raster(path, np.nan_to_num(catchment.dem_data), SITTER_DEM)
+        values = catchment.extract_unit_property_from_raster(path, "elev_check", "m")
+
+        # Reference: the zonal mean of the DEM, computed directly.
+        unit_ids = np.unique(catchment.map_unit_ids)
+        unit_ids = unit_ids[unit_ids != 0]
+        reference = [
+            np.nanmean(catchment.dem_data[catchment.map_unit_ids == i])
+            for i in unit_ids
+        ]
+        assert len(values) == len(reference)
+        assert np.allclose(values, reference, atol=0.01)
+
+
+def test_extract_unit_property_reclassify():
+    if not has_required_packages():
+        return
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        # Two classes split by elevation, so each unit is fully in one class.
+        catchment = hb.Catchment(SITTER_OUTLINE)
+        catchment.extract_dem(SITTER_DEM)
+        catchment.create_elevation_bands(method="equal_intervals", distance=100)
+        classes = np.where(catchment.dem_data < 1000, 2, 5)
+        path = Path(tmp_dir) / "nfk.tif"
+        _write_raster(path, classes, SITTER_DEM)
+
+        values = catchment.extract_unit_property_from_raster(
+            path, "awc", "%", reclassify=hb.soils.PREVAH_SOIL_AWC_CLASSES
+        )
+
+        # Only the two mapped values appear, and the property is in the table.
+        assert set(np.unique(np.round(values, 6))) <= {4.5, 16.0}
+        assert catchment.hydro_units.has("awc")
+        units = catchment.hydro_units.hydro_units
+        elevations = units["elevation"].values.ravel()
+        for elevation, value in zip(elevations, values):
+            if elevation < 900:  # fully below the class boundary
+                assert value == pytest.approx(4.5)
+            elif elevation > 1100:
+                assert value == pytest.approx(16.0)
+
+
+def test_extract_unit_property_ignores_unmapped_classes():
+    if not has_required_packages():
+        return
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        catchment = hb.Catchment(SITTER_OUTLINE)
+        catchment.extract_dem(SITTER_DEM)
+        catchment.create_elevation_bands(method="equal_intervals", distance=100)
+        # Class 99 is in no table: those cells must not drag the mean down.
+        classes = np.where(catchment.dem_data < 1000, 99, 5)
+        path = Path(tmp_dir) / "nfk.tif"
+        _write_raster(path, classes, SITTER_DEM)
+
+        values = catchment.extract_unit_property_from_raster(
+            path, "awc", "%", reclassify=hb.soils.PREVAH_SOIL_AWC_CLASSES
+        )
+        finite = values[~np.isnan(values)]
+        assert np.all(finite == pytest.approx(16.0))
+        # The units made only of unmapped cells have no value at all.
+        assert np.isnan(values).any()
+
+
+def test_extract_soil_properties():
+    if not has_required_packages():
+        return
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        catchment, paths = _sitter_with_soil(
+            tmp_dir,
+            {
+                "awc_classes": np.full((1, 1), 3.0),
+                "depth_classes": np.full((1, 1), 4.0),
+                "k_classes": np.full((1, 1), 6.0),
+            },
+        )
+        shape = catchment.dem_data.shape
+        for name, value in (("awc_classes", 3), ("depth_classes", 4), ("k_classes", 6)):
+            _write_raster(paths[name], np.full(shape, value), SITTER_DEM)
+
+        catchment.extract_soil_properties(
+            available_water_content=paths["awc_classes"],
+            soil_depth=paths["depth_classes"],
+            conductivity=paths["k_classes"],
+            reclassify=True,
+        )
+
+        units = catchment.hydro_units.hydro_units
+        assert np.all(units["awc"].values == pytest.approx(8.0))
+        assert np.all(units["soil_depth"].values == pytest.approx(1.0))
+        assert np.all(units["conductivity"].values == pytest.approx(500.0))
+
+
+def test_extract_soil_properties_feeds_the_prevah_tables():
+    """The properties must be usable as they are by the PREVAH land-use methods."""
+    if not has_required_packages():
+        return
+    import hydrobricks.models as models
+
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        catchment, paths = _sitter_with_soil(tmp_dir, {"awc": np.full((1, 1), 1.0)})
+        shape = catchment.dem_data.shape
+        _write_raster(paths["awc"], np.full(shape, 4), SITTER_DEM)
+        _write_raster(Path(tmp_dir) / "depth.tif", np.full(shape, 3), SITTER_DEM)
+        _write_raster(Path(tmp_dir) / "k.tif", np.full(shape, 2), SITTER_DEM)
+        catchment.extract_soil_properties(
+            available_water_content=paths["awc"],
+            soil_depth=Path(tmp_dir) / "depth.tif",
+            conductivity=Path(tmp_dir) / "k.tif",
+            reclassify=True,
+        )
+
+        hydro_units = catchment.hydro_units
+        model = models.PrevahUniBE(land_cover_names=["open"], land_cover_types=["open"])
+        parameters = model.generate_parameters()
+        parameters.set_values({"cu_perc": 0.7})
+
+        def column(name):
+            return hydro_units.hydro_units[name].to_numpy().flatten()
+
+        model.apply_land_use_field_capacity(
+            parameters,
+            hydro_units,
+            "pasture",
+            available_water_content=column("awc"),
+            soil_depth=column("soil_depth"),
+        )
+        model.apply_land_use_percolation(
+            parameters,
+            hydro_units,
+            "pasture",
+            available_water_content=column("awc"),
+            soil_depth=column("soil_depth"),
+            conductivity=column("conductivity"),
+        )
+
+        assert parameters.has("kwper")
+        assert hydro_units.has("kwper")
+        # A uniform conductivity gives no spatial contrast: KWPER is 1 everywhere.
+        assert np.all(column("kwper") == pytest.approx(1.0))

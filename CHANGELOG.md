@@ -5,6 +5,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## Unreleased
+
+### Added
+
+- `area_of` brick key in model structures: a storage representing a land cover's area (e.g. a per-cover soil store) has its capacity and its evapotranspiration scaled by that cover's live area fraction.
+
+### Changed
+
+- HBV-96 per-class soils (the default with several soil-bearing covers) and PREVAH-UniBE with `share_soil=False`: `fc_<cover>` is now the capacity of the cover's own soil (in mm over the cover area) rather than a share of the unit's soil storage. Each store is scaled by its cover's area fraction in each unit and follows land cover changes, so a cover absent from a unit no longer holds the percolation gate shut, and per-cover soils now work on single-land-use units (PREVAH hydrotopes).
+
+### Fixed
+
+- Per-cover soil stores of HBV-96 and PREVAH-UniBE (`share_soil=False`) evaporated at the full potential rate of the unit each, instead of over their cover's share of it, so a unit with several covers could evaporate more than the potential (about +45% for PREVAH and +60% for HBV-96 on a 60/40 open/forest test case).
+
 ## 0.9.2 - 2026-10-20
 
 ### Breaking changes

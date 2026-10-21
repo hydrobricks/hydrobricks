@@ -193,6 +193,7 @@ void ModelBuilder::CreateHydroUnitsComponents(SettingsModel& modelSettings) {
         }
 
         LinkSurfaceComponentsParents(modelSettings, unit);
+        LinkAreaFractions(modelSettings, unit);
     }
 
     for (int iUnit = 0; iUnit < hydroUnitCount; ++iUnit) {
@@ -345,6 +346,27 @@ void ModelBuilder::LinkSurfaceComponentsParents(SettingsModel& modelSettings, Hy
             assert(landCoverBrick);
             surfaceComponentBrick->SetParent(landCoverBrick);
         }
+    }
+}
+
+void ModelBuilder::LinkAreaFractions(SettingsModel& modelSettings, HydroUnit* unit) {
+    for (int iBrick = 0; iBrick < modelSettings.GetHydroUnitBrickCount(); ++iBrick) {
+        const BrickSettings& brickSettings = modelSettings.GetHydroUnitBrickSettings(iBrick);
+        if (brickSettings.areaOf.empty()) {
+            continue;
+        }
+        if (!unit->HasBrick(brickSettings.areaOf)) {
+            throw ModelConfigError(
+                std::format("The brick '{}' represents the area of the land cover '{}', which "
+                            "does not exist.",
+                            brickSettings.name, brickSettings.areaOf));
+        }
+        auto landCover = dynamic_cast<LandCover*>(unit->GetBrick(brickSettings.areaOf));
+        if (landCover == nullptr) {
+            throw ModelConfigError(std::format("The brick '{}' represents the area of '{}', which is not a land cover.",
+                                               brickSettings.name, brickSettings.areaOf));
+        }
+        unit->GetBrick(brickSettings.name)->GetWaterContainer()->SetAreaFraction(landCover->GetAreaFractionPointer());
     }
 }
 

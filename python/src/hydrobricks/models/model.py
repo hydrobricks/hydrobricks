@@ -1163,6 +1163,10 @@ class Model(ABC):
             if brick.get("computed_directly", False):
                 self.settings.set_current_brick_computed_directly()
 
+            # Make the brick represent a land cover's area instead of the unit's
+            if "area_of" in brick:
+                self.settings.set_current_brick_area_of(brick["area_of"])
+
             # Add brick parameters if any
             if "parameters" in brick:
                 for param, value in brick["parameters"].items():

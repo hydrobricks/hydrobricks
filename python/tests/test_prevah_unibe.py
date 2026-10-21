@@ -17,6 +17,7 @@ import numpy as np
 import pytest
 
 import hydrobricks as hb
+import hydrobricks.actions as actions
 import hydrobricks.models as models
 from hydrobricks.land_covers import (
     PREVAH_LAND_USE_ALBEDO,
@@ -1285,18 +1286,118 @@ def test_prevah_per_cover_soil_water_balance_closes(tmp_path):
     assert _balance(model, forcing) == pytest.approx(0, abs=1e-6)
 
 
-def test_prevah_per_cover_soil_capacity_is_expressed_over_the_unit(tmp_path):
-    # A per-cover store is fed by its land cover, whose outgoing fluxes already carry
-    # the cover area fraction, so its content — and therefore its capacity — is
-    # expressed over the whole hydro unit, not over the cover. Giving both covers the
-    # capacity of the shared store therefore enlarges the unit's soil storage.
+def test_prevah_per_cover_soil_capacity_is_expressed_over_the_cover(tmp_path):
+    # fc_<cover> is the capacity of the cover's own soil: each store represents its
+    # cover's area, so its capacity and its ET are scaled by the cover fraction. Equal
+    # per-cover capacities therefore hold the same soil water as the shared store,
+    # and the ET cannot exceed the potential rate however many covers there are.
     shared, _ = _run_per_cover_soil(
         _subdir(tmp_path, "shared"), share_soil=True, fc_open=200.0, fc_forest=200.0
     )
     split, _ = _run_per_cover_soil(
         _subdir(tmp_path, "split"), share_soil=False, fc_open=200.0, fc_forest=200.0
     )
-    assert split.get_total_outlet_discharge() < shared.get_total_outlet_discharge()
+    assert split.get_total_et() == pytest.approx(shared.get_total_et(), rel=0.01)
+    assert split.get_total_outlet_discharge() == pytest.approx(
+        shared.get_total_outlet_discharge(), rel=0.01
+    )
+
+
+def _run_single_land_use_units(tmp_path, *, share_soil, changes_csv=None):
+    """Run PREVAH on two units of a single land use each: all open, all forest.
+
+    That is the PREVAH hydrotope discretization. With ``changes_csv``, the forest
+    area of the units follows that land cover change (in km2, matched by unit id).
+    """
+    hydro_units = hb.HydroUnits(
+        land_cover_types=["open", "forest"], land_cover_names=["open", "forest"]
+    )
+    hu_csv = tmp_path / "hydro_units.csv"
+    hu_csv.write_text(
+        "id,elevation,area_open,area_forest\n-,m,m^2,m^2\n"
+        "1,1000,1000000,0\n2,1000,0,1000000\n"
+    )
+    hydro_units.load_from_csv(
+        hu_csv,
+        column_elevation="elevation",
+        columns_areas={"open": "area_open", "forest": "area_forest"},
+    )
+    forcing = _load_forcing(hydro_units, _meteo_csv_seasonal(tmp_path, _N_2Y, 5.0, 1.5))
+
+    model = models.PrevahUniBE(
+        land_cover_names=["open", "forest"],
+        land_cover_types=["open", "forest"],
+        share_soil=share_soil,
+        interception_covers=["forest"],
+        record_all=True,
+    )
+    parameters = model.generate_parameters()
+    values = dict(_DEFAULT_PARAMS)
+    values.pop("beta")
+    values.update({"beta_open": 2.0, "beta_forest": 2.0, "ic": 2.0})
+    if not share_soil:
+        values.pop("fc")
+        values.pop("cu")
+        values.update(
+            {"fc_open": 200.0, "fc_forest": 200.0, "lp_open": 0.7, "lp_forest": 0.7}
+        )
+    parameters.set_values(values)
+
+    end_date = (_START + timedelta(days=_N_2Y - 1)).strftime("%Y-%m-%d")
+    model.setup(
+        spatial_structure=hydro_units,
+        output_path=str(tmp_path),
+        start_date=_START.strftime("%Y-%m-%d"),
+        end_date=end_date,
+    )
+    if changes_csv is not None:
+        changes = actions.ActionLandCoverChange()
+        changes.load_from_csv(
+            changes_csv,
+            hydro_units,
+            land_cover="forest",
+            area_unit="km2",
+            match_with="id",
+        )
+        assert model.add_action(changes)
+    model.run(parameters=parameters, forcing=forcing)
+    return model, forcing
+
+
+def test_prevah_per_cover_soil_on_single_land_use_units(tmp_path):
+    # A cover absent from a unit holds no capacity there, so it neither dilutes nor
+    # shuts that unit's percolation gate: on units of a single land use, the per-cover
+    # stores behave exactly as the shared one.
+    shared, _ = _run_single_land_use_units(_subdir(tmp_path, "shared"), share_soil=True)
+    split, forcing = _run_single_land_use_units(
+        _subdir(tmp_path, "split"), share_soil=False
+    )
+    assert _balance(split, forcing) == pytest.approx(0, abs=1e-6)
+    assert np.asarray(split.get_outlet_discharge()) == pytest.approx(
+        np.asarray(shared.get_outlet_discharge()), rel=1e-6, abs=1e-9
+    )
+    assert split.get_total_et() == pytest.approx(shared.get_total_et(), rel=1e-6)
+
+
+def test_prevah_per_cover_soil_follows_a_land_cover_change(tmp_path):
+    # The cover fractions are read live: a cover appearing in a unit during the run
+    # gets its soil capacity there from that date on, and the water balance closes.
+    changes_csv = tmp_path / "forest_changes.csv"
+    changes_csv.write_text("id,1982-01-01\n1,0.5\n")
+    static, _ = _run_single_land_use_units(
+        _subdir(tmp_path, "static"), share_soil=False
+    )
+    changed, forcing = _run_single_land_use_units(
+        _subdir(tmp_path, "changed"), share_soil=False, changes_csv=changes_csv
+    )
+    assert _balance(changed, forcing) == pytest.approx(0, abs=1e-6)
+    q_static = np.asarray(static.get_outlet_discharge())
+    q_changed = np.asarray(changed.get_outlet_discharge())
+    assert np.all(np.isfinite(q_changed))
+    # Identical until the change, different after it.
+    first_1982 = 365
+    assert q_changed[:first_1982] == pytest.approx(q_static[:first_1982], rel=1e-9)
+    assert not np.allclose(q_changed[first_1982:], q_static[first_1982:])
 
 
 def test_prevah_per_cover_soil_capacities_change_the_result(tmp_path):

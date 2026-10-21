@@ -509,6 +509,23 @@ class ModelSettings:
         """
         self.settings.set_current_brick_computed_directly()
 
+    def set_current_brick_area_of(self, land_cover: str) -> None:
+        """
+        Make the selected brick represent the area of a land cover.
+
+        For a per-cover store (e.g. a per-land-cover soil moisture store): its
+        capacity parameter applies to that cover's area, and the capacity and the
+        evapotranspiration are scaled by the cover's area fraction in each hydro unit
+        (zero where the cover is absent). The fraction is read live, so land cover
+        changes apply during the run.
+
+        Parameters
+        ----------
+        land_cover
+            Name of the land cover.
+        """
+        self.settings.set_current_brick_area_of(land_cover)
+
     def add_process_parameter(
         self, name: str, value: int | float | bool, kind: str = "constant"
     ) -> None:

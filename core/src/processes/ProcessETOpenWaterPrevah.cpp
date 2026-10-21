@@ -56,7 +56,7 @@ const vecDouble& ProcessETOpenWaterPrevah::GetRates() {
     // monthly vegetation-cover fraction), then the open-water cap at the available content
     // over the time step.
     double albedo = _hydroUnit->GetSnowAlbedo(*_albedoLand);
-    double rate = *_etFactor * (1.0 - albedo) / 0.8 * GetForcingRate(_pet);
+    double rate = *_etFactor * (1.0 - albedo) / 0.8 * GetPetRate(_pet);
 
     if (_timeMachine != nullptr) {
         double maxRate = _container->GetContentWithChanges() / GetTimeStepInDays();

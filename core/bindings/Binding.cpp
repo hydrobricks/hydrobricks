@@ -212,6 +212,8 @@ PYBIND11_MODULE(_hydrobricks, m) {
              "kind"_a = "constant")
         .def("set_current_brick_computed_directly", &SettingsModel::SetCurrentBrickComputedDirectly,
              "Mark the selected brick as computed directly (explicitly, without the ODE solver).")
+        .def("set_current_brick_area_of", &SettingsModel::SetCurrentBrickAreaOf,
+             "Make the selected brick represent the area of a land cover (scales its capacity and ET).", "land_cover"_a)
         .def("set_parameter_value", &SettingsModel::SetParameterValue, "Setting one of the model parameter.",
              "component"_a, "name"_a, "value"_a)
         .def("set_parameter_monthly_values", &SettingsModel::SetParameterMonthlyValues,

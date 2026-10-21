@@ -166,21 +166,15 @@ class PrevahUniBE(Model):
         Optional snow redistribution process (e.g. 'transport:snow_slide').
     share_soil : bool
         Share a single soil moisture store across the soil-bearing land covers
-        (default: True). A PREVAH hydrotope carries one land use and one soil, so a
-        shared store is the right model when each hydro unit is dominated by one
-        cover. Set it to False when a unit mixes covers and you want PREVAH's
-        per-land-use soil parameterization: each cover then gets its own store with
-        its own ``fc_<cover>`` and ``lp_<cover>``, and the percolation is gated by
-        their area-weighted mean saturation. Note that a per-cover store is fed by
-        its land cover, whose outgoing fluxes already carry the cover area fraction,
-        so ``fc_<cover>`` is expressed over the whole hydro unit rather than over the
-        cover itself (as for the per-class soils of
-        :class:`~hydrobricks.models.hbv.HBV`): the capacities of the covers add up to
-        the unit's soil storage. It is therefore only meaningful when every cover
-        holds a share of every unit: a cover with no area in a unit still contributes
-        its capacity to that unit's percolation gate while its store stays empty,
-        which would hold the gate shut. Keep the shared store for a discretization
-        that gives each unit a single land use (a PREVAH hydrotope).
+        (default: True). Set it to False for PREVAH's per-land-use soil
+        parameterization: each cover then gets its own store with its own
+        ``fc_<cover>`` and ``lp_<cover>``, and the percolation is gated by their
+        area-weighted mean saturation. ``fc_<cover>`` is the capacity of the cover's
+        own soil (in mm over the cover area); each unit scales it by the cover's area
+        fraction, read live so that land cover changes apply. A cover absent from a
+        unit therefore holds no capacity there and does not affect its percolation,
+        which suits both a discretization giving each unit a single land use (a
+        PREVAH hydrotope) and units mixing several covers.
     forest_interception : bool
         Enable the canopy interception (default: True). ``False`` disables it
         unless ``interception_covers`` names covers explicitly.
@@ -510,8 +504,14 @@ class PrevahUniBE(Model):
                     "overflow": {"kind": "overflow", "target": "upper_zone"},
                 },
             }
-            if not self._shared_soil and multi_cover:
-                soil["alias_suffix"] = f"_{cover_name}"
+            if not self._shared_soil:
+                # The store represents its cover's area: fc_<cover> is the cover's own
+                # capacity, and the capacity and the ET are scaled by the cover's area
+                # fraction in each unit. A cover absent from a unit holds no capacity,
+                # so it does not dilute the percolation gate.
+                soil["area_of"] = cover_name
+                if multi_cover:
+                    soil["alias_suffix"] = f"_{cover_name}"
             self.structure[soil_name] = soil
 
         # Upper zone (SUZ): threshold surface runoff, interflow and the
@@ -526,8 +526,8 @@ class PrevahUniBE(Model):
                     "kind": "percolation:prevah",
                     "target": "slz1",
                     # With one soil store per cover, the percolation is gated by their
-                    # area-weighted mean saturation (the contents already carry the
-                    # cover area fractions).
+                    # area-weighted mean saturation (the contents and the capacities
+                    # both carry the cover area fractions).
                     "gate": self._gate_bricks(),
                 },
             },

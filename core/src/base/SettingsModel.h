@@ -58,6 +58,7 @@ struct BrickSettings {
     vector<VariableType> forcing;
     vector<ProcessSettings> processes;
     bool computedDirectly = false;  // if true, the brick is solved explicitly (no ODE solver)
+    string areaOf;                  // land cover whose area the brick represents (empty: the whole unit)
 };
 
 struct ModelStructure {
@@ -168,6 +169,15 @@ class SettingsModel {
      * where processes apply an exact discrete update each time step.
      */
     void SetCurrentBrickComputedDirectly();
+
+    /**
+     * Make the selected brick represent the area of a land cover of the same hydro
+     * unit instead of the whole unit (e.g. a per-cover soil store): its capacity and
+     * its evapotranspiration are then scaled by the live area fraction of that cover.
+     *
+     * @param landCover name of the land cover.
+     */
+    void SetCurrentBrickAreaOf(const string& landCover);
 
     /**
      * Check if the selected brick has a parameter.

@@ -34,8 +34,9 @@ class Snowpack;
  * With several soil gate bricks (one soil moisture store per land cover), the contents
  * and the capacities are summed before the ratio is taken, which is the
  * area-weighted mean saturation of the hydro unit: the stores are fed by their land
- * cover, whose outgoing fluxes already carry its area fraction, so their contents
- * are expressed over the whole unit.
+ * cover, whose outgoing fluxes already carry its area fraction, and their capacity is
+ * expressed over that cover and scaled by its area fraction, so both are expressed
+ * over the whole unit. A cover with no area in the unit contributes neither.
  */
 class ProcessPercolationPrevah : public ProcessOutflow {
   public:

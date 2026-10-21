@@ -538,6 +538,30 @@ def test_hbv96_per_class_soil_capillary_fanout_balance_closes(tmp_path):
     assert _balance(model, forcing) == pytest.approx(0, abs=1e-6)
 
 
+def test_hbv96_per_class_soil_capacity_is_expressed_over_the_cover(tmp_path):
+    """fc_<cover> is the cover's own capacity: per-class soils with the same
+    parameters as a shared soil give the same ET and discharge (each store's
+    capacity and ET are scaled by its cover's area fraction)."""
+    common = {
+        k: v
+        for k, v in _PARAMS_2COVER_PERCLASS.items()
+        if not k.startswith(("fc_", "lp_", "beta_"))
+    }
+    common.update({"beta_open": 2.0, "beta_forest": 2.0, "cflux": 1.0})
+    per_class = {**common, "fc_open": 200.0, "fc_forest": 200.0}
+    per_class.update({"lp_open": 0.9, "lp_forest": 0.9})
+    shared = {**common, "fc": 200.0, "lp": 0.9}
+
+    (tmp_path / "pc").mkdir()
+    (tmp_path / "sh").mkdir()
+    model_pc, _ = _run_2cover(tmp_path / "pc", share_soil=False, params=per_class)
+    model_sh, _ = _run_2cover(tmp_path / "sh", share_soil=True, params=shared)
+    assert model_pc.get_total_et() == pytest.approx(model_sh.get_total_et(), rel=1e-6)
+    assert model_pc.get_total_outlet_discharge() == pytest.approx(
+        model_sh.get_total_outlet_discharge(), rel=1e-6
+    )
+
+
 def _run_open_forest(
     tmp_path,
     *,

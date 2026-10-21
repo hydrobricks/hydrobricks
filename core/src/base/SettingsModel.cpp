@@ -140,6 +140,11 @@ void SettingsModel::SetCurrentBrickComputedDirectly() {
     _selectedBrick->computedDirectly = true;
 }
 
+void SettingsModel::SetCurrentBrickAreaOf(const string& landCover) {
+    assert(_selectedBrick);
+    _selectedBrick->areaOf = landCover;
+}
+
 bool SettingsModel::BrickHasParameter(const string& name) {
     assert(_selectedBrick);
     for (auto& parameter : _selectedBrick->parameters) {

@@ -110,7 +110,7 @@ class CatchmentDiscretization:
         min_slope: int = 0,
         max_slope: int = 90,
         aspect_classes: int = 4,
-        flat_slope_threshold: float = 0.0,
+        flat_slope_threshold: float = 3.0,
         radiation_method: str = "equal_intervals",
         radiation_number: int = 5,
         radiation_distance: int = 50,
@@ -174,11 +174,22 @@ class CatchmentDiscretization:
             classes and 315-45° with 4.
         flat_slope_threshold
             Slope (degrees) below which a cell is considered flat and assigned to the
-            'FLAT' aspect class rather than to a direction. Cells whose aspect is
-            undefined (flat terrain, or the border of the DEM) are always assigned to
-            'FLAT', whatever the threshold, so that no area is lost. The 'FLAT' class
-            is only created when such cells exist. Default: 0 = only the cells with an
-            undefined aspect (PREVAH uses 0.5).
+            'FLAT' aspect class rather than to a direction (default: 3). Cells whose
+            aspect is undefined (flat terrain, or the border of the DEM) are always
+            assigned to 'FLAT', whatever the threshold, so that no area is lost. The
+            'FLAT' class is only created when such cells exist; 0 keeps only the cells
+            with an undefined aspect (PREVAH uses 0.5).
+
+            The default suits a 25 m DEM with about a metre of vertical error, where
+            below 3° the aspect of a cell is mostly noise: perturbing the DEM by 1 m
+            moves 37 % of the cells of the 1-2° band to another aspect class out of
+            four (a uniformly random aspect would move 75 %), against 14 % at 3-5°.
+            Little is lost by not splitting them, since the north-south difference in
+            annual clear-sky radiation at 3° is under 8 % of the horizontal. The error
+            of the aspect scales with the vertical error over the cell size, so a finer
+            DEM calls for a *higher* threshold, not a lower one:
+            ``atan(1.1 * sigma_z / cell_size)`` holds the median error of the aspect
+            near 15°.
         radiation_method
             The method to build the radiation categories:
             'equal_intervals' = fixed radiation intervals

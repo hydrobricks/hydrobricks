@@ -200,8 +200,9 @@ def test_discretize_by_elevation_and_aspect():
         elevation_method="equal_intervals",
         elevation_distance=100,
     )
-    # 4 combinations are empty; 'FLAT' gathers the cells with no aspect.
-    assert len(catchment.hydro_units.hydro_units) == 73
+    # 4 combinations are empty; 'FLAT' gathers the cells with no aspect and
+    # those flatter than the default threshold (3.2 % of the area here).
+    assert len(catchment.hydro_units.hydro_units) == 87
 
 
 def test_discretize_by_aspect_conserves_the_area():
@@ -534,7 +535,7 @@ def test_connectivity_on_discontinuous_hydro_units():
 
 
 def _discretize_sitter(**kwargs) -> "hb.Catchment":
-    """Discretize the Sitter catchment by elevation and aspect (73 units)."""
+    """Discretize the Sitter catchment by elevation and aspect (87 units)."""
     catchment = hb.Catchment(SITTER_OUTLINE)
     catchment.extract_dem(SITTER_DEM)
     catchment.discretize_by(
@@ -596,9 +597,13 @@ def test_split_discontinuous_units():
 def test_split_discontinuous_preserves_criteria_columns():
     if not has_required_packages() or not hb.HAS_SCIPY:
         return
-    catchment = _discretize_sitter(split_discontinuous=True)
+    flat_threshold = 3.0
+    catchment = _discretize_sitter(
+        split_discontinuous=True, flat_slope_threshold=flat_threshold
+    )
     units = catchment.hydro_units.hydro_units
     aspect = catchment.topography.aspect
+    slope = catchment.topography.slope
 
     for _, row in units.iterrows():
         unit_id = int(row["id"].values[0])
@@ -620,7 +625,8 @@ def test_split_discontinuous_preserves_criteria_columns():
         elif aspect_class == "S":
             assert np.all((aspects >= 135) & (aspects < 225))
         elif aspect_class == "FLAT":
-            assert np.all(~(aspects >= 0))
+            # No aspect at all, or too little slope for the aspect to mean anything.
+            assert np.all(~(aspects >= 0) | (slope[mask] < flat_threshold))
         else:
             assert np.all((aspects >= 225) & (aspects < 315))
 

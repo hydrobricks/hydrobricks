@@ -14,7 +14,7 @@ class ModelSettings:
 
     def __init__(
         self,
-        solver: str = "crank_nicolson",
+        solver: str = "heun_explicit",
         record_all: bool = False,
         channel_routing: str = "none",
         route_local_runoff: bool = False,

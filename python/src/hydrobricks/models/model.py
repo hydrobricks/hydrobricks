@@ -98,7 +98,7 @@ class Model(ABC):
 
         # Default options
         self.options: dict[str, Any] = dict()
-        self.solver: str = "crank_nicolson"
+        self.solver: str = "heun_explicit"
         self.record_all: bool = False
         # Channel routing between the subbasins of a river network ('none', 'lag' or
         # 'muskingum'); irrelevant for a catchment without a declared network. Not to be

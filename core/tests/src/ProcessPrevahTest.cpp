@@ -1178,7 +1178,8 @@ class EtPrevahSoil : public ::testing::Test {
     std::unique_ptr<TimeSeriesUniform> _tsTemp;
     std::unique_ptr<TimeSeriesUniform> _tsPet;
 
-    void SetUpModel(const std::vector<string>& covers, float meltingTemperature2 = 20.0f) {
+    void SetUpModel(const std::vector<string>& covers, float meltingTemperature2 = 20.0f,
+                    const string& etGateCover = "") {
         _model.SetSolver("euler_explicit");
         _model.SetTimer("2020-01-01", "2020-01-05", 1, "day");
 
@@ -1210,6 +1211,11 @@ class EtPrevahSoil : public ::testing::Test {
         _model.AddHydroUnitBrick("soil", "storage");
         _model.AddBrickParameter("capacity", 100.0f);
         _model.AddBrickProcess("et", "et:prevah");
+        if (!etGateCover.empty()) {
+            // A soil store belonging to a single cover: the albedo is read from the
+            // snow of that cover alone.
+            _model.SetProcessGateBrick(etGateCover);
+        }
         _model.SetProcessParameterValue("lp", 0.05f);
         _model.AddProcessLogging("output");
         _model.AddBrickProcess("outflow", "outflow:linear", "outlet");
@@ -1312,6 +1318,31 @@ TEST_F(EtPrevahSoil, PartialSnowCoverInterpolatesAlbedo) {
     // [0.59, 0.875] -> ET in [1.19, 1.75]: reduced, but less so than under full cover.
     EXPECT_GT(et(2), 1.0);  // partial cover -> above the full-snow reduction
     EXPECT_LT(et(2), 2.0);  // still below the snow-free rate
+}
+
+TEST_F(EtPrevahSoil, GatedOnASnowCoveredCoverTakesItsAlbedo) {
+    // Same half-snowy unit as above, but the soil store belongs to the cover that
+    // keeps its snow: the albedo is that of the snow surface, with no mixing.
+    SetUpModel({"ground1", "ground2"}, -10.0f, "ground1");
+    SetForcing(5.0);
+
+    axd et = RunAndGetEt({{"ground1", 0.5}, {"ground2", 0.5}});
+
+    // Full snow reduction: ET = PET * (1 - albedo)/0.8 with albedo in [0.4, 0.85].
+    EXPECT_GT(et(2), 0.375 - 1e-6);
+    EXPECT_LT(et(2), 1.5 + 1e-6);
+}
+
+TEST_F(EtPrevahSoil, GatedOnASnowFreeCoverKeepsThePotentialRate) {
+    // The soil store belongs to the cover whose snow has melted: the snow lying on
+    // the other half of the unit no longer damps its ET.
+    SetUpModel({"ground1", "ground2"}, -10.0f, "ground2");
+    SetForcing(5.0);
+
+    axd et = RunAndGetEt({{"ground1", 0.5}, {"ground2", 0.5}});
+
+    // albedo = albedo_land = 0.2 -> factor 1 -> ET = PET.
+    EXPECT_NEAR(et(2), 2.0, 1e-6);
 }
 
 TEST_F(MenzelCanopy, CanopyContentFollowsMenzelFilling) {

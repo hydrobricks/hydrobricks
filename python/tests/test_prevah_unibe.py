@@ -1225,6 +1225,41 @@ def test_prevah_per_cover_soil_falls_back_to_a_single_store():
     assert model.generate_parameters().has("fc")
 
 
+def test_prevah_per_cover_soil_et_reads_its_own_cover():
+    # A soil store of its own belongs to one cover, so the snow-albedo reduction
+    # follows the snow of that cover (given as gate brick), as a PREVAH hydrotope
+    # does, instead of the mean over the unit.
+    model = models.PrevahUniBE(
+        land_cover_names=["open", "forest"],
+        land_cover_types=["open", "forest"],
+        share_soil=False,
+    )
+    for cover in ("open", "forest"):
+        et = model.structure[f"{cover}_soil_moisture"]["processes"]["et"]
+        assert et["kind"] == "et:prevah"
+        assert et["gate"] == cover
+
+
+def test_prevah_shared_soil_et_reads_the_whole_unit():
+    # A shared store spans several covers and has no single owner: the albedo stays
+    # the area-weighted mean over the unit.
+    model = models.PrevahUniBE(
+        land_cover_names=["open", "forest"], land_cover_types=["open", "forest"]
+    )
+    assert "gate" not in model.structure["soil_moisture"]["processes"]["et"]
+
+
+def test_prevah_per_cover_soil_with_hbv_et_has_no_gate():
+    # The plain HBV limitation reads no albedo, so it needs no cover.
+    model = models.PrevahUniBE(
+        land_cover_names=["open", "forest"],
+        land_cover_types=["open", "forest"],
+        share_soil=False,
+        soil_et_process="et:hbv",
+    )
+    assert "gate" not in model.structure["open_soil_moisture"]["processes"]["et"]
+
+
 def _run_per_cover_soil(tmp_path, *, share_soil, fc_open, fc_forest):
     """Run PREVAH on an open/forest catchment (60/40) with the given soil setup."""
     hydro_units = hb.HydroUnits(

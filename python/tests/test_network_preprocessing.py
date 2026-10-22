@@ -40,18 +40,35 @@ APPENZELL_AREA = 74.4e6  # m2, from the official outline
 def catchment():
     catchment = hb.Catchment(STGALLEN_DIR / "outline.shp")
     catchment.extract_dem(STGALLEN_DIR / "dem.tif")
-    catchment.load_unit_ids_from_raster(STGALLEN_DIR / "unit_ids.tif")
-    catchment.get_hydro_units_attributes()
     return catchment
 
 
-def test_delineation_requires_a_dem_and_units():
+def _area(catchment):
+    """The catchment area [m2] on the DEM grid."""
+    cells = np.count_nonzero(~np.isnan(catchment.dem_data))
+    return cells * catchment.get_dem_pixel_area()
+
+
+def test_delineation_requires_a_dem_and_one_source():
     bare = hb.Catchment(STGALLEN_DIR / "outline.shp")
     with pytest.raises(hb.ConfigurationError):
         bare.delineate_subbasins([APPENZELL_GAUGE])
     bare.extract_dem(STGALLEN_DIR / "dem.tif")
+    # Either outlet points or polygons, not both nor none.
     with pytest.raises(hb.ConfigurationError):
-        bare.delineate_subbasins([APPENZELL_GAUGE])
+        bare.delineate_subbasins()
+    with pytest.raises(hb.ConfigurationError):
+        bare.delineate_subbasins(
+            [APPENZELL_GAUGE], subbasins=APPENZELL_DIR / "outline.shp"
+        )
+
+
+def test_hydro_units_before_the_subbasins_are_refused():
+    catchment = hb.Catchment(STGALLEN_DIR / "outline.shp")
+    catchment.extract_dem(STGALLEN_DIR / "dem.tif")
+    catchment.load_unit_ids_from_raster(STGALLEN_DIR / "unit_ids.tif")
+    with pytest.raises(hb.ConfigurationError, match="delineate the subbasins first"):
+        catchment.delineate_subbasins([APPENZELL_GAUGE])
 
 
 def test_delineate_a_nested_gauge(catchment, tmp_path):
@@ -62,7 +79,7 @@ def test_delineate_a_nested_gauge(catchment, tmp_path):
     assert list(table["downstream"]) == [2, 0]
     assert list(table["name"]) == ["Appenzell", "outlet"]
     assert table.loc[0, "area_drained"] == pytest.approx(APPENZELL_AREA, rel=0.25)
-    assert table.loc[1, "area_drained"] == pytest.approx(catchment.area, rel=0.01)
+    assert table.loc[1, "area_drained"] == pytest.approx(_area(catchment), rel=0.01)
     assert table.loc[1, "area_local"] + table.loc[0, "area_local"] == pytest.approx(
         table.loc[1, "area_drained"]
     )
@@ -90,15 +107,6 @@ def test_delineate_a_nested_gauge(catchment, tmp_path):
     covered = np.count_nonzero(catchment.map_subbasin_ids[inside] == 1) / inside.sum()
     assert covered > 0.95
 
-    # The hydro units carry their subbasin and the table is on them.
-    hydro_units = catchment.hydro_units
-    assert hydro_units.subbasins is not None
-    assert hydro_units.get_subbasin_ids() == [1, 2]
-    column = hydro_units.hydro_units["subbasin"].iloc[:, 0].to_numpy()
-    assert set(column) == {1, 2}
-    areas = hydro_units.get_subbasin_areas()
-    assert areas.loc[2, "drained"] == pytest.approx(catchment.area, rel=0.01)
-
     # The raster round-trips.
     catchment.save_subbasin_ids_raster(tmp_path)
     import rasterio
@@ -114,27 +122,37 @@ def test_outlet_far_from_a_stream_is_refused(catchment):
         catchment.delineate_subbasins([(2736000.0, 1254000.0)], snap_distance=50.0)
 
 
-def test_split_units_by_subbasin(tmp_path):
+def test_hydro_units_created_within_the_subbasins(tmp_path):
     catchment = hb.Catchment(STGALLEN_DIR / "outline.shp")
     catchment.extract_dem(STGALLEN_DIR / "dem.tif")
-    catchment.load_unit_ids_from_raster(STGALLEN_DIR / "unit_ids.tif")
-    catchment.get_hydro_units_attributes()
-    n_before = catchment.get_hydro_unit_count()
-
-    table = catchment.delineate_subbasins(
-        {"Appenzell": APPENZELL_GAUGE}, split_units=True
-    )
+    table = catchment.delineate_subbasins({"Appenzell": APPENZELL_GAUGE})
     assert list(table["name"]) == ["Appenzell", "outlet"]
+    catchment.create_elevation_bands(method="equal_intervals", distance=100)
+
+    # Every unit lies in a single subbasin, and the units carry the table.
     hydro_units = catchment.hydro_units
-    assert catchment.get_hydro_unit_count() > n_before
-    # Every unit now lies in a single subbasin.
     unit_ids = hydro_units.hydro_units["id"].iloc[:, 0].to_numpy()
     for unit_id in unit_ids:
         cells = catchment.map_subbasin_ids[catchment.map_unit_ids == unit_id]
         assert len(np.unique(cells)) == 1
     assert hydro_units.has("elevation") and hydro_units.has("slope")
+    assert hydro_units.get_subbasin_ids() == [1, 2]
+    areas = hydro_units.get_subbasin_areas()
+    assert areas.loc[2, "drained"] == pytest.approx(_area(catchment), rel=0.01)
 
-    # The split units run as a two-subbasin model with channel routing.
+    # A unit raster drawn within the subbasins can be loaded after the delineation.
+    catchment.save_unit_ids_raster(tmp_path)
+    reloaded = hb.Catchment(STGALLEN_DIR / "outline.shp")
+    reloaded.extract_dem(STGALLEN_DIR / "dem.tif")
+    reloaded.delineate_subbasins({"Appenzell": APPENZELL_GAUGE})
+    reloaded.load_unit_ids_from_raster(tmp_path / "unit_ids.tif")
+    reloaded.get_hydro_units_attributes()
+    column = reloaded.hydro_units.hydro_units["subbasin"].iloc[:, 0].to_numpy()
+    expected = hydro_units.hydro_units["subbasin"].iloc[:, 0].to_numpy()
+    assert list(column) == list(expected)
+    assert reloaded.hydro_units.get_subbasin_ids() == [1, 2]
+
+    # The units run as a two-subbasin model with channel routing.
     hydro_units.save_to_csv(tmp_path / "hydro_units.csv")
     table.to_csv(tmp_path / "subbasins.csv", index=False)
     units = hb.HydroUnits()
@@ -300,3 +318,161 @@ def test_reach_length_from_the_river_network(catchment):
 
     with pytest.raises(hb.ConfigurationError):
         catchment.delineate_subbasins([APPENZELL_GAUGE], reach_lengths="straight")
+
+
+def test_unit_raster_spanning_the_subbasins_is_refused():
+    catchment = hb.Catchment(STGALLEN_DIR / "outline.shp")
+    catchment.extract_dem(STGALLEN_DIR / "dem.tif")
+    catchment.delineate_subbasins({"Appenzell": APPENZELL_GAUGE})
+    # Elevation bands drawn without the subbasins cross the Appenzell outline.
+    catchment.load_unit_ids_from_raster(STGALLEN_DIR / "unit_ids.tif")
+    with pytest.raises(hb.DataError, match="span several subbasins"):
+        catchment.get_hydro_units_attributes()
+
+
+def _outlines(crs):
+    """The official St. Gallen and Appenzell outlines (nested drained areas)."""
+    import geopandas as gpd
+    from shapely.ops import unary_union
+
+    stgallen = gpd.read_file(STGALLEN_DIR / "outline.shp").to_crs(crs)
+    appenzell = gpd.read_file(APPENZELL_DIR / "outline.shp").to_crs(crs)
+    return unary_union(list(stgallen.geometry)), unary_union(list(appenzell.geometry))
+
+
+def _polygons(crs, geometries, **columns):
+    import geopandas as gpd
+
+    return gpd.GeoDataFrame(columns, geometry=geometries, crs=crs)
+
+
+def test_subbasins_from_nested_drained_areas(catchment):
+    stgallen, appenzell = _outlines(catchment.crs)
+    polygons = _polygons(
+        catchment.crs, [stgallen, appenzell], name=["St. Gallen", "Appenzell"]
+    )
+    table = catchment.delineate_subbasins(subbasins=polygons)
+
+    # The smaller area is carved out of the larger one and drains into it.
+    assert list(table["name"]) == ["St. Gallen", "Appenzell"]
+    assert list(table["downstream"]) == [0, 1]
+    assert table.loc[1, "area_drained"] == pytest.approx(APPENZELL_AREA, rel=0.05)
+    assert table.loc[0, "area_drained"] == pytest.approx(_area(catchment), rel=0.01)
+    assert table["area_local"].sum() == pytest.approx(table.loc[0, "area_drained"])
+    # The reaches are measured as for outlet points.
+    assert table.loc[0, "length"] > 5000
+    assert 0 < table.loc[0, "slope"] < 0.1
+    assert table.loc[1, "length"] > 1000
+    assert table.loc[1, "elevation_outlet"] > table.loc[0, "elevation_outlet"]
+    # The outlet found on the DEM is the gauge.
+    assert abs(table.loc[1, "outlet_x"] - APPENZELL_GAUGE[0]) < 500
+    assert abs(table.loc[1, "outlet_y"] - APPENZELL_GAUGE[1]) < 500
+
+
+def test_subbasins_from_a_partition_match_the_nested_areas(catchment):
+    stgallen, appenzell = _outlines(catchment.crs)
+    nested = catchment.delineate_subbasins(
+        subbasins=_polygons(catchment.crs, [stgallen, appenzell])
+    )
+    partition = catchment.delineate_subbasins(
+        subbasins=_polygons(
+            catchment.crs,
+            [appenzell, stgallen.difference(appenzell)],
+            name=["Appenzell", "lower Sitter"],
+        )
+    )
+    # The same subbasins, whether given as local or as drained areas.
+    assert list(partition["downstream"]) == [2, 0]
+    assert partition.loc[0, "area_local"] == pytest.approx(
+        nested.loc[1, "area_local"], rel=1e-3
+    )
+    assert partition.loc[1, "area_drained"] == pytest.approx(
+        nested.loc[0, "area_drained"], rel=1e-3
+    )
+    assert partition.loc[1, "length"] == pytest.approx(
+        nested.loc[0, "length"], rel=0.05
+    )
+
+
+def test_uncovered_part_becomes_the_outlet_subbasin(catchment):
+    _, appenzell = _outlines(catchment.crs)
+    table = catchment.delineate_subbasins(
+        subbasins=_polygons(catchment.crs, [appenzell]), names=["Appenzell"]
+    )
+    assert list(table["name"]) == ["Appenzell", "outlet"]
+    assert list(table["downstream"]) == [2, 0]
+    assert table.loc[1, "area_drained"] == pytest.approx(_area(catchment), rel=0.01)
+
+
+def test_subbasin_topology_from_a_downstream_column(catchment):
+    stgallen, appenzell = _outlines(catchment.crs)
+    geometries = [appenzell, stgallen.difference(appenzell)]
+    table = catchment.delineate_subbasins(
+        subbasins=_polygons(catchment.crs, geometries, code=[10, 20], to=[20, 0]),
+        id_column="code",
+        downstream_column="to",
+    )
+    assert list(table["downstream"]) == [2, 0]
+    assert list(table["source_id"]) == [10, 20]
+
+    # Two subbasins draining out of the catchment do not make a tree.
+    with pytest.raises(hb.DataError, match="2 outlets"):
+        catchment.delineate_subbasins(
+            subbasins=_polygons(catchment.crs, geometries, code=[10, 20], to=[0, 0]),
+            id_column="code",
+            downstream_column="to",
+        )
+
+
+def test_subbasins_before_the_hydro_units_without_flow_directions(monkeypatch):
+    """Polygons and a river network need no flow directions, and the hydro units
+    discretized afterwards each lie within a single subbasin."""
+    from shapely.geometry import LineString
+
+    from hydrobricks.preprocessing.catchment_network import CatchmentNetwork
+
+    catchment = hb.Catchment(STGALLEN_DIR / "outline.shp")
+    catchment.extract_dem(STGALLEN_DIR / "dem.tif")
+    stgallen, appenzell = _outlines(catchment.crs)
+    polygons = _polygons(catchment.crs, [stgallen, appenzell])
+    reference = catchment.delineate_subbasins(subbasins=polygons)
+
+    # A river network: the main stem between the two outlets, and a headwater stream
+    # from inside the Appenzell subbasin down to its outlet.
+    gauge = (reference.loc[1, "outlet_x"], reference.loc[1, "outlet_y"])
+    outlet = (reference.loc[0, "outlet_x"], reference.loc[0, "outlet_y"])
+    source = appenzell.representative_point().coords[0]
+    main_stem = LineString([gauge, outlet])
+    headwater = LineString([source, gauge])
+    rivers = _polygons(catchment.crs, [main_stem, headwater])
+
+    def no_flow_directions(self):
+        pytest.fail("The flow directions were computed.")
+
+    monkeypatch.setattr(CatchmentNetwork, "_flow_grid", no_flow_directions)
+    catchment.network._grid = None
+    partition = _polygons(catchment.crs, [appenzell, stgallen.difference(appenzell)])
+    table = catchment.delineate_subbasins(subbasins=partition, river_network=rivers)
+    assert list(table["downstream"]) == [2, 0]
+
+    table = catchment.delineate_subbasins(subbasins=polygons, river_network=rivers)
+    assert list(table["downstream"]) == [0, 1]
+    assert list(table["area_local"]) == pytest.approx(list(reference["area_local"]))
+    # The reaches follow the river lines.
+    assert table.loc[0, "length"] == pytest.approx(main_stem.length, rel=0.05)
+    assert table.loc[1, "length"] == pytest.approx(headwater.length, rel=0.05)
+    assert catchment.map_unit_ids is None
+
+    # The hydro units are created within the subbasins.
+    catchment.create_elevation_bands(distance=200)
+    hydro_units = catchment.hydro_units
+    unit_ids = hydro_units.hydro_units["id"].iloc[:, 0].to_numpy()
+    for unit_id in unit_ids:
+        cells = catchment.map_subbasin_ids[catchment.map_unit_ids == unit_id]
+        assert len(np.unique(cells)) == 1
+    assert hydro_units.get_subbasin_ids() == [1, 2]
+    areas = hydro_units.get_subbasin_areas()
+    assert areas.loc[2, "local"] == pytest.approx(table.loc[1, "area_local"], rel=1e-3)
+    assert areas.loc[1, "drained"] == pytest.approx(
+        table.loc[0, "area_drained"], rel=1e-3
+    )

@@ -278,6 +278,45 @@ TEST(HydroUnit, ChangeLandCoverAreaFractionConservesSnow) {
     EXPECT_NEAR(snowVolume(), snowBefore, 1e-8);
 }
 
+TEST(HydroUnit, SnowAlbedoRestrictedToACover) {
+    HydroUnit unit(100, HydroUnit::Lumped);
+
+    auto ground = std::make_unique<GenericLandCover>();
+    ground->SetName("ground");
+    ground->SetAreaFraction(0.6);
+    LandCover* groundPtr = ground.get();
+    unit.AddBrick(std::move(ground));
+
+    auto forest = std::make_unique<GenericLandCover>();
+    forest->SetName("forest");
+    forest->SetAreaFraction(0.4);
+    LandCover* forestPtr = forest.get();
+    unit.AddBrick(std::move(forest));
+
+    // Only the ground holds snow; both snowpacks are fresh (age 0 -> albedo 0.85).
+    auto groundSnow = std::make_unique<Snowpack>();
+    groundSnow->SetName("ground_snowpack");
+    groundSnow->SetParent(groundPtr);
+    groundSnow->UpdateContent(100.0, ContentType::Snow);
+    unit.AddBrick(std::move(groundSnow));
+
+    auto forestSnow = std::make_unique<Snowpack>();
+    forestSnow->SetName("forest_snowpack");
+    forestSnow->SetParent(forestPtr);
+    unit.AddBrick(std::move(forestSnow));
+
+    double albedoLand = 0.2;
+    double albedoSnow = 0.85;
+
+    // Over the whole unit, the snow and the bare forest mix by their area fractions.
+    EXPECT_NEAR(unit.GetSnowAlbedo(albedoLand), 0.6 * albedoSnow + 0.4 * albedoLand, 1e-8);
+
+    // Restricted to a cover, the surface is either snow or bare ground, as in a
+    // PREVAH hydrotope.
+    EXPECT_NEAR(unit.GetSnowAlbedo(albedoLand, groundPtr), albedoSnow, 1e-8);
+    EXPECT_NEAR(unit.GetSnowAlbedo(albedoLand, forestPtr), albedoLand, 1e-8);
+}
+
 TEST(HydroUnit, ChangeLandCoverAreaFractionToZero) {
     HydroUnit unit(100, HydroUnit::Lumped);
 

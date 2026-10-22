@@ -171,7 +171,9 @@ class PrevahUniBE(Model):
         cover. Set it to False when a unit mixes covers and you want PREVAH's
         per-land-use soil parameterization: each cover then gets its own store with
         its own ``fc_<cover>`` and ``lp_<cover>``, and the percolation is gated by
-        their area-weighted mean saturation. Note that a per-cover store is fed by
+        their area-weighted mean saturation. With ``soil_et_process='et:prevah'``,
+        each store then also reads the snow-albedo reduction from its own cover
+        rather than from the unit as a whole. Note that a per-cover store is fed by
         its land cover, whose outgoing fluxes already carry the cover area fraction,
         so ``fc_<cover>`` is expressed over the whole hydro unit rather than over the
         cover itself (as for the per-class soils of
@@ -205,7 +207,9 @@ class PrevahUniBE(Model):
         from the unit's snow-covered fraction, which suppresses the soil ET under
         snow). The snow albedo is age-dependent (0.4 + 0.45 exp(-0.15 age), ~0.85
         fresh to 0.4 old); ``albedo_land`` (default 0.2) is the snow-free ground
-        albedo (neutral). 'et:hbv' is the plain HBV limitation.
+        albedo (neutral). With ``share_soil=False`` the reduction reads the snow of
+        the cover owning the store instead, as a PREVAH hydrotope does. 'et:hbv' is
+        the plain HBV limitation.
     canopy_et_process : str
         Canopy evaporation process (default: 'et:open_water_prevah', the potential
         rate with the same age-dependent snow-albedo reduction). 'et:open_water'
@@ -479,7 +483,10 @@ class PrevahUniBE(Model):
         # the CU fraction (lp = CU). The overflow is a numerical safety only (the
         # infiltration vanishes at FC). With soil_et_process='et:prevah' the potential
         # rate additionally carries the PREVAH snow-albedo reduction (1 - albedo)/0.8,
-        # driven by the unit's snow-covered fraction (ET-under-snow suppression).
+        # driven by the unit's snow-covered fraction (ET-under-snow suppression). One
+        # store per cover reads the snow of that cover alone (the cover as gate brick),
+        # as a PREVAH hydrotope does; a shared store spans several covers, so it keeps
+        # the mean over the unit.
         soil_et = self.options["soil_et_process"]
         if soil_et not in ("et:hbv", "et:prevah"):
             raise ConfigurationError(
@@ -512,6 +519,8 @@ class PrevahUniBE(Model):
             }
             if not self._shared_soil and multi_cover:
                 soil["alias_suffix"] = f"_{cover_name}"
+            if not self._shared_soil and soil_et == "et:prevah":
+                soil["processes"]["et"]["gate"] = cover_name
             self.structure[soil_name] = soil
 
         # Upper zone (SUZ): threshold surface runoff, interflow and the

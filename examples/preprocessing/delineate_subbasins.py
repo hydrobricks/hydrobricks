@@ -47,16 +47,17 @@ working_dir.mkdir(parents=True, exist_ok=True)
 catchment = hb.Catchment(CATCHMENT_OUTLINE)
 catchment.extract_dem(CATCHMENT_DEM)
 
-# Hydro units: elevation bands here; any discretization works. The units spanning
-# several subbasins are split (one part per subbasin) so that every unit drains to
-# a single outlet.
-catchment.create_elevation_bands(method="equal_intervals", distance=100)
-
 # Delineate the subbasins: the outlets are snapped to the streams derived from the
 # DEM (cells draining more than 1 km2), their upstream areas carved into a tree,
-# the reaches measured along the D8 flow paths.
-subbasins = catchment.delineate_subbasins(GAUGES, split_units=True)
+# the reaches measured along the D8 flow paths. Subbasin polygons, when available,
+# can be given instead (subbasins=...), local or nested.
+subbasins = catchment.delineate_subbasins(GAUGES)
 print(subbasins)
+
+# Hydro units: elevation bands here; any discretization works. Delineated first, the
+# subbasins are a criterion of the discretization, so every unit lies within a
+# single subbasin and drains to a single outlet.
+catchment.create_elevation_bands(method="equal_intervals", distance=100)
 
 # Save what a project file needs: the hydro units (with their 'subbasin' column),
 # the subbasin table and the rasters.

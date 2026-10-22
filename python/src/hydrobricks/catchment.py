@@ -697,6 +697,13 @@ class Catchment:
         else:
             unit_ids = self.hydro_units.hydro_units["id"].values.tolist()
 
+        # Hydro units created after the subbasins (e.g. from a unit raster) get their
+        # subbasin; the discretization sets it itself.
+        if self.map_subbasin_ids is not None and not self.hydro_units.has(
+            self.hydro_units.SUBBASIN_COLUMN
+        ):
+            self.network.assign_hydro_units()
+
         res_area = []
         res_elevation = []
         res_elevation_mean = []
@@ -1138,12 +1145,15 @@ class Catchment:
 
     def delineate_subbasins(self, *args, **kwargs) -> pd.DataFrame:
         """
-        Delineate the subbasins of a river network from outlet points (gauges).
+        Delineate the subbasins of a river network from outlet points (gauges), or
+        read them from subbasin polygons (local areas, nested drained areas, or both).
 
         See :meth:`CatchmentNetwork.delineate
         <hydrobricks.preprocessing.CatchmentNetwork.delineate>` for the parameters.
         The subbasin table is set on the hydro units (with their ``subbasin``
-        column) and returned.
+        column once they are created) and returned. The subbasins come first: the
+        hydro units are then created within them, and delineating the subbasins of a
+        catchment that already has hydro units is refused.
         """
         return self.network.delineate(*args, **kwargs)
 

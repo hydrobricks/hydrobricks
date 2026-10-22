@@ -4,6 +4,8 @@
 #include "Includes.h"
 #include "ProcessETHBV.h"
 
+class LandCover;
+
 /**
  * PREVAH actual evapotranspiration: the HBV soil-moisture limitation with the
  * PREVAH snow-albedo reduction of the potential rate.
@@ -21,6 +23,10 @@
  * With no snow (and the default albedo_land = 0.2) the factor is exactly 1, so the
  * process then behaves identically to 'et:hbv'. Requires a hydro-unit context (the
  * process must live on a hydro-unit brick, e.g. the soil moisture store).
+ *
+ * A land cover can be given as gate brick, for a soil store that belongs to a single
+ * cover: the albedo is then read from the snow of that cover alone, as a PREVAH
+ * hydrotope does, instead of the mean over the unit.
  */
 class ProcessETPrevah : public ProcessETHBV {
   public:
@@ -45,8 +51,17 @@ class ProcessETPrevah : public ProcessETHBV {
      */
     void SetParameters(const ProcessSettings& processSettings) override;
 
+    /**
+     * @copydoc Process::AddGateBrick()
+     *
+     * The gate brick is optional here; when given, it must be the land cover owning
+     * the soil store, and the albedo is read from the snow of that cover alone.
+     */
+    void AddGateBrick(Brick* brick) override;
+
   protected:
     const float* _albedoLand;  // snow-free ground albedo [-] (0.2 makes the factor neutral)
+    const LandCover* _cover;   // cover owning the store, if any (nullptr: the whole unit)
 
     /**
      * @copydoc Process::GetRates()

@@ -3,11 +3,13 @@
 #include <algorithm>
 
 #include "HydroUnit.h"
+#include "LandCover.h"
 #include "WaterContainer.h"
 
 ProcessETPrevah::ProcessETPrevah(WaterContainer* container)
     : ProcessETHBV(container),
-      _albedoLand(nullptr) {}
+      _albedoLand(nullptr),
+      _cover(nullptr) {}
 
 void ProcessETPrevah::RegisterProcessSettings(SettingsModel* modelSettings) {
     ProcessETHBV::RegisterProcessSettings(modelSettings);
@@ -39,14 +41,23 @@ void ProcessETPrevah::SetParameters(const ProcessSettings& processSettings) {
     _albedoLand = GetParameterValuePointer(processSettings, "albedo_land");
 }
 
+void ProcessETPrevah::AddGateBrick(Brick* brick) {
+    auto* landCover = dynamic_cast<LandCover*>(brick);
+    if (landCover == nullptr) {
+        throw ModelConfigError("PREVAH ET process: the gate brick must be a land cover.");
+    }
+    _cover = landCover;
+}
+
 const vecDouble& ProcessETPrevah::GetRates() {
     assert(_container->HasMaximumCapacity());
 
     // PREVAH snow-albedo reduction of the potential rate: (1 - albedo)/0.8, with the
     // area-weighted albedo combining the snow-free ground and the (age-dependent) snow
     // albedo of the unit's snowpacks. Neutral (factor 1) when snow-free at
-    // albedo_land = 0.2.
-    double albedo = _hydroUnit->GetSnowAlbedo(*_albedoLand);
+    // albedo_land = 0.2. With a cover given (a soil store of its own), only the snow of
+    // that cover is seen.
+    double albedo = _hydroUnit->GetSnowAlbedo(*_albedoLand, _cover);
     double albedoFactor = (1.0 - albedo) / 0.8;
 
     double pet = static_cast<double>(*_etCorrectionFactor) * albedoFactor * GetForcingRate(_pet);

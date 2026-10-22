@@ -202,6 +202,14 @@ class CatchmentDiscretization:
             Pixel connectivity defining a patch when 'split_discontinuous' is True:
             8 = diagonal neighbours are connected (default), 4 = only the neighbours
             sharing an edge are connected.
+
+        Notes
+        -----
+        When the subbasins were delineated beforehand
+        (:meth:`Catchment.delineate_subbasins
+        <hydrobricks.Catchment.delineate_subbasins>`), they are an implicit criterion:
+        every hydro unit lies within a single subbasin, the units carry the
+        ``subbasin`` column and the subbasin table is set on them.
         """
         if not HAS_PYPROJ:
             raise DependencyError(
@@ -362,6 +370,13 @@ class CatchmentDiscretization:
             sub_catchments_map, n_sub = self._build_sub_catchments_map(sub_catchments)
             criteria_dict["sub_catchments"] = list(range(1, n_sub + 1))
 
+        # Subbasins delineated beforehand: no hydro unit may span two of them.
+        subbasin_map = self.catchment.map_subbasin_ids
+        if subbasin_map is not None:
+            criteria_dict["subbasin"] = [
+                int(i) for i in np.unique(subbasin_map[subbasin_map > 0])
+            ]
+
         res_elevation = []
         res_elevation_min = []
         res_elevation_max = []
@@ -373,6 +388,7 @@ class CatchmentDiscretization:
         res_radiation_min = []
         res_radiation_max = []
         res_sub_catchment = []
+        res_subbasin = []
 
         combinations = list(itertools.product(*criteria_dict.values()))
         combinations_keys = list(criteria_dict.keys())
@@ -442,6 +458,8 @@ class CatchmentDiscretization:
                 elif criterion_name == "sub_catchments":
                     mask_sub = sub_catchments_map == criterion
                     mask_unit = np.logical_and(mask_unit, mask_sub)
+                elif criterion_name == "subbasin":
+                    mask_unit = np.logical_and(mask_unit, subbasin_map == criterion)
 
             # If the unit is empty, skip it
             if np.count_nonzero(mask_unit) == 0:
@@ -483,6 +501,9 @@ class CatchmentDiscretization:
                 sub_id = combination[criterion_positions["sub_catchments"]]
                 res_sub_catchment.append(str(sub_id))
 
+            if "subbasin" in criteria_dict.keys():
+                res_subbasin.append(combination[criterion_positions["subbasin"]])
+
             unit_id += 1
 
         if split_discontinuous:
@@ -506,6 +527,7 @@ class CatchmentDiscretization:
             res_radiation_min = _reindex(res_radiation_min)
             res_radiation_max = _reindex(res_radiation_max)
             res_sub_catchment = _reindex(res_sub_catchment)
+            res_subbasin = _reindex(res_subbasin)
 
         # The unit ids are stored as uint16 in the raster: fail rather than wrap.
         n_units = int(self.map_unit_ids.max())
@@ -558,6 +580,16 @@ class CatchmentDiscretization:
             self.catchment.hydro_units.add_property(
                 ("sub_catchment", "-"), res_sub_catchment
             )
+
+        if res_subbasin:
+            hydro_units = self.catchment.hydro_units
+            column = (hydro_units.SUBBASIN_COLUMN, "-")
+            if hydro_units.has(hydro_units.SUBBASIN_COLUMN):
+                hydro_units.hydro_units[column] = res_subbasin
+            else:
+                hydro_units.add_property(column, res_subbasin)
+            if self.catchment.network.table is not None:
+                hydro_units.set_subbasins(self.catchment.network.table)
 
         self.catchment.initialize_land_cover_fractions()
         self.catchment.get_hydro_units_attributes()

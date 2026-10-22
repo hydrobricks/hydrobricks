@@ -24,6 +24,7 @@ void Processor::Initialize(const SolverSettings& solverSettings) {
     _solver->Connect(this);
     ConnectToElementsToSolve();
     ValidateFluxTopology();
+    MarkDirectToSolverFluxesAsStatic();
     BuildTraversalTables();
     _solver->InitializeContainers();
     _changeRatesNoSolver = axd::Zero(_directRateCount);
@@ -48,6 +49,38 @@ void Processor::ValidateFluxTopology() const {
                                     "Bricks computed directly are processed before the solver and must not receive "
                                     "water from solved bricks.",
                                     brick->GetName(), target->GetName()));
+                }
+            }
+        }
+    }
+}
+
+void Processor::MarkDirectToSolverFluxesAsStatic() const {
+    // The direct pass settles the amount a direct brick sends to a solved brick before the
+    // solver runs, and then clears the rate it was computed from. Read as a rate, that inflow
+    // would be zero when the solver enforces the constraints of the receiving brick, whose
+    // outflows would be limited to its start-of-step content: the water would only leave it
+    // at the following time step. As a static flux, its amount is counted as available.
+    int hydroUnitCount = _subbasin->GetHydroUnitCount();
+    for (int iUnit = 0; iUnit < hydroUnitCount; ++iUnit) {
+        HydroUnit* unit = _subbasin->GetHydroUnit(iUnit);
+        for (int iBrick = 0; iBrick < unit->GetBrickCount(); ++iBrick) {
+            Brick* brick = unit->GetBrick(iBrick);
+            if (brick->NeedsSolver()) {
+                continue;
+            }
+            for (int i = 0; i < brick->GetProcessCount(); ++i) {
+                auto process = brick->GetProcess(i);
+                for (int j = 0; j < process->GetOutputFluxCount(); ++j) {
+                    Flux* flux = process->GetOutputFlux(j);
+                    auto fluxToBrick = dynamic_cast<FluxToBrick*>(flux);
+                    if (fluxToBrick == nullptr || flux->IsInstantaneous() || flux->IsStatic()) {
+                        continue;
+                    }
+                    Brick* target = fluxToBrick->GetTargetBrick();
+                    if (target && target->NeedsSolver()) {
+                        flux->SetAsStatic();
+                    }
                 }
             }
         }

@@ -136,6 +136,15 @@ class Flux {
     }
 
     /**
+     * Get the fraction of the unit area.
+     *
+     * @return the fraction of the unit area.
+     */
+    [[nodiscard]] double GetFractionUnitArea() const {
+        return _fractionUnitArea;
+    }
+
+    /**
      * Set the fraction of the land cover.
      *
      * @param value the fraction of the land cover.

@@ -248,6 +248,13 @@ class Processor {
     void ValidateFluxTopology() const;
 
     /**
+     * Mark the fluxes from bricks computed directly to solved bricks as static: their
+     * amount is settled by the direct pass, before the solver runs, and must be counted as
+     * available water when the constraints of the receiving brick are enforced.
+     */
+    void MarkDirectToSolverFluxesAsStatic() const;
+
+    /**
      * Store the state variable changes.
      *
      * @param values the state variable changes to store.

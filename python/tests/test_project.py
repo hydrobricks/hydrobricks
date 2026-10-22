@@ -287,6 +287,31 @@ def test_calibration_database_validation(tmp_path):
     assert "calibration.database: unknown key 'keep'" in message
 
 
+def test_calibration_options_reach_the_algorithm(tmp_path):
+    """The algorithm's own settings are forwarded to its sample()."""
+    config = calibration_config(tmp_path)
+    config["calibration"]["algorithm"] = "sceua"
+    # A tiny population, so the run stays short and the setting is visible in
+    # the number of model runs it produces.
+    config["calibration"]["options"] = {"ngs": 2}
+    config["calibration"]["repetitions"] = 40
+
+    project = hb.load_project(config, base_dir=SITTER_DIR)
+    best = project.calibrate()
+
+    # 2 complexes of (2 * 2 + 1) points: the initial population alone is 10, far
+    # short of the 40 a default ngs of 20 would have spent on it.
+    assert 10 <= len(best["sampler"].datawriter.ram) <= 40
+
+
+def test_calibration_options_validation(tmp_path):
+    config = calibration_config(tmp_path)
+    config["calibration"]["options"] = {"ngs": [2, 3]}
+    with pytest.raises(hb.ConfigurationError) as excinfo:
+        hb.load_project(config, base_dir=SITTER_DIR)
+    assert "calibration.options.ngs: expected a single value" in str(excinfo.value)
+
+
 def test_calibration_requires_observations_and_period(tmp_path):
     config = calibration_config(tmp_path)
     del config["observations"]
@@ -964,6 +989,22 @@ def test_day_of_year_forcing_is_not_trimmed(tmp_path):
     Restricting the gridded sources to the modelling period must skip it, even
     when its dimension is declared as the time one.
     """
+    import xarray as xr
+
+    # A small synthetic climatology over the unit ids raster (2669000-2677000 E,
+    # 1154500-1169000 N, EPSG:2056) on a 500 m grid: the real one is generated, not
+    # committed.
+    days = np.arange(1, 367)
+    x = np.arange(2669250.0, 2677000.0, 500.0)
+    y = np.arange(1168750.0, 1154500.0, -500.0)
+    seasonal = 150 + 100 * np.sin(2 * np.pi * (days - 80) / 366)
+    radiation = np.broadcast_to(seasonal[:, None, None], (days.size, y.size, x.size))
+    radiation_path = tmp_path / "daily_potential_radiation.nc"
+    xr.Dataset(
+        {"radiation": (("day_of_year", "y", "x"), radiation.copy())},
+        coords={"day_of_year": days, "y": y, "x": x},
+    ).to_netcdf(radiation_path)
+
     config = {
         "model": {
             "name": "socont",
@@ -988,7 +1029,7 @@ def test_day_of_year_forcing_is_not_trimmed(tmp_path):
             "ref_elevation": 2702,
             "gridded": {
                 "solar_radiation": {
-                    "path": "daily_potential_radiation.nc",
+                    "path": str(radiation_path),
                     "var_name": "radiation",
                     "dim_time": "day_of_year",
                     "data_crs": 2056,

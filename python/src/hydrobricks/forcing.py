@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from enum import auto
+from enum import StrEnum, auto
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -17,7 +17,7 @@ from hydrobricks._exceptions import (
     DependencyError,
     ForcingError,
 )
-from hydrobricks._optional import HAS_NETCDF, HAS_PYET, Dataset, StrEnumClass, pyet
+from hydrobricks._optional import HAS_NETCDF, HAS_PYET, Dataset, pyet
 from hydrobricks.parameters import ParameterSet
 from hydrobricks.time_series import TimeSeries1D, TimeSeries2D
 
@@ -101,7 +101,7 @@ if TYPE_CHECKING:
 class Forcing:
     """Class for managing forcing (meteorological) data for hydrological models."""
 
-    class Variable(StrEnumClass):
+    class Variable(StrEnum):
         """Enumeration of supported meteorological variables."""
 
         P = auto()  # Precipitation [mm]
@@ -1413,12 +1413,22 @@ class Forcing:
             raster_hydro_units = kwargs.get("raster_hydro_units", "")
             start_date = kwargs.get("start_date", None)
             end_date = kwargs.get("end_date", None)
-            if variable in {self.Variable.P, self.Variable.T}:
+            # The minimum and maximum temperatures are temperatures: they vary
+            # with elevation exactly as the mean does, and a gridded product
+            # smooths the relief, so without the gradient they arrive biased at
+            # altitude (a 1 km grid spans a few hundred metres where the
+            # catchment spans well over a thousand). They therefore default to
+            # the same additive gradient as 't'.
+            gradient_by_default = {
+                self.Variable.P,
+                self.Variable.T,
+                self.Variable.T_MIN,
+                self.Variable.T_MAX,
+            }
+            if variable in gradient_by_default:
                 apply_data_gradient = kwargs.get("apply_data_gradient", True)
                 if variable == self.Variable.P:
                     gradient_type = kwargs.get("gradient_type", "multiplicative")
-                elif variable == self.Variable.T:
-                    gradient_type = kwargs.get("gradient_type", "additive")
                 else:
                     gradient_type = kwargs.get("gradient_type", "additive")
             else:

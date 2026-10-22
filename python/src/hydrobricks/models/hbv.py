@@ -62,7 +62,10 @@ class HBV(Model):
         original HBV). With several land covers and per-cover soils, the
         soil/recharge parameters (fc, lp, beta) become cover-specific and are exposed
         with a per-cover suffix (e.g. ``fc_forest``); with a single land cover (or
-        when sharing) the bare aliases (``fc``, ``lp``, ``beta``) are kept.
+        when sharing) the bare aliases (``fc``, ``lp``, ``beta``) are kept. A
+        per-cover ``fc_<cover>`` is the cover's own capacity (mm over the cover); the
+        store's capacity and evapotranspiration are scaled by the cover's live area
+        fraction, so they follow land cover changes.
     forest_interception : bool
         Add a canopy interception store on each ``forest`` land cover (default:
         False). When enabled, the canopy intercepts rain (capacity ``ic``),
@@ -83,7 +86,7 @@ class HBV(Model):
     Land covers
     -----------
     Besides the default soil-bearing ``open`` cover, HBV supports the land cover
-    types of the original HBV (its land-use classes): ``forest`` (an optional canopy
+    types of the original HBV: ``forest`` (an optional canopy
     interception on the rain path, enabled with ``forest_interception=True``),
     ``water`` (exclusive open-water
     cover: all precipitation direct, open-water evaporation, linear outflow — its own
@@ -233,6 +236,9 @@ class HBV(Model):
             }
             if not self._shared_soil and multi_cover:
                 soil["alias_suffix"] = f"_{cover_name}"
+                # The store represents its cover's area: its capacity (fc_<cover>,
+                # over the cover) and its ET are scaled by the live cover fraction.
+                soil["area_of"] = cover_name
             self.structure[soil_name] = soil
 
         # Transformation function (triangular unit hydrograph)

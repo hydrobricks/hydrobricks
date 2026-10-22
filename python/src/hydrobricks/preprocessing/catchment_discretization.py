@@ -109,6 +109,8 @@ class CatchmentDiscretization:
         slope_distance: int = 15,
         min_slope: int = 0,
         max_slope: int = 90,
+        aspect_classes: int = 4,
+        flat_slope_threshold: float = 3.0,
         radiation_method: str = "equal_intervals",
         radiation_number: int = 5,
         radiation_distance: int = 50,
@@ -132,7 +134,7 @@ class CatchmentDiscretization:
         criteria
             The criteria to use to discretize the catchment (can be combined):
             'elevation' = elevation bands
-            'aspect' = aspect according to the cardinal directions (4 classes)
+            'aspect' = aspect classes (see the 'aspect_classes' parameter)
             'radiation' = potential radiation (Hock, 1999)
             'slope' = slope in degrees
             'sub_catchments' = membership to a sub-catchment polygon (keeps a hydro
@@ -165,6 +167,29 @@ class CatchmentDiscretization:
             Minimum slope of the slope bands (to homogenize between runs).
         max_slope
             Maximum slope of the slope bands (to homogenize between runs).
+        aspect_classes
+            Number of aspect classes for the 'aspect' criterion: 4 (the cardinal
+            directions N, E, S, W; default) or 8 (N, NE, E, SE, S, SW, W, NW). The
+            sectors are centred on their direction, so N spans 337.5-22.5° with 8
+            classes and 315-45° with 4.
+        flat_slope_threshold
+            Slope (degrees) below which a cell is considered flat and assigned to the
+            'FLAT' aspect class rather than to a direction (default: 3). Cells whose
+            aspect is undefined (flat terrain, or the border of the DEM) are always
+            assigned to 'FLAT', whatever the threshold, so that no area is lost. The
+            'FLAT' class is only created when such cells exist; 0 keeps only the cells
+            with an undefined aspect (PREVAH uses 0.5).
+
+            The default suits a 25 m DEM with about a metre of vertical error, where
+            below 3° the aspect of a cell is mostly noise: perturbing the DEM by 1 m
+            moves 37 % of the cells of the 1-2° band to another aspect class out of
+            four (a uniformly random aspect would move 75 %), against 14 % at 3-5°.
+            Little is lost by not splitting them, since the north-south difference in
+            annual clear-sky radiation at 3° is under 8 % of the horizontal. The error
+            of the aspect scales with the vertical error over the cell size, so a finer
+            DEM calls for a *higher* threshold, not a lower one:
+            ``atan(1.1 * sigma_z / cell_size)`` holds the median error of the aspect
+            near 15°.
         radiation_method
             The method to build the radiation categories:
             'equal_intervals' = fixed radiation intervals
@@ -316,8 +341,12 @@ class CatchmentDiscretization:
                     reason="Invalid method value",
                 )
 
+        aspect_masks = {}
         if "aspect" in criteria:
-            criteria_dict["aspect"] = ["N", "E", "S", "W"]
+            aspect_masks = self._build_aspect_masks(
+                aspect_classes, flat_slope_threshold
+            )
+            criteria_dict["aspect"] = list(aspect_masks.keys())
 
         if "radiation" in criteria:
             if self.catchment.solar_radiation.mean_annual_radiation is None:
@@ -415,40 +444,7 @@ class CatchmentDiscretization:
                     )
                     mask_unit = np.logical_and(mask_unit, mask_slope)
                 elif criterion_name == "aspect":
-                    if criterion == "N":
-                        mask_aspect = np.logical_or(
-                            np.logical_and(
-                                self.catchment.topography.aspect >= 315,
-                                self.catchment.topography.aspect <= 360,
-                            ),
-                            np.logical_and(
-                                self.catchment.topography.aspect >= 0,
-                                self.catchment.topography.aspect < 45,
-                            ),
-                        )
-                    elif criterion == "E":
-                        mask_aspect = np.logical_and(
-                            self.catchment.topography.aspect >= 45,
-                            self.catchment.topography.aspect < 135,
-                        )
-                    elif criterion == "S":
-                        mask_aspect = np.logical_and(
-                            self.catchment.topography.aspect >= 135,
-                            self.catchment.topography.aspect < 225,
-                        )
-                    elif criterion == "W":
-                        mask_aspect = np.logical_and(
-                            self.catchment.topography.aspect >= 225,
-                            self.catchment.topography.aspect < 315,
-                        )
-                    else:
-                        raise ConfigurationError(
-                            "Unknown aspect value.",
-                            item_name="aspect",
-                            item_value=criterion,
-                            reason="Invalid aspect direction",
-                        )
-                    mask_unit = np.logical_and(mask_unit, mask_aspect)
+                    mask_unit = np.logical_and(mask_unit, aspect_masks[criterion])
                 elif criterion_name == "radiation":
                     radiation = self.catchment.solar_radiation.mean_annual_radiation
                     mask_radiation = np.logical_and(
@@ -676,6 +672,75 @@ class CatchmentDiscretization:
                 new_map[too_small] = largest_new_id
 
         return new_map, origins
+
+    def _build_aspect_masks(
+        self, aspect_classes: int, flat_slope_threshold: float
+    ) -> dict[str, np.ndarray]:
+        """Build the cell mask of every aspect class.
+
+        The sectors are centred on their direction (N spans 315-45° with 4 classes,
+        337.5-22.5° with 8). Cells whose aspect is undefined -- flat terrain, which
+        the aspect computation marks with -1, and the border of the DEM, where it is
+        NaN -- belong to no sector, and so does a cell flatter than
+        ``flat_slope_threshold``. They are gathered in a 'FLAT' class so that their
+        area is not dropped from the catchment. That class is only created when such
+        cells exist, so a catchment without them keeps the same hydro units as before.
+
+        Parameters
+        ----------
+        aspect_classes
+            Number of aspect classes: 4 or 8.
+        flat_slope_threshold
+            Slope (degrees) below which a cell is considered flat.
+
+        Returns
+        -------
+        The mask of each class, keyed by class name, in clockwise order from north.
+
+        Raises
+        ------
+        ConfigurationError
+            If the number of aspect classes is not 4 or 8.
+        """
+        if aspect_classes == 4:
+            names = ["N", "E", "S", "W"]
+        elif aspect_classes == 8:
+            names = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"]
+        else:
+            raise ConfigurationError(
+                "The number of aspect classes must be 4 or 8.",
+                item_name="aspect_classes",
+                item_value=aspect_classes,
+                reason="Invalid number of aspect classes",
+            )
+
+        aspect = self.catchment.topography.aspect
+        slope = self.catchment.topography.slope
+
+        # Undefined aspect (flat cells, marked -1, and NaN at the border of the DEM)
+        # and, if asked for, the cells too flat for their aspect to mean anything.
+        with np.errstate(invalid="ignore"):
+            mask_flat = ~(aspect >= 0)
+            if flat_slope_threshold > 0:
+                mask_flat = np.logical_or(mask_flat, slope < flat_slope_threshold)
+
+        width = 360 / aspect_classes
+        masks = {}
+        for i, name in enumerate(names):
+            start = (i * width - width / 2) % 360
+            end = start + width
+            if end <= 360:
+                mask = np.logical_and(aspect >= start, aspect < end)
+            else:  # the north sector wraps around 0°
+                mask = np.logical_or(aspect >= start, aspect < end - 360)
+            masks[name] = np.logical_and(mask, ~mask_flat)
+
+        # Outside the catchment the aspect is undefined too, so only the flat cells
+        # that carry an elevation decide whether the class is needed.
+        if np.any(np.logical_and(mask_flat, ~np.isnan(self.catchment.dem_data))):
+            masks["FLAT"] = mask_flat
+
+        return masks
 
     def _build_sub_catchments_map(
         self, sub_catchments: str | Path

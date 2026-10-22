@@ -1394,6 +1394,10 @@ class Model(ABC):
             if brick.get("computed_directly", False):
                 self.settings.set_current_brick_computed_directly()
 
+            # Make the brick represent a land cover's area instead of the unit's
+            if "area_of" in brick:
+                self.settings.set_current_brick_area_of(brick["area_of"])
+
             # Add brick parameters if any
             if "parameters" in brick:
                 for param, value in brick["parameters"].items():
@@ -1520,6 +1524,13 @@ class Model(ABC):
             self.land_cover_types,
             with_snow=with_snow,
             snow_melt_process=snow_melt_process,
+            # Which splitter divides precipitation into rain and snow. None
+            # keeps the default (linear, or CemaNeige when the melt is
+            # CemaNeige); 'snow_rain:threshold' switches to a single calibrated
+            # temperature. GR4J, GR6J and HBV already pass this from their own
+            # structure code; forwarding it here gives every model built through
+            # the shared path the same choice.
+            snow_rain_process=self.options.get("snow_rain_process"),
             snow_ice_transformation=snow_ice_transformation,
             snow_redistribution=snow_redistribution,
             snow_water_retention_process=snow_water_retention_process,

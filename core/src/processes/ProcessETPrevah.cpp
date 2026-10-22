@@ -60,7 +60,7 @@ const vecDouble& ProcessETPrevah::GetRates() {
     double albedo = _hydroUnit->GetSnowAlbedo(*_albedoLand, _cover);
     double albedoFactor = (1.0 - albedo) / 0.8;
 
-    double pet = static_cast<double>(*_etCorrectionFactor) * albedoFactor * GetForcingRate(_pet);
+    double pet = static_cast<double>(*_etCorrectionFactor) * albedoFactor * GetPetRate(_pet);
     double threshold = static_cast<double>(*_lp) * _container->GetMaximumCapacity();
     if (threshold <= 0) {
         return StoreRates({pet});

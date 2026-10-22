@@ -38,7 +38,7 @@ print("=" * 72)
 socont.print_structure()  # same as: print(socont.summary())
 
 # --------------------------------------------------------------------------- #
-# 2. A richer HBV-96 with several land-use classes
+# 2. A richer HBV-96 with several land covers
 # --------------------------------------------------------------------------- #
 # Open areas, a forest (with canopy interception enabled), and a glacier. The
 # graph reflects the COMPLETE structure, including the auto-generated parts

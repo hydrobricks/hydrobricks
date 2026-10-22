@@ -9,6 +9,7 @@ WaterContainer::WaterContainer(Brick* brick)
       _contentChangeStatic(0),
       _initialState(0),
       _capacity(nullptr),
+      _areaFraction(nullptr),
       _infiniteStorage(false),
       _allowNegativeContent(false),
       _inputsBooked(false),
@@ -184,8 +185,9 @@ void WaterContainer::ApplyConstraints(double timeStep) {
 
     // Enforce maximum capacity
     if (HasMaximumCapacity()) {
-        if (content + inputsStatic + change * timeStep > *_capacity) {
-            double diff = (content + inputsStatic + change * timeStep - *_capacity) / timeStep;
+        double capacity = GetMaximumCapacity();
+        if (content + inputsStatic + change * timeStep > capacity) {
+            double diff = (content + inputsStatic + change * timeStep - capacity) / timeStep;
             // If it has an overflow, use it
             if (HasOverflow()) {
                 if (_overflow->GetOutputFlux(0)->GetChangeRatePointer() != nullptr) {
@@ -196,7 +198,7 @@ void WaterContainer::ApplyConstraints(double timeStep) {
                     "WaterContainer::ApplyConstraints - Overflow exists but has no change rate pointer");
             }
             // Check that it is not only due to forcing
-            if (content + inputsStatic > *_capacity) {
+            if (content + inputsStatic > capacity) {
                 throw ModelConfigError(
                     "Forcing is coming directly into a brick with limited capacity and no overflow.");
             }
@@ -336,6 +338,11 @@ vecDoublePt WaterContainer::GetDynamicContentChanges() {
 }
 
 double WaterContainer::GetTargetFillingRatio() const {
-    assert(GetMaximumCapacity() > 0);
-    return std::max(0.0, std::min(1.0, GetContentWithChanges() / GetMaximumCapacity()));
+    // A capacity can be zero when it is expressed over a land cover with no area in
+    // the unit: such a store takes no water, so it counts as full.
+    double capacity = GetMaximumCapacity();
+    if (capacity <= 0) {
+        return 1.0;
+    }
+    return std::max(0.0, std::min(1.0, GetContentWithChanges() / capacity));
 }

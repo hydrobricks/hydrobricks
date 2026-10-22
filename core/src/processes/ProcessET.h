@@ -32,6 +32,17 @@ class ProcessET : public Process {
     [[nodiscard]] bool ToAtmosphere() const override {
         return true;
     }
+
+  protected:
+    /**
+     * Get the PET rate over the area the container represents: the whole hydro unit,
+     * or the share of its land cover for a per-cover store (whose fluxes are
+     * expressed over the whole unit).
+     *
+     * @param pet the PET forcing.
+     * @return the PET rate [mm/d] over the hydro unit.
+     */
+    [[nodiscard]] double GetPetRate(Forcing* pet) const;
 };
 
 #endif  // HYDROBRICKS_PROCESS_ET_H

@@ -113,13 +113,41 @@ class WaterContainer {
     }
 
     /**
-     * Get the maximum capacity of the water container.
+     * Get the maximum capacity of the water container, over the hydro unit area. For a
+     * container representing a land cover's area, the capacity parameter is expressed
+     * over that cover and scaled by its live area fraction.
      *
      * @return maximum capacity [mm]
      */
     [[nodiscard]] double GetMaximumCapacity() const {
         assert(_capacity);
+        if (_areaFraction != nullptr) {
+            return *_capacity * *_areaFraction;
+        }
         return *_capacity;
+    }
+
+    /**
+     * Get the fraction of the hydro unit this container represents: the live area
+     * fraction of its land cover, or 1 for a container spanning the whole unit.
+     *
+     * @return area fraction [-]
+     */
+    [[nodiscard]] double GetAreaFraction() const {
+        return _areaFraction != nullptr ? *_areaFraction : 1.0;
+    }
+
+    /**
+     * Make the container represent the area of a land cover rather than the whole
+     * hydro unit (e.g. a per-cover soil store): its capacity parameter and the
+     * per-area rates of its processes (the evapotranspiration) are then scaled by
+     * the cover's area fraction. The fraction is read live, so land cover changes
+     * apply without rebuilding.
+     *
+     * @param areaFraction pointer to the land cover area fraction (non-owning).
+     */
+    void SetAreaFraction(const double* areaFraction) {
+        _areaFraction = areaFraction;
     }
 
     /**
@@ -410,6 +438,7 @@ class WaterContainer {
     double _contentChangeStatic;   // [mm]
     double _initialState;          // [mm]
     const float* _capacity;        // non-owning reference
+    const double* _areaFraction;   // area fraction of the land cover represented (non-owning)
     bool _infiniteStorage;
     bool _allowNegativeContent;
     bool _inputsBooked;                                    // incoming amounts already in the content changes

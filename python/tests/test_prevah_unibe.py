@@ -17,14 +17,15 @@ import numpy as np
 import pytest
 
 import hydrobricks as hb
+import hydrobricks.actions as actions
 import hydrobricks.models as models
 from hydrobricks.land_covers import (
-    PREVAH_LAND_USE_ALBEDO,
-    PREVAH_LAND_USE_COVER_TYPES,
-    PREVAH_LAND_USE_LAI,
-    PREVAH_LAND_USE_ROOT_DEPTH,
-    PREVAH_LAND_USE_SI_MAX,
-    PREVAH_LAND_USE_VEG_COV,
+    PREVAH_COVER_ALBEDO,
+    PREVAH_COVER_LAI,
+    PREVAH_COVER_ROOT_DEPTH,
+    PREVAH_COVER_SI_MAX,
+    PREVAH_COVER_TYPES,
+    PREVAH_COVER_VEG_COV,
 )
 
 # ---------------------------------------------------------------------------
@@ -1165,7 +1166,7 @@ def test_prevah_snow_holding_cexliq_releases_more_on_ripe_pack(tmp_path):
 
 
 # ---------------------------------------------------------------------------
-# Per-cover soil moisture stores (PREVAH parameterizes the soil per land use)
+# Per-cover soil moisture stores (PREVAH parameterizes the soil per cover class)
 # ---------------------------------------------------------------------------
 
 
@@ -1320,18 +1321,116 @@ def test_prevah_per_cover_soil_water_balance_closes(tmp_path):
     assert _balance(model, forcing) == pytest.approx(0, abs=1e-6)
 
 
-def test_prevah_per_cover_soil_capacity_is_expressed_over_the_unit(tmp_path):
-    # A per-cover store is fed by its land cover, whose outgoing fluxes already carry
-    # the cover area fraction, so its content — and therefore its capacity — is
-    # expressed over the whole hydro unit, not over the cover. Giving both covers the
-    # capacity of the shared store therefore enlarges the unit's soil storage.
+def test_prevah_per_cover_soil_capacity_is_expressed_over_the_cover(tmp_path):
+    # fc_<cover> is the capacity of the cover's own soil: each store represents its
+    # cover's area, so its capacity and its ET are scaled by the cover fraction. Equal
+    # per-cover capacities therefore hold the same soil water as the shared store,
+    # and the ET cannot exceed the potential rate however many covers there are.
     shared, _ = _run_per_cover_soil(
         _subdir(tmp_path, "shared"), share_soil=True, fc_open=200.0, fc_forest=200.0
     )
     split, _ = _run_per_cover_soil(
         _subdir(tmp_path, "split"), share_soil=False, fc_open=200.0, fc_forest=200.0
     )
-    assert split.get_total_outlet_discharge() < shared.get_total_outlet_discharge()
+    assert split.get_total_et() == pytest.approx(shared.get_total_et(), rel=0.01)
+    assert split.get_total_outlet_discharge() == pytest.approx(
+        shared.get_total_outlet_discharge(), rel=0.01
+    )
+
+
+def _run_single_cover_units(tmp_path, *, share_soil, changes_csv=None):
+    """Run PREVAH on two units of a single cover class each: all open, all forest.
+
+    That is the PREVAH hydrotope discretization. With ``changes_csv``, the forest
+    area of the units follows that land cover change (in km2, matched by unit id).
+    """
+    hydro_units = hb.HydroUnits(
+        land_cover_types=["open", "forest"], land_cover_names=["open", "forest"]
+    )
+    hu_csv = tmp_path / "hydro_units.csv"
+    hu_csv.write_text(
+        "id,elevation,area_open,area_forest\n-,m,m^2,m^2\n"
+        "1,1000,1000000,0\n2,1000,0,1000000\n"
+    )
+    hydro_units.load_from_csv(
+        hu_csv,
+        column_elevation="elevation",
+        columns_areas={"open": "area_open", "forest": "area_forest"},
+    )
+    forcing = _load_forcing(hydro_units, _meteo_csv_seasonal(tmp_path, _N_2Y, 5.0, 1.5))
+
+    model = models.PrevahUniBE(
+        land_cover_names=["open", "forest"],
+        land_cover_types=["open", "forest"],
+        share_soil=share_soil,
+        interception_covers=["forest"],
+        record_all=True,
+    )
+    parameters = model.generate_parameters()
+    values = dict(_DEFAULT_PARAMS)
+    values.pop("beta")
+    values.update({"beta_open": 2.0, "beta_forest": 2.0, "ic": 2.0})
+    if not share_soil:
+        values.pop("fc")
+        values.pop("cu")
+        values.update(
+            {"fc_open": 200.0, "fc_forest": 200.0, "lp_open": 0.7, "lp_forest": 0.7}
+        )
+    parameters.set_values(values)
+
+    end_date = (_START + timedelta(days=_N_2Y - 1)).strftime("%Y-%m-%d")
+    model.setup(
+        spatial_structure=hydro_units,
+        output_path=str(tmp_path),
+        start_date=_START.strftime("%Y-%m-%d"),
+        end_date=end_date,
+    )
+    if changes_csv is not None:
+        changes = actions.ActionLandCoverChange()
+        changes.load_from_csv(
+            changes_csv,
+            hydro_units,
+            land_cover="forest",
+            area_unit="km2",
+            match_with="id",
+        )
+        assert model.add_action(changes)
+    model.run(parameters=parameters, forcing=forcing)
+    return model, forcing
+
+
+def test_prevah_per_cover_soil_on_single_cover_units(tmp_path):
+    # A cover absent from a unit holds no capacity there, so it neither dilutes nor
+    # shuts that unit's percolation gate: on units of a single cover class,
+    # the per-cover stores behave exactly as the shared one.
+    shared, _ = _run_single_cover_units(_subdir(tmp_path, "shared"), share_soil=True)
+    split, forcing = _run_single_cover_units(
+        _subdir(tmp_path, "split"), share_soil=False
+    )
+    assert _balance(split, forcing) == pytest.approx(0, abs=1e-6)
+    assert np.asarray(split.get_outlet_discharge()) == pytest.approx(
+        np.asarray(shared.get_outlet_discharge()), rel=1e-6, abs=1e-9
+    )
+    assert split.get_total_et() == pytest.approx(shared.get_total_et(), rel=1e-6)
+
+
+def test_prevah_per_cover_soil_follows_a_land_cover_change(tmp_path):
+    # The cover fractions are read live: a cover appearing in a unit during the run
+    # gets its soil capacity there from that date on, and the water balance closes.
+    changes_csv = tmp_path / "forest_changes.csv"
+    changes_csv.write_text("id,1982-01-01\n1,0.5\n")
+    static, _ = _run_single_cover_units(_subdir(tmp_path, "static"), share_soil=False)
+    changed, forcing = _run_single_cover_units(
+        _subdir(tmp_path, "changed"), share_soil=False, changes_csv=changes_csv
+    )
+    assert _balance(changed, forcing) == pytest.approx(0, abs=1e-6)
+    q_static = np.asarray(static.get_outlet_discharge())
+    q_changed = np.asarray(changed.get_outlet_discharge())
+    assert np.all(np.isfinite(q_changed))
+    # Identical until the change, different after it.
+    first_1982 = 365
+    assert q_changed[:first_1982] == pytest.approx(q_static[:first_1982], rel=1e-9)
+    assert not np.allclose(q_changed[first_1982:], q_static[first_1982:])
 
 
 def test_prevah_per_cover_soil_capacities_change_the_result(tmp_path):
@@ -1347,29 +1446,29 @@ def test_prevah_per_cover_soil_capacities_change_the_result(tmp_path):
 
 
 # ---------------------------------------------------------------------------
-# PREVAH's built-in land-use parameterization
+# PREVAH's built-in cover parameterization
 # ---------------------------------------------------------------------------
 
 
 _TABLES = (
-    PREVAH_LAND_USE_SI_MAX,
-    PREVAH_LAND_USE_VEG_COV,
-    PREVAH_LAND_USE_ROOT_DEPTH,
-    PREVAH_LAND_USE_ALBEDO,
-    PREVAH_LAND_USE_LAI,
+    PREVAH_COVER_SI_MAX,
+    PREVAH_COVER_VEG_COV,
+    PREVAH_COVER_ROOT_DEPTH,
+    PREVAH_COVER_ALBEDO,
+    PREVAH_COVER_LAI,
 )
 
 
-def test_every_land_use_has_twelve_monthly_values():
+def test_every_cover_class_has_twelve_monthly_values():
     for table in _TABLES:
-        assert sorted(table) == sorted(PREVAH_LAND_USE_COVER_TYPES)
+        assert sorted(table) == sorted(PREVAH_COVER_TYPES)
         assert all(len(values) == 12 for values in table.values())
 
 
-def test_land_uses_map_onto_the_hydrobricks_cover_types():
-    # PREVAH names 22 land uses; only six carry distinct physics and those are the
+def test_cover_classes_map_onto_the_hydrobricks_cover_types():
+    # PREVAH names 22 cover classes; only six carry distinct physics and those are the
     # hydrobricks cover types of the same name.
-    assert len(PREVAH_LAND_USE_COVER_TYPES) == 22
+    assert len(PREVAH_COVER_TYPES) == 22
     distinct = {
         "water": "water",
         "urban": "urban",
@@ -1378,16 +1477,16 @@ def test_land_uses_map_onto_the_hydrobricks_cover_types():
         "rock": "rock",
         "wetland": "wetland",
     }
-    for land_use, cover_type in distinct.items():
-        assert PREVAH_LAND_USE_COVER_TYPES[land_use] == cover_type
-    # Every other land use is an ordinary soil-bearing cover.
-    others = set(PREVAH_LAND_USE_COVER_TYPES) - set(distinct)
-    assert {PREVAH_LAND_USE_COVER_TYPES[c] for c in others} == {"open", "forest"}
+    for cover_class, cover_type in distinct.items():
+        assert PREVAH_COVER_TYPES[cover_class] == cover_type
+    # Every other cover class is an ordinary soil-bearing cover.
+    others = set(PREVAH_COVER_TYPES) - set(distinct)
+    assert {PREVAH_COVER_TYPES[c] for c in others} == {"open", "forest"}
 
 
 def test_reference_values():
     # Spot checks against mxp_model_parameter.f90.
-    assert PREVAH_LAND_USE_SI_MAX["coniferous_forest"] == [
+    assert PREVAH_COVER_SI_MAX["coniferous_forest"] == [
         2.5,
         2.8,
         2.8,
@@ -1401,111 +1500,111 @@ def test_reference_values():
         3.0,
         2.5,
     ]
-    assert PREVAH_LAND_USE_VEG_COV["water"] == [0.0] * 12
-    assert PREVAH_LAND_USE_ROOT_DEPTH["coniferous_forest"] == [1.5] * 12
-    # The albedo falls back to the land use's own value when the LAI exceeds 4.
-    assert PREVAH_LAND_USE_LAI["coniferous_forest"][6] == 8.0
-    assert PREVAH_LAND_USE_ALBEDO["coniferous_forest"][6] == pytest.approx(0.12)
+    assert PREVAH_COVER_VEG_COV["water"] == [0.0] * 12
+    assert PREVAH_COVER_ROOT_DEPTH["coniferous_forest"] == [1.5] * 12
+    # The albedo falls back to the cover class's own value when the LAI exceeds 4.
+    assert PREVAH_COVER_LAI["coniferous_forest"][6] == 8.0
+    assert PREVAH_COVER_ALBEDO["coniferous_forest"][6] == pytest.approx(0.12)
     # ... and is interpolated with the bare-soil albedo otherwise.
-    assert PREVAH_LAND_USE_LAI["pasture"][0] == 0.5
-    assert PREVAH_LAND_USE_ALBEDO["pasture"][0] == pytest.approx(
+    assert PREVAH_COVER_LAI["pasture"][0] == 0.5
+    assert PREVAH_COVER_ALBEDO["pasture"][0] == pytest.approx(
         0.1 + 0.25 * (0.25 - 0.1) * 0.5
     )
 
 
 def test_interception_capacity_is_si_max_times_veg_cov():
-    values = models.PrevahUniBE.land_use_interception_capacity("pasture")
+    values = models.PrevahUniBE.cover_interception_capacity("pasture")
     expected = [
         s * v
-        for s, v in zip(
-            PREVAH_LAND_USE_SI_MAX["pasture"], PREVAH_LAND_USE_VEG_COV["pasture"]
-        )
+        for s, v in zip(PREVAH_COVER_SI_MAX["pasture"], PREVAH_COVER_VEG_COV["pasture"])
     ]
     assert values == pytest.approx(expected)
 
 
 def test_field_capacity():
     # awc high enough that the 10 mm floor of the vegetated covers does not bite.
-    values = models.PrevahUniBE.land_use_field_capacity("pasture", 20.0)
+    values = models.PrevahUniBE.cover_field_capacity("pasture", 20.0)
     assert values == pytest.approx([20.0 * (0.6 + 0.05) * 10.0] * 12)
 
 
 def test_field_capacity_applies_the_vegetated_minimum():
     # A thin alpine soil would give 8.3 mm; PREVAH holds the vegetated covers at 10.
-    values = models.PrevahUniBE.land_use_field_capacity("pasture", 1.27)
+    values = models.PrevahUniBE.cover_field_capacity("pasture", 1.27)
     assert values == pytest.approx([10.0] * 12)
 
 
 def test_field_capacity_is_capped_by_the_soil_depth():
     # The roots reach 1.55 m but the soil is 0.4 m deep.
-    values = models.PrevahUniBE.land_use_field_capacity(
+    values = models.PrevahUniBE.cover_field_capacity(
         "coniferous_forest", 20.0, soil_depth=0.4
     )
     assert values == pytest.approx([20.0 * 0.4 * 10.0] * 12)
     # Without the cap the full rooting depth applies.
-    uncapped = models.PrevahUniBE.land_use_field_capacity("coniferous_forest", 20.0)
+    uncapped = models.PrevahUniBE.cover_field_capacity("coniferous_forest", 20.0)
     assert uncapped == pytest.approx([20.0 * (1.5 + 0.05) * 10.0] * 12)
 
 
 def test_field_capacity_follows_a_seasonal_rooting_depth():
-    values = models.PrevahUniBE.land_use_field_capacity("cereals", 20.0)
+    values = models.PrevahUniBE.cover_field_capacity("cereals", 20.0)
     # Deep roots from July to September, shallow the rest of the year.
     assert values[0] == pytest.approx(20.0 * (0.2 + 0.05) * 10.0)
     assert values[7] == pytest.approx(20.0 * (0.8 + 0.05) * 10.0)
 
 
 def test_field_capacity_of_the_soilless_covers_is_fixed():
-    assert models.PrevahUniBE.land_use_field_capacity("urban", 20.0) == [5.0] * 12
-    assert models.PrevahUniBE.land_use_field_capacity("rock", 20.0) == [3.0] * 12
-    assert models.PrevahUniBE.land_use_field_capacity("glacier_ice", 20.0) == [0.1] * 12
+    assert models.PrevahUniBE.cover_field_capacity("urban", 20.0) == [5.0] * 12
+    assert models.PrevahUniBE.cover_field_capacity("rock", 20.0) == [3.0] * 12
+    assert models.PrevahUniBE.cover_field_capacity("glacier_ice", 20.0) == [0.1] * 12
     # Open water instead carries a deep store.
-    assert models.PrevahUniBE.land_use_field_capacity("water", 20.0) == [2500.0] * 12
+    assert models.PrevahUniBE.cover_field_capacity("water", 20.0) == [2500.0] * 12
 
 
-def test_unknown_land_use_is_rejected():
+def test_unknown_cover_class_is_rejected():
     with pytest.raises(hb.ConfigurationError):
-        models.PrevahUniBE.land_use_interception_capacity("not_a_land_use")
+        models.PrevahUniBE.cover_interception_capacity("not_a_cover_class")
     with pytest.raises(hb.ConfigurationError):
-        models.PrevahUniBE.land_use_field_capacity("not_a_land_use", 1.0)
+        models.PrevahUniBE.cover_field_capacity("not_a_cover_class", 1.0)
 
 
-def _model_with_land_uses(land_uses, **options):
+def _model_with_cover_classes(cover_classes, **options):
     return models.PrevahUniBE(
-        land_cover_names=land_uses,
-        land_cover_types=[PREVAH_LAND_USE_COVER_TYPES[c] for c in land_uses],
-        interception_covers=land_uses,
+        land_cover_names=cover_classes,
+        land_cover_types=[PREVAH_COVER_TYPES[c] for c in cover_classes],
+        interception_covers=cover_classes,
         **options,
     )
 
 
-def test_apply_land_use_sets_the_monthly_parameters():
-    land_uses = ["coniferous_forest", "pasture"]
-    model = _model_with_land_uses(land_uses, canopy_et_process="et:open_water_prevah")
+def test_apply_cover_parameters_sets_the_monthly_parameters():
+    cover_classes = ["coniferous_forest", "pasture"]
+    model = _model_with_cover_classes(
+        cover_classes, canopy_et_process="et:open_water_prevah"
+    )
     parameters = model.generate_parameters()
 
-    for land_use in land_uses:
-        model.apply_land_use(parameters, land_use)
+    for cover_class in cover_classes:
+        model.apply_cover_parameters(parameters, cover_class)
 
     monthly = {
         (component, name): values
         for component, name, values in parameters.get_monthly_parameters()
     }
     assert monthly[("pasture_canopy", "capacity")] == pytest.approx(
-        model.land_use_interception_capacity("pasture")
+        model.cover_interception_capacity("pasture")
     )
     assert monthly[("pasture_canopy", "et_factor")] == pytest.approx(
-        PREVAH_LAND_USE_VEG_COV["pasture"]
+        PREVAH_COVER_VEG_COV["pasture"]
     )
     assert monthly[("coniferous_forest_canopy", "capacity")] == pytest.approx(
-        model.land_use_interception_capacity("coniferous_forest")
+        model.cover_interception_capacity("coniferous_forest")
     )
 
 
-def test_apply_land_use_on_a_renamed_cover():
+def test_apply_cover_parameters_on_a_renamed_cover():
     model = models.PrevahUniBE(land_cover_names=["open"], land_cover_types=["open"])
     parameters = model.generate_parameters()
     # A single canopy: the alias carries no cover suffix.
-    model.apply_land_use(parameters, "pasture", cover_name="open")
+    model.apply_cover_parameters(parameters, "pasture", cover_name="open")
 
     monthly = {
         (component, name): values
@@ -1516,28 +1615,28 @@ def test_apply_land_use_on_a_renamed_cover():
         ("open_canopy", "et_factor"),
     ]
     assert monthly[("open_canopy", "capacity")] == pytest.approx(
-        model.land_use_interception_capacity("pasture")
+        model.cover_interception_capacity("pasture")
     )
 
 
-def test_generate_parameters_applies_the_tables_of_named_land_uses():
-    """A canopy named after a PREVAH land use gets its monthly tables right away."""
-    land_uses = ["coniferous_forest", "pasture"]
+def test_generate_parameters_applies_the_tables_of_named_cover_classes():
+    """A canopy named after a PREVAH cover class gets its monthly tables right away."""
+    cover_classes = ["coniferous_forest", "pasture"]
     model = models.PrevahUniBE(
-        land_cover_names=land_uses,
-        land_cover_types=[PREVAH_LAND_USE_COVER_TYPES[c] for c in land_uses],
+        land_cover_names=cover_classes,
+        land_cover_types=[PREVAH_COVER_TYPES[c] for c in cover_classes],
     )
     parameters = model.generate_parameters()
     monthly = {
         (component, name): values
         for component, name, values in parameters.get_monthly_parameters()
     }
-    for land_use in land_uses:
-        assert monthly[(f"{land_use}_canopy", "capacity")] == pytest.approx(
-            model.land_use_interception_capacity(land_use)
+    for cover_class in cover_classes:
+        assert monthly[(f"{cover_class}_canopy", "capacity")] == pytest.approx(
+            model.cover_interception_capacity(cover_class)
         )
-        assert monthly[(f"{land_use}_canopy", "et_factor")] == pytest.approx(
-            PREVAH_LAND_USE_VEG_COV[land_use]
+        assert monthly[(f"{cover_class}_canopy", "et_factor")] == pytest.approx(
+            PREVAH_COVER_VEG_COV[cover_class]
         )
 
 
@@ -1548,22 +1647,22 @@ def test_generate_parameters_keeps_generic_covers_constant():
     assert parameters.has("ic")
 
 
-def test_apply_land_use_without_the_prevah_canopy_et():
+def test_apply_cover_parameters_without_the_prevah_canopy_et():
     # With the default canopy ET there is no et_factor: only the capacity is set.
-    land_uses = ["coniferous_forest", "pasture"]
-    model = _model_with_land_uses(land_uses, canopy_et_process="et:open_water")
+    cover_classes = ["coniferous_forest", "pasture"]
+    model = _model_with_cover_classes(cover_classes, canopy_et_process="et:open_water")
     parameters = model.generate_parameters()
-    for land_use in land_uses:
-        model.apply_land_use(parameters, land_use)
+    for cover_class in cover_classes:
+        model.apply_cover_parameters(parameters, cover_class)
 
     monthly = parameters.get_monthly_parameters()
     assert sorted(name for _, name, _ in monthly) == ["capacity", "capacity"]
 
 
-def _two_unit_hydro_units(tmp_path, land_use, cover_type):
+def _two_unit_hydro_units(tmp_path, cover_class, cover_type):
     """Two equal-area units carrying a single land cover."""
     hydro_units = hb.HydroUnits(
-        land_cover_types=[cover_type], land_cover_names=[land_use]
+        land_cover_types=[cover_type], land_cover_names=[cover_class]
     )
     hu_csv = tmp_path / "hydro_units.csv"
     hu_csv.write_text("id,elevation,area\n-,m,m^2\n1,1000,500000\n2,2000,500000\n")
@@ -1571,12 +1670,12 @@ def _two_unit_hydro_units(tmp_path, land_use, cover_type):
     return hydro_units
 
 
-def test_apply_land_use_field_capacity_builds_a_per_unit_monthly_table(tmp_path):
+def test_apply_cover_field_capacity_builds_a_per_unit_monthly_table(tmp_path):
     model = models.PrevahUniBE(land_cover_names=["pasture"], land_cover_types=["open"])
     parameters = model.generate_parameters()
     hydro_units = _two_unit_hydro_units(tmp_path, "pasture", "open")
 
-    names = model.apply_land_use_field_capacity(
+    names = model.apply_cover_field_capacity(
         parameters, hydro_units, "pasture", available_water_content=[20.0, 30.0]
     )
 
@@ -1589,14 +1688,14 @@ def test_apply_land_use_field_capacity_builds_a_per_unit_monthly_table(tmp_path)
     assert january == pytest.approx([20.0 * 0.65 * 10.0, 30.0 * 0.65 * 10.0])
 
 
-def test_apply_land_use_field_capacity_caps_with_the_soil_depth(tmp_path):
+def test_apply_cover_field_capacity_caps_with_the_soil_depth(tmp_path):
     model = models.PrevahUniBE(
         land_cover_names=["coniferous_forest"], land_cover_types=["forest"]
     )
     parameters = model.generate_parameters()
     hydro_units = _two_unit_hydro_units(tmp_path, "coniferous_forest", "forest")
 
-    model.apply_land_use_field_capacity(
+    model.apply_cover_field_capacity(
         parameters,
         hydro_units,
         "coniferous_forest",
@@ -1609,13 +1708,13 @@ def test_apply_land_use_field_capacity_caps_with_the_soil_depth(tmp_path):
     assert january == pytest.approx([20.0 * 0.4 * 10.0, 20.0 * 1.55 * 10.0])
 
 
-def test_apply_land_use_field_capacity_per_unit_land_use(tmp_path):
-    """A PREVAH hydrotope carries one land use, so each unit can have its own."""
+def test_apply_cover_field_capacity_per_unit_cover_class(tmp_path):
+    """A PREVAH hydrotope carries one cover class, so each unit can have its own."""
     model = models.PrevahUniBE(land_cover_names=["open"], land_cover_types=["open"])
     parameters = model.generate_parameters()
     hydro_units = _two_unit_hydro_units(tmp_path, "open", "open")
 
-    model.apply_land_use_field_capacity(
+    model.apply_cover_field_capacity(
         parameters,
         hydro_units,
         ["pasture", "coniferous_forest"],
@@ -1626,13 +1725,13 @@ def test_apply_land_use_field_capacity_per_unit_land_use(tmp_path):
     assert january == pytest.approx([20.0 * 0.65 * 10.0, 20.0 * 1.55 * 10.0])
 
 
-def test_apply_land_use_field_capacity_per_unit_seasonal(tmp_path):
-    """A unit whose land use has a seasonal rooting depth follows it."""
+def test_apply_cover_field_capacity_per_unit_seasonal(tmp_path):
+    """A unit whose cover class has a seasonal rooting depth follows it."""
     model = models.PrevahUniBE(land_cover_names=["open"], land_cover_types=["open"])
     parameters = model.generate_parameters()
     hydro_units = _two_unit_hydro_units(tmp_path, "open", "open")
 
-    model.apply_land_use_field_capacity(
+    model.apply_cover_field_capacity(
         parameters,
         hydro_units,
         ["cereals", "pasture"],
@@ -1647,7 +1746,7 @@ def test_apply_land_use_field_capacity_per_unit_seasonal(tmp_path):
     assert january[1] == pytest.approx(august[1])
 
 
-def test_apply_land_use_field_capacity_per_unit_needs_a_cover_with_split_soils(
+def test_apply_cover_field_capacity_per_unit_needs_a_cover_with_split_soils(
     tmp_path,
 ):
     model = models.PrevahUniBE(
@@ -1658,7 +1757,7 @@ def test_apply_land_use_field_capacity_per_unit_needs_a_cover_with_split_soils(
     parameters = model.generate_parameters()
     hydro_units = _two_unit_hydro_units(tmp_path, "pasture", "open")
     with pytest.raises(hb.ConfigurationError):
-        model.apply_land_use_field_capacity(
+        model.apply_cover_field_capacity(
             parameters,
             hydro_units,
             ["pasture", "pasture"],
@@ -1666,12 +1765,12 @@ def test_apply_land_use_field_capacity_per_unit_needs_a_cover_with_split_soils(
         )
 
 
-def test_apply_land_use_field_capacity_rejects_a_length_mismatch(tmp_path):
+def test_apply_cover_field_capacity_rejects_a_length_mismatch(tmp_path):
     model = models.PrevahUniBE(land_cover_names=["pasture"], land_cover_types=["open"])
     parameters = model.generate_parameters()
     hydro_units = _two_unit_hydro_units(tmp_path, "pasture", "open")
     with pytest.raises(hb.ConfigurationError):
-        model.apply_land_use_field_capacity(
+        model.apply_cover_field_capacity(
             parameters,
             hydro_units,
             "pasture",
@@ -1680,7 +1779,7 @@ def test_apply_land_use_field_capacity_rejects_a_length_mismatch(tmp_path):
         )
 
 
-def test_apply_land_use_requires_a_canopy():
+def test_apply_cover_parameters_requires_a_canopy():
     model = models.PrevahUniBE(
         land_cover_names=["pasture"],
         land_cover_types=["open"],
@@ -1688,7 +1787,7 @@ def test_apply_land_use_requires_a_canopy():
     )
     parameters = model.generate_parameters()
     with pytest.raises(hb.ConfigurationError):
-        model.apply_land_use(parameters, "pasture")
+        model.apply_cover_parameters(parameters, "pasture")
 
 
 # ---------------------------------------------------------------------------
@@ -1712,10 +1811,12 @@ def test_prevah_conductivity_factor_is_one_with_a_zero_conductivity():
     assert factor == pytest.approx([1.0, 1.0, 1.0])
 
 
-def _percolation_units(tmp_path, land_uses, awc):
+def _percolation_units(tmp_path, cover_classes, awc):
     hydro_units = hb.HydroUnits(land_cover_types=["open"], land_cover_names=["open"])
     hu_csv = tmp_path / "hydro_units.csv"
-    rows = "".join(f"{i + 1},{1000 + 500 * i},1000000\n" for i in range(len(land_uses)))
+    rows = "".join(
+        f"{i + 1},{1000 + 500 * i},1000000\n" for i in range(len(cover_classes))
+    )
     hu_csv.write_text(f"id,elevation,area_open\n-,m,m^2\n{rows}")
     hydro_units.load_from_csv(
         hu_csv, column_elevation="elevation", columns_areas={"open": "area_open"}
@@ -1727,14 +1828,14 @@ def test_prevah_constant_percolation_on_built_up_surfaces_with_a_deep_soil(tmp_p
     """The constant branch applies where cu times the soil-map capacity reaches the
     capacity the cover forces (5 mm built-up): a deep enough soil, never on a
     vegetated cover."""
-    land_uses = ["urban", "urban", "alpine_meadow"]
+    cover_classes = ["urban", "urban", "alpine_meadow"]
     awc = [20.0, 2.0, 20.0]
-    hydro_units = _percolation_units(tmp_path, land_uses, awc)
+    hydro_units = _percolation_units(tmp_path, cover_classes, awc)
     model = models.PrevahUniBE(land_cover_names=["open"], land_cover_types=["open"])
     parameters = model.generate_parameters()
     parameters.set_values({"cu_perc": 0.7})
-    names = model.apply_land_use_percolation(
-        parameters, hydro_units, land_uses, awc, soil_depth=[1.0, 1.0, 1.0]
+    names = model.apply_cover_percolation(
+        parameters, hydro_units, cover_classes, awc, soil_depth=[1.0, 1.0, 1.0]
     )
     assert len(names) == 12  # no conductivity given: KWPER stays 1
     flags = hydro_units.hydro_units[names[0]].to_numpy().flatten()
@@ -1744,23 +1845,23 @@ def test_prevah_constant_percolation_on_built_up_surfaces_with_a_deep_soil(tmp_p
 def test_prevah_constant_percolation_stops_under_snow(tmp_path):
     """A built-up unit on the constant branch percolates more than on the ramp while
     snow free, nothing under snow, and the balance still closes."""
-    land_uses = ["urban"]
+    cover_classes = ["urban"]
     awc = [20.0]
 
     def run(path, constant):
-        hydro_units = _percolation_units(path, land_uses, awc)
+        hydro_units = _percolation_units(path, cover_classes, awc)
         forcing = _load_forcing(hydro_units, _meteo_csv_seasonal(path, _N_2Y, 5.0, 1.5))
         model = models.PrevahUniBE(
             land_cover_names=["open"], land_cover_types=["open"], record_all=True
         )
         parameters = model.generate_parameters()
         parameters.set_values(_DEFAULT_PARAMS)
-        model.apply_land_use_field_capacity(
-            parameters, hydro_units, land_uses, awc, soil_depth=[1.0]
+        model.apply_cover_field_capacity(
+            parameters, hydro_units, cover_classes, awc, soil_depth=[1.0]
         )
         if constant:
-            model.apply_land_use_percolation(
-                parameters, hydro_units, land_uses, awc, soil_depth=[1.0]
+            model.apply_cover_percolation(
+                parameters, hydro_units, cover_classes, awc, soil_depth=[1.0]
             )
         end_date = (_START + timedelta(days=_N_2Y - 1)).strftime("%Y-%m-%d")
         out = path / "out"

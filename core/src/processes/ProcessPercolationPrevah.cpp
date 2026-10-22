@@ -92,8 +92,9 @@ double ProcessPercolationPrevah::GetSnowCoveredFraction() const {
 
 const vecDouble& ProcessPercolationPrevah::GetRates() {
     // Sum over the gate bricks: with one soil moisture store per land cover, the
-    // contents already carry the cover area fractions, so the ratio of the sums is
-    // the area-weighted mean saturation of the hydro unit.
+    // contents and the capacities both carry the cover area fractions (the capacity
+    // being expressed over its cover), so the ratio of the sums is the area-weighted
+    // mean saturation of the hydro unit. A cover with no area adds nothing to either.
     double content = 0;
     double capacity = 0;
     for (auto* gateBrick : _gateBricks) {

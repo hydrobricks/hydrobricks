@@ -107,6 +107,7 @@ class ModelBuilder {
     void CreateHydroUnitBrick(SettingsModel& modelSettings, HydroUnit* unit, int iBrick);
     void PopulateSpatialOverrides(SettingsModel& modelSettings, HydroUnit* unit, const string& brickName);
     void LinkSurfaceComponentsParents(SettingsModel& modelSettings, HydroUnit* unit);
+    void LinkAreaFractions(SettingsModel& modelSettings, HydroUnit* unit);
     void LinkSubbasinProcessesTargetBricks(SettingsModel& modelSettings);
     void LinkHydroUnitProcessesTargetBricks(SettingsModel& modelSettings, HydroUnit* unit);
     std::vector<Brick*> FindLandCoversFeeding(const string& targetName, HydroUnit* unit, SettingsModel& modelSettings);

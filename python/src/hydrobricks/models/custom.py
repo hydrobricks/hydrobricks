@@ -86,7 +86,14 @@ _SNOW_OPTION_DEFAULTS: dict[str, Any] = {
     "rain_to_snowpack": False,
     "forest_interception": False,
 }
-_BRICK_KEYS = {"kind", "attach_to", "computed_directly", "parameters", "processes"}
+_BRICK_KEYS = {
+    "kind",
+    "attach_to",
+    "computed_directly",
+    "area_of",
+    "parameters",
+    "processes",
+}
 _PROCESS_KEYS = {"kind", "target", "targets", "log", "instantaneous", "gate"}
 _CONSTRAINT_OPERATORS = ("<", "<=", ">", ">=")
 _TARGETLESS_PREFIXES = ("et:", "interception:", "sublimation:")
@@ -206,6 +213,8 @@ def _validate_brick(brick: Any, where: str, errors: list[str]) -> None:
         brick["computed_directly"], bool
     ):
         errors.append(f"{where}.computed_directly: expected true or false.")
+    if "area_of" in brick and not isinstance(brick["area_of"], str):
+        errors.append(f"{where}.area_of: expected a land cover name.")
     parameters = brick.get("parameters", {})
     if not isinstance(parameters, dict):
         errors.append(f"{where}.parameters: expected a mapping of name to value.")

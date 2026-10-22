@@ -58,6 +58,16 @@ class Logger {
     void SetHydroUnitFractionPointer(int iUnit, int iLabel, double* valPt);
 
     /**
+     * Set the area a hydro unit label is expressed over: "land_cover" (a land cover or one of its surface
+     * components, over its own area), "hydro_unit" (over the hydro unit) or "subbasin" (a flux delivered to
+     * the outlet or to a subbasin brick, over the subbasin's local area).
+     *
+     * @param iLabel index of the hydro unit label.
+     * @param basis the area basis.
+     */
+    void SetHydroUnitLabelBasis(int iLabel, const string& basis);
+
+    /**
      * Set the date in the logger.
      *
      * @param date date to set.
@@ -361,6 +371,24 @@ class Logger {
     }
 
     /**
+     * Get the area basis of each hydro unit label ("land_cover", "hydro_unit" or "subbasin").
+     *
+     * @return vector of area bases, one per hydro unit label.
+     */
+    const vecStr& GetHydroUnitLabelBases() const {
+        return _hydroUnitLabelBases;
+    }
+
+    /**
+     * Get the share of its subbasin's area covered by each hydro unit (unit area / subbasin area).
+     *
+     * @return vector of area fractions, one per hydro unit.
+     */
+    const axd& GetHydroUnitSubbasinFractions() const {
+        return _hydroUnitSubbasinFractions;
+    }
+
+    /**
      * Activate the recording of fractions.
      */
     void RecordFractions() {
@@ -403,6 +431,8 @@ class Logger {
     vecInt _hydroUnitStructureIds;
     axd _hydroUnitAreas;
     vecStr _hydroUnitLabels;
+    vecStr _hydroUnitLabelBases;      // [label] area the values are expressed over
+    axd _hydroUnitSubbasinFractions;  // [unit] unit area / subbasin area
     vecAxd _hydroUnitInitialValues;
     vecAxxd _hydroUnitValues;
     vector<vecDoublePt> _hydroUnitValuesPt;

@@ -504,6 +504,21 @@ axd ModelHydro::GetHydroUnitAreas() const {
     return _logger.GetHydroUnitAreas();
 }
 
+string ModelHydro::GetHydroUnitLabelBasis(const string& label) const {
+    const vecStr& labels = _logger.GetHydroUnitLabels();
+    auto it = std::find(labels.begin(), labels.end(), label);
+    if (it == labels.end()) {
+        throw std::invalid_argument("The hydro unit component '" + label +
+                                    "' was not recorded. Enable record_all to record it.");
+    }
+    int index = static_cast<int>(std::distance(labels.begin(), it));
+    return _logger.GetHydroUnitLabelBases()[index];
+}
+
+axd ModelHydro::GetHydroUnitSubbasinFractions() const {
+    return _logger.GetHydroUnitSubbasinFractions();
+}
+
 bool ModelHydro::AddTimeSeries(std::unique_ptr<TimeSeries> timeSeries) {
     // Validate time series before adding
     if (!timeSeries->IsValid()) {

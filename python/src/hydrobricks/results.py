@@ -3,6 +3,11 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
+from hydrobricks._area_basis import (
+    check_area_basis,
+    convert_area_basis,
+    land_cover_of_label,
+)
 from hydrobricks._exceptions import DataError, DependencyError
 from hydrobricks._optional import HAS_XARRAY, xr
 
@@ -403,7 +408,11 @@ class Results:
         return self.results.hydro_units_structure_ids.to_numpy()
 
     def get_hydro_units_values(
-        self, component: str, start_date: str | None = None, end_date: str | None = None
+        self,
+        component: str,
+        start_date: str | None = None,
+        end_date: str | None = None,
+        basis: str | None = None,
     ) -> np.ndarray:
         """
         Get the values of a component at the hydro units.
@@ -422,6 +431,11 @@ class Results:
         end_date
             The end date of the period to extract (format: 'YYYY-MM-DD').
             If None, returns up to end of time series. Default: None
+        basis
+            The area to express the values over: 'land_cover', 'hydro_unit' or
+            'subbasin'. None (default) returns them as recorded, over the area given
+            by :meth:`get_hydro_units_basis`. Converting to or from a land cover
+            needs the land-cover fractions (recorded with ``record_all``).
 
         Returns
         -------
@@ -437,11 +451,69 @@ class Results:
         KeyError
             If date selection fails or dates are not in the time series.
         """
-        i_component, _ = self._resolve_component_label(component)
-
-        return self._select_time(
+        i_component, label = self._resolve_component_label(component)
+        values = self._select_time(
             self.results.hydro_units_values[i_component], start_date, end_date
         )
+        if basis is None:
+            return values
+
+        check_area_basis(basis)
+        if "hydro_units_subbasin_fractions" not in self.results:
+            raise DataError(
+                "The results file does not record the area basis of its values "
+                "(written by an older version); they cannot be converted.",
+                data_type="results",
+                reason="No area basis",
+            )
+        cover = land_cover_of_label(label, list(self.labels_land_cover or []))
+        fraction = None
+        if cover is not None:
+            i_land_cover = list(self.labels_land_cover).index(cover)
+            fraction = self._select_time(
+                self.results.land_cover_fractions[i_land_cover], start_date, end_date
+            )
+        return convert_area_basis(
+            values,
+            label,
+            source=self.get_hydro_units_basis(label),
+            target=basis,
+            land_cover_fraction=fraction,
+            subbasin_fraction=self.results.hydro_units_subbasin_fractions.to_numpy(),
+        )
+
+    def get_hydro_units_basis(self, component: str) -> str:
+        """
+        Get the area a hydro-unit component is expressed over.
+
+        Parameters
+        ----------
+        component
+            The name of the component (e.g. 'glacier:melt:output').
+
+        Returns
+        -------
+        'land_cover' (over the area of its land cover), 'hydro_unit' (over the
+        unit) or 'subbasin' (a flux to the outlet or to a subbasin brick, over the
+        local area of the subbasin).
+
+        Raises
+        ------
+        DataError
+            If the results file does not record the area bases (older versions).
+        """
+        i_component, _ = self._resolve_component_label(component)
+        bases = self.results.attrs.get("labels_distributed_basis")
+        if bases is None:
+            raise DataError(
+                "The results file does not record the area basis of its values "
+                "(written by an older version).",
+                data_type="results",
+                reason="No area basis",
+            )
+        if isinstance(bases, str):
+            bases = [bases]
+        return str(bases[i_component])
 
     def get_mean_hydro_units_values(
         self,

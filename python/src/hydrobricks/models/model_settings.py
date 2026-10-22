@@ -14,7 +14,7 @@ class ModelSettings:
 
     def __init__(
         self,
-        solver: str = "heun_explicit",
+        solver: str = "exponential_euler",
         record_all: bool = False,
         channel_routing: str = "none",
         route_local_runoff: bool = False,
@@ -26,7 +26,7 @@ class ModelSettings:
         solver
             Numerical solver used to integrate the reservoir ODEs. One of:
 
-            - ``"crank_nicolson"`` (alias ``"trapezoidal"``) -- default;
+            - ``"crank_nicolson"`` (alias ``"trapezoidal"``) --
               implicit trapezoidal rule, second-order and unconditionally
               stable for any process; no transit lag.
             - ``"heun_explicit"`` -- explicit, second-order; good
@@ -41,7 +41,7 @@ class ModelSettings:
             - ``"implicit_euler"`` (alias ``"euler_implicit"``) -- backward
               Euler, first-order; unconditionally stable for any process, no
               transit lag; most robust for very stiff reservoirs.
-            - ``"exponential_euler"`` -- analytic integration of the
+            - ``"exponential_euler"`` -- default; analytic integration of the
               per-step linearized system; unconditionally stable, no
               transit lag.
 

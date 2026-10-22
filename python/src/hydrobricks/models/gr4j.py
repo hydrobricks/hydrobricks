@@ -79,8 +79,8 @@ class GR4J(Model):
         inherent step delay through the store -> routing -> outlet cascade, which the
         staged explicit solvers reproduce (they route water across one brick per step)
         but the sequential solvers remove (they route the whole cascade within a step),
-        shifting the hydrograph far too early. The global default (crank_nicolson) is
-        sequential, so pin the explicit Heun solver for this mode to stay faithful to
+        shifting the hydrograph far too early. The global default (exponential_euler)
+        is sequential, so pin the explicit Heun solver for this mode to stay faithful to
         the reference GR timing, unless the user chose a solver explicitly. Shared by
         GR4J and GR6J.
         """

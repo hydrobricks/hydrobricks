@@ -451,7 +451,11 @@ PYBIND11_MODULE(_hydrobricks, m) {
         .def("get_recorded_hydro_unit_fraction_labels", &ModelHydro::GetRecordedHydroUnitFractionLabels,
              "Get the labels of the recorded land-cover fractions.")
         .def("get_hydro_unit_ids", &ModelHydro::GetHydroUnitIds, "Get the hydro unit ids in recorded order.")
-        .def("get_hydro_unit_areas", &ModelHydro::GetHydroUnitAreas, "Get the hydro unit areas in recorded order.");
+        .def("get_hydro_unit_areas", &ModelHydro::GetHydroUnitAreas, "Get the hydro unit areas in recorded order.")
+        .def("get_hydro_unit_label_basis", &ModelHydro::GetHydroUnitLabelBasis,
+             "Get the area a recorded hydro unit component is expressed over.", "label"_a)
+        .def("get_hydro_unit_subbasin_fractions", &ModelHydro::GetHydroUnitSubbasinFractions,
+             "Get the share of its subbasin's area covered by each hydro unit, in recorded order.");
 
     py::class_<Action>(m, "Action").def(py::init<>());
 

@@ -373,6 +373,22 @@ class ModelHydro {
      */
     [[nodiscard]] axd GetHydroUnitAreas() const;
 
+    /**
+     * Get the area basis of a recorded hydro unit component: "land_cover" (over the area of its land
+     * cover), "hydro_unit" (over the unit) or "subbasin" (over the local area of the subbasin).
+     *
+     * @param label the component label (e.g. "glacier:melt:output").
+     * @return the area basis.
+     */
+    [[nodiscard]] string GetHydroUnitLabelBasis(const string& label) const;
+
+    /**
+     * Get the share of its subbasin's area covered by each hydro unit, in recorded order.
+     *
+     * @return vector of area fractions.
+     */
+    [[nodiscard]] axd GetHydroUnitSubbasinFractions() const;
+
   protected:
     std::vector<std::unique_ptr<Processor>> _processors;  // owning: one per subbasin, in processing order
     std::unique_ptr<RiverNetwork> _network;  // owning: set only when ModelHydro builds the network from settings

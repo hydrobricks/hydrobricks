@@ -9,6 +9,11 @@ import HydroErr
 import numpy as np
 import pandas as pd
 
+from hydrobricks._area_basis import (
+    check_area_basis,
+    convert_area_basis,
+    land_cover_of_label,
+)
 from hydrobricks._exceptions import ConfigurationError, ModelError
 from hydrobricks._hydrobricks import ModelHydro, close_log, init_log
 from hydrobricks._utils import Timer, date_as_mjd, dump_config_file, validate_kwargs
@@ -98,7 +103,7 @@ class Model(ABC):
 
         # Default options
         self.options: dict[str, Any] = dict()
-        self.solver: str = "heun_explicit"
+        self.solver: str = "exponential_euler"
         self.record_all: bool = False
         # Channel routing between the subbasins of a river network ('none', 'lag' or
         # 'muskingum'); irrelevant for a catchment without a declared network. Not to be
@@ -726,7 +731,9 @@ class Model(ABC):
         """
         return list(self.model.get_recorded_hydro_unit_labels())
 
-    def get_recorded_hydro_unit_values(self, label: str) -> np.ndarray:
+    def get_recorded_hydro_unit_values(
+        self, label: str, basis: str | None = None
+    ) -> np.ndarray:
         """
         Get a recorded hydro-unit component series directly from memory.
 
@@ -738,6 +745,11 @@ class Model(ABC):
         ----------
         label
             The recorded component label (e.g. 'glacier_snowpack:snow_content').
+        basis
+            The area to express the values over: 'land_cover', 'hydro_unit' or
+            'subbasin'. None (default) returns them as recorded, over the area given
+            by :meth:`get_recorded_hydro_unit_basis`. Converting to or from a land
+            cover needs the land-cover fractions (``record_all``).
 
         Returns
         -------
@@ -747,7 +759,44 @@ class Model(ABC):
         """
         # The engine stores the series as (time, units); transpose to the
         # (units, time) convention used by the Results reader.
-        return np.asarray(self.model.get_hydro_unit_values(label)).T
+        values = np.asarray(self.model.get_hydro_unit_values(label)).T
+        if basis is None:
+            return values
+
+        check_area_basis(basis)
+        cover = land_cover_of_label(
+            label, list(self.model.get_recorded_hydro_unit_fraction_labels())
+        )
+        fraction = (
+            self.get_recorded_hydro_unit_fractions(cover) if cover is not None else None
+        )
+        return convert_area_basis(
+            values,
+            label,
+            source=self.get_recorded_hydro_unit_basis(label),
+            target=basis,
+            land_cover_fraction=fraction,
+            subbasin_fraction=np.asarray(
+                self.model.get_hydro_unit_subbasin_fractions()
+            ),
+        )
+
+    def get_recorded_hydro_unit_basis(self, label: str) -> str:
+        """
+        Get the area a recorded hydro-unit component is expressed over.
+
+        Parameters
+        ----------
+        label
+            The recorded component label (e.g. 'glacier:melt:output').
+
+        Returns
+        -------
+        'land_cover' (over the area of its land cover), 'hydro_unit' (over the
+        unit) or 'subbasin' (a flux to the outlet or to a subbasin brick, over the
+        local area of the subbasin).
+        """
+        return str(self.model.get_hydro_unit_label_basis(label))
 
     def get_recorded_hydro_unit_fractions(self, label: str) -> np.ndarray:
         """

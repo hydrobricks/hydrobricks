@@ -9,9 +9,11 @@ bool ResultWriter::WriteNetCDF(const string& path, const axd& time, const vecInt
                                const vecInt& subbasinDownstreamIds, const vecInt& subbasinStructureIds,
                                const axd& subbasinLocalAreas, const axd& subbasinDrainedAreas,
                                const vecInt& hydroUnitIds, const vecInt& hydroUnitStructureIds,
-                               const axd& hydroUnitAreas, const vecStr& subbasinLabels, const vecAxxd& subbasinValues,
-                               const vecStr& hydroUnitLabels, const vecAxxd& hydroUnitValues,
-                               const vecStr& hydroUnitFractionLabels, const vecAxxd& hydroUnitFractions) {
+                               const axd& hydroUnitAreas, const axd& hydroUnitSubbasinFractions,
+                               const vecStr& subbasinLabels, const vecAxxd& subbasinValues,
+                               const vecStr& hydroUnitLabels, const vecStr& hydroUnitLabelBases,
+                               const vecAxxd& hydroUnitValues, const vecStr& hydroUnitFractionLabels,
+                               const vecAxxd& hydroUnitFractions) {
     if (!std::filesystem::is_directory(path)) {
         LogError("The directory {} could not be found.", path);
         return false;
@@ -80,6 +82,10 @@ bool ResultWriter::WriteNetCDF(const string& path, const axd& time, const vecInt
         file.PutVar(varId, hydroUnitAreas);
         file.PutAttText("long_name", "hydrological units areas", varId);
 
+        varId = file.DefVarDouble("hydro_units_subbasin_fractions", {dimIdUnit});
+        file.PutVar(varId, hydroUnitSubbasinFractions);
+        file.PutAttText("long_name", "share of its subbasin's area covered by each hydrological unit", varId);
+
         varId = file.DefVarDouble("subbasin_values", {dimIdItemsAgg, dimIdSubbasin, dimIdTime}, 3, true);
         file.PutVar(varId, subbasinValues);
         file.PutAttText("long_name",
@@ -89,7 +95,9 @@ bool ResultWriter::WriteNetCDF(const string& path, const axd& time, const vecInt
 
         varId = file.DefVarDouble("hydro_units_values", {dimIdItemsDist, dimIdUnit, dimIdTime}, 3, true);
         file.PutVar(varId, hydroUnitValues);
-        file.PutAttText("long_name", "values for each hydrological units", varId);
+        file.PutAttText("long_name",
+                        "values for each hydrological units (mm over the area given by labels_distributed_basis)",
+                        varId);
         file.PutAttText("units", "mm", varId);
 
         if (recordFractions) {
@@ -103,6 +111,7 @@ bool ResultWriter::WriteNetCDF(const string& path, const axd& time, const vecInt
         file.PutAttText("format_version", "2");
         file.PutAttString("labels_aggregated", subbasinLabels);
         file.PutAttString("labels_distributed", hydroUnitLabels);
+        file.PutAttString("labels_distributed_basis", hydroUnitLabelBases);
         if (recordFractions) {
             file.PutAttString("labels_land_covers", hydroUnitFractionLabels);
         }

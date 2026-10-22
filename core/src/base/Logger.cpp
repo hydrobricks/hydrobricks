@@ -32,6 +32,7 @@ void Logger::InitContainers(int timeSize, const std::vector<Subbasin*>& subbasin
     _outletIndex = 0;
     vecInt hydroUnitIds;
     vecInt hydroUnitStructureIds;
+    vecDouble hydroUnitSubbasinFractions;
     vecDouble hydroUnitAreas;
     double totalArea = 0;
     for (int i = 0; i < subbasinCount; ++i) {
@@ -53,6 +54,9 @@ void Logger::InitContainers(int timeSize, const std::vector<Subbasin*>& subbasin
         hydroUnitIds.insert(hydroUnitIds.end(), ids.begin(), ids.end());
         hydroUnitStructureIds.insert(hydroUnitStructureIds.end(), structureIds.begin(), structureIds.end());
         hydroUnitAreas.insert(hydroUnitAreas.end(), areas.begin(), areas.end());
+        for (double area : areas) {
+            hydroUnitSubbasinFractions.push_back(area / subbasin->GetArea());
+        }
     }
     // A single subbasin gets the weight 1.0 exactly (x / x), so its totals are unchanged.
     for (int i = 0; i < subbasinCount; ++i) {
@@ -70,6 +74,8 @@ void Logger::InitContainers(int timeSize, const std::vector<Subbasin*>& subbasin
     _hydroUnitStructureIds = hydroUnitStructureIds;
     _hydroUnitAreas = Eigen::Map<axd>(hydroUnitAreas.data(), hydroUnitAreas.size());
     _hydroUnitLabels = hydroUnitLabels;
+    _hydroUnitLabelBases = vecStr(hydroUnitLabels.size(), "hydro_unit");
+    _hydroUnitSubbasinFractions = Eigen::Map<axd>(hydroUnitSubbasinFractions.data(), hydroUnitSubbasinFractions.size());
     _hydroUnitInitialValues = vecAxd(hydroUnitLabels.size(), axd::Ones(hydroUnitIds.size()) * NAN_D);
     _hydroUnitValues = vecAxxd(hydroUnitLabels.size(), axxd::Ones(timeSize, hydroUnitIds.size()) * NAN_D);
     _hydroUnitValuesPt = vector<vecDoublePt>(hydroUnitLabels.size(), vecDoublePt(hydroUnitIds.size(), nullptr));
@@ -98,6 +104,11 @@ void Logger::SetHydroUnitValuePointer(int iUnit, int iLabel, double* valPt) {
     assert(_hydroUnitValuesPt.size() > iLabel);
     assert(_hydroUnitValuesPt[iLabel].size() > iUnit);
     _hydroUnitValuesPt[iLabel][iUnit] = valPt;
+}
+
+void Logger::SetHydroUnitLabelBasis(int iLabel, const string& basis) {
+    assert(_hydroUnitLabelBases.size() > iLabel);
+    _hydroUnitLabelBases[iLabel] = basis;
 }
 
 void Logger::SetHydroUnitFractionPointer(int iUnit, int iLabel, double* valPt) {
@@ -183,8 +194,9 @@ bool Logger::DumpOutputs(const string& path) {
 
     return writer.WriteNetCDF(path, _time, _subbasinIds, _subbasinDownstreamIds, _subbasinStructureIds,
                               _subbasinLocalAreas, _subbasinDrainedAreas, _hydroUnitIds, _hydroUnitStructureIds,
-                              _hydroUnitAreas, _subbasinLabels, _subbasinValues, _hydroUnitLabels, _hydroUnitValues,
-                              _hydroUnitFractionLabels, _hydroUnitFractions);
+                              _hydroUnitAreas, _hydroUnitSubbasinFractions, _subbasinLabels, _subbasinValues,
+                              _hydroUnitLabels, _hydroUnitLabelBases, _hydroUnitValues, _hydroUnitFractionLabels,
+                              _hydroUnitFractions);
 }
 
 int Logger::GetOutletLabelIndex() const {

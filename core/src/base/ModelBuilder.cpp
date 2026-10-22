@@ -929,6 +929,33 @@ void ModelBuilder::ConnectLoggerToValues(SettingsModel& modelSettings) {
     }
     std::set<int> etIndicesSeen;  // an ET label must be registered once, not once per unit
 
+    // Area the recorded values are expressed over. A land cover and its surface components hold
+    // their content over their own area; the other bricks over the whole unit. A flux is recorded
+    // as delivered to its recipient: over the subbasin when it goes to the outlet or to a subbasin
+    // brick, over the unit when it leaves a land cover weighted by its fraction, otherwise over the
+    // area of the brick it leaves.
+    auto brickBasis = [](const Brick* brick) {
+        return brick->CanHaveAreaFraction() ? string("land_cover") : string("hydro_unit");
+    };
+    auto processOutputBasis = [&](const Brick* brick, Process* process) {
+        if (process->GetOutputFluxCount() == 0) {
+            return brickBasis(brick);
+        }
+        Flux* flux = process->GetOutputFlux(0);
+        if (dynamic_cast<FluxToOutlet*>(flux) != nullptr) {
+            return string("subbasin");
+        }
+        auto fluxToBrick = dynamic_cast<FluxToBrick*>(flux);
+        if (fluxToBrick != nullptr && fluxToBrick->GetTargetBrick() != nullptr &&
+            _subbasin->HasBrick(fluxToBrick->GetTargetBrick()->GetName())) {
+            return string("subbasin");
+        }
+        if (flux->NeedsWeighting()) {
+            return string("hydro_unit");
+        }
+        return brickBasis(brick);
+    };
+
     for (int iUnit = 0; iUnit < _subbasin->GetHydroUnitCount(); ++iUnit) {
         auto unit = _subbasin->GetHydroUnit(iUnit);
         modelSettings.SelectStructure(unit->GetStructureId());
@@ -949,8 +976,9 @@ void ModelBuilder::ConnectLoggerToValues(SettingsModel& modelSettings) {
                                     "{} brick {}",
                                     logItem, iUnit, brickSettings.name));
                 }
-                _logger->SetHydroUnitValuePointer(_unitOffset + iUnit,
-                                                  labelIndex.at(brickSettings.name + ":" + logItem), valPt);
+                int brickLabel = labelIndex.at(brickSettings.name + ":" + logItem);
+                _logger->SetHydroUnitValuePointer(_unitOffset + iUnit, brickLabel, valPt);
+                _logger->SetHydroUnitLabelBasis(brickLabel, brickBasis(brick));
             }
 
             for (int iProcess = 0; iProcess < modelSettings.GetProcessCount(); ++iProcess) {
@@ -968,6 +996,8 @@ void ModelBuilder::ConnectLoggerToValues(SettingsModel& modelSettings) {
                     }
                     int idx = labelIndex.at(brickSettings.name + ":" + processSettings.name + ":" + logItem);
                     _logger->SetHydroUnitValuePointer(_unitOffset + iUnit, idx, valPt);
+                    _logger->SetHydroUnitLabelBasis(
+                        idx, logItem == "output" ? processOutputBasis(brick, process) : brickBasis(brick));
                     if (logItem == "output" && process->ToAtmosphere() && etIndicesSeen.insert(idx).second) {
                         _logger->AddHydroUnitEtIndex(idx);
                     }

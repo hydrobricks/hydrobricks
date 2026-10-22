@@ -24,9 +24,11 @@ class ResultWriter {
      * @param hydroUnitIds Vector of hydro unit IDs.
      * @param hydroUnitStructureIds Vector of the model-structure variant ID used by each hydro unit.
      * @param hydroUnitAreas Vector of hydro unit areas.
+     * @param hydroUnitSubbasinFractions Share of its subbasin's area covered by each hydro unit.
      * @param subbasinLabels Labels for subbasin aggregated values.
      * @param subbasinValues Vector of subbasin value arrays.
      * @param hydroUnitLabels Labels for distributed hydro unit values.
+     * @param hydroUnitLabelBases Area each distributed value is expressed over, one per label.
      * @param hydroUnitValues Vector of 2D hydro unit value arrays.
      * @param hydroUnitFractionLabels Labels for land cover fractions (optional).
      * @param hydroUnitFractions Vector of 2D fraction arrays (optional).
@@ -35,8 +37,9 @@ class ResultWriter {
     bool WriteNetCDF(const string& path, const axd& time, const vecInt& subbasinIds,
                      const vecInt& subbasinDownstreamIds, const vecInt& subbasinStructureIds,
                      const axd& subbasinLocalAreas, const axd& subbasinDrainedAreas, const vecInt& hydroUnitIds,
-                     const vecInt& hydroUnitStructureIds, const axd& hydroUnitAreas, const vecStr& subbasinLabels,
-                     const vecAxxd& subbasinValues, const vecStr& hydroUnitLabels, const vecAxxd& hydroUnitValues,
+                     const vecInt& hydroUnitStructureIds, const axd& hydroUnitAreas,
+                     const axd& hydroUnitSubbasinFractions, const vecStr& subbasinLabels, const vecAxxd& subbasinValues,
+                     const vecStr& hydroUnitLabels, const vecStr& hydroUnitLabelBases, const vecAxxd& hydroUnitValues,
                      const vecStr& hydroUnitFractionLabels = vecStr(), const vecAxxd& hydroUnitFractions = vecAxxd());
 
     /**

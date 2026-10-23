@@ -227,8 +227,9 @@ def test_gr6j_continuous_mode_pins_explicit_solver():
     # solver: the sequential solvers have no transit lag and shift the GR6J
     # hydrograph too early. The default (discrete=True) mode keeps the global
     # default, and an explicit solver choice is always respected.
+    global_default = models.Socont().solver
     assert models.GR6J(discrete=False).solver == "heun_explicit"
-    assert models.GR6J(discrete=True).solver == "crank_nicolson"
+    assert models.GR6J(discrete=True).solver == global_default
     assert (
         models.GR6J(discrete=False, solver="crank_nicolson").solver == "crank_nicolson"
     )

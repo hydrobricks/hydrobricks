@@ -16,7 +16,7 @@
 #include "ParameterModifier.h"
 #include "SettingsBasin.h"
 #include "SettingsModel.h"
-#include "SubBasin.h"
+#include "Subbasin.h"
 #include "Utils.h"
 
 namespace py = pybind11;
@@ -99,16 +99,16 @@ py::dict BrickToDict(const BrickSettings& brick, const string& attach, bool isLa
     return d;
 }
 
-py::list SplittersToList(SettingsModel& settings, bool subBasin) {
+py::list SplittersToList(SettingsModel& settings, bool subbasin) {
     py::list list;
-    int count = subBasin ? settings.GetSubBasinSplitterCount() : settings.GetHydroUnitSplitterCount();
+    int count = subbasin ? settings.GetSubbasinSplitterCount() : settings.GetHydroUnitSplitterCount();
     for (int i = 0; i < count; ++i) {
-        const SplitterSettings& s = subBasin ? settings.GetSubBasinSplitterSettings(i)
+        const SplitterSettings& s = subbasin ? settings.GetSubbasinSplitterSettings(i)
                                              : settings.GetHydroUnitSplitterSettings(i);
         py::dict d;
         d["name"] = s.name;
         d["kind"] = s.type;
-        d["attach"] = subBasin ? "sub_basin" : "hydro_unit";
+        d["attach"] = subbasin ? "subbasin" : "hydro_unit";
         d["forcing"] = ForcingToList(s.forcing);
         d["outputs"] = OutputsToList(s.outputs);
         list.append(d);
@@ -137,17 +137,17 @@ py::list ExportStructure(SettingsModel& settings) {
                                                landCoverIdx.count(i) > 0, surfaceIdx.count(i) > 0));
         }
 
-        py::list subBasinBricks;
-        for (int i = 0; i < settings.GetSubBasinBrickCount(); ++i) {
-            subBasinBricks.append(BrickToDict(settings.GetSubBasinBrickSettings(i), "sub_basin", false, false));
+        py::list subbasinBricks;
+        for (int i = 0; i < settings.GetSubbasinBrickCount(); ++i) {
+            subbasinBricks.append(BrickToDict(settings.GetSubbasinBrickSettings(i), "subbasin", false, false));
         }
 
         py::dict structure;
         structure["id"] = id;
         structure["hydro_unit_bricks"] = hydroUnitBricks;
-        structure["sub_basin_bricks"] = subBasinBricks;
+        structure["subbasin_bricks"] = subbasinBricks;
         structure["hydro_unit_splitters"] = SplittersToList(settings, false);
-        structure["sub_basin_splitters"] = SplittersToList(settings, true);
+        structure["subbasin_splitters"] = SplittersToList(settings, true);
         structures.append(structure);
     }
 
@@ -186,6 +186,10 @@ PYBIND11_MODULE(_hydrobricks, m) {
         .def("add_structure", &SettingsModel::AddStructure,
              "Add a new (empty) model-structure variant and select it. Returns its id.")
         .def("set_solver", &SettingsModel::SetSolver, "Set the solver.", "name"_a)
+        .def("set_channel_routing", &SettingsModel::SetChannelRouting,
+             "Set the channel routing scheme between the subbasins ('none', 'lag', 'muskingum' or "
+             "'muskingum_cunge') and whether the local runoff is routed too.",
+             "scheme"_a, "route_local_runoff"_a = false)
         .def("set_timer", &SettingsModel::SetTimer, "Set the modelling time properties.", "start_date"_a, "end_date"_a,
              "time_step"_a, "time_step_unit"_a)
         .def("set_spinup_days", &SettingsModel::SetSpinupDays,
@@ -195,7 +199,7 @@ PYBIND11_MODULE(_hydrobricks, m) {
         .def("add_land_cover_brick", &SettingsModel::AddLandCoverBrick, "Add a land cover brick.", "name"_a, "kind"_a)
         .def("add_hydro_unit_brick", &SettingsModel::AddHydroUnitBrick, "Add a hydro unit brick.", "name"_a,
              "kind"_a = "storage")
-        .def("add_sub_basin_brick", &SettingsModel::AddSubBasinBrick, "Add a sub basin brick.", "name"_a,
+        .def("add_subbasin_brick", &SettingsModel::AddSubbasinBrick, "Add a subbasin brick.", "name"_a,
              "kind"_a = "storage")
         .def("select_hydro_unit_brick", &SettingsModel::SelectHydroUnitBrickByName, "Select a hydro unit brick.",
              "name"_a)
@@ -212,6 +216,8 @@ PYBIND11_MODULE(_hydrobricks, m) {
              "kind"_a = "constant")
         .def("set_current_brick_computed_directly", &SettingsModel::SetCurrentBrickComputedDirectly,
              "Mark the selected brick as computed directly (explicitly, without the ODE solver).")
+        .def("set_current_brick_area_of", &SettingsModel::SetCurrentBrickAreaOf,
+             "Make the selected brick represent the area of a land cover (scales its capacity and ET).", "land_cover"_a)
         .def("set_parameter_value", &SettingsModel::SetParameterValue, "Setting one of the model parameter.",
              "component"_a, "name"_a, "value"_a)
         .def("set_parameter_monthly_values", &SettingsModel::SetParameterMonthlyValues,
@@ -255,7 +261,64 @@ PYBIND11_MODULE(_hydrobricks, m) {
     py::class_<SettingsBasin>(m, "SettingsBasin")
         .def(py::init<>())
         .def("add_hydro_unit", &SettingsBasin::AddHydroUnit, "Add a hydro unit to the spatial structure.", "id"_a,
-             "area"_a, "elevation"_a = -9999)
+             "area"_a, "elevation"_a = -9999, "subbasin_id"_a = 1)
+        .def("add_subbasin", &SettingsBasin::AddSubbasin,
+             "Add a subbasin to the river network (and select it for the following properties).", "id"_a,
+             "downstream_id"_a = 0, "name"_a = "")
+        .def("add_subbasin_property_double", &SettingsBasin::AddSubbasinPropertyDouble,
+             "Set a numeric property of the selected subbasin.", "name"_a, "value"_a, "unit"_a = "")
+        .def("add_subbasin_property_str", &SettingsBasin::AddSubbasinPropertyString,
+             "Set a string property of the selected subbasin.", "name"_a, "value"_a)
+        .def("get_subbasin_count", &SettingsBasin::GetSubbasinCount, "Get the number of declared subbasins.")
+        .def("get_hydro_unit_count", &SettingsBasin::GetHydroUnitCount, "Get the number of hydro units.")
+        .def(
+            "get_hydro_unit_subbasin_ids",
+            [](const SettingsBasin& s) {
+                vecInt ids;
+                for (int i = 0; i < s.GetHydroUnitCount(); ++i) {
+                    ids.push_back(s.GetHydroUnitSettings(i).subbasinId);
+                }
+                return ids;
+            },
+            "Get the subbasin ID of every hydro unit, in declaration order.")
+        .def(
+            "get_subbasin_ids",
+            [](const SettingsBasin& s) {
+                vecInt ids;
+                for (const auto& subbasin : s.GetSubbasins()) {
+                    ids.push_back(subbasin.id);
+                }
+                return ids;
+            },
+            "Get the IDs of the declared subbasins.")
+        .def(
+            "get_subbasin_downstream_ids",
+            [](const SettingsBasin& s) {
+                vecInt ids;
+                for (const auto& subbasin : s.GetSubbasins()) {
+                    ids.push_back(subbasin.downstreamId);
+                }
+                return ids;
+            },
+            "Get the downstream IDs of the declared subbasins (0: terminal outlet).")
+        .def(
+            "get_subbasin_property_double",
+            [](const SettingsBasin& s, int index, const string& name) {
+                for (const auto& property : s.GetSubbasinSettings(index).propertiesDouble) {
+                    if (property.name == name) return property.value;
+                }
+                throw py::key_error(name);
+            },
+            "Get a numeric property of a subbasin by index.", "index"_a, "name"_a)
+        .def(
+            "validate_network",
+            [](const SettingsBasin& s) {
+                auto r = s.ValidateNetwork();
+                if (!r) throw py::value_error(r.error());
+            },
+            "Check the river network (subbasin tree and hydro unit assignment); raises on error.")
+        .def("parse", &SettingsBasin::Parse, "Load the hydro units (and the river network) from a netCDF file.",
+             "path"_a)
         .def("add_land_cover", &SettingsBasin::AddLandCover, "Add a land cover element.", "name"_a, "kind"_a,
              "fraction"_a)
         .def("add_hydro_unit_property_str", &SettingsBasin::AddHydroUnitPropertyString, "Set a hydro unit property.",
@@ -269,11 +332,11 @@ PYBIND11_MODULE(_hydrobricks, m) {
              "Get the number of lateral connections.")
         .def("clear", &SettingsBasin::Clear, "Clear the basin settings.");
 
-    py::class_<SubBasin>(m, "SubBasin")
+    py::class_<Subbasin>(m, "Subbasin")
         .def(py::init<>())
         .def(
             "init",
-            [](SubBasin& s, SettingsBasin& bs) {
+            [](Subbasin& s, SettingsBasin& bs) {
                 auto r = s.Initialize(bs);
                 if (!r) throw py::value_error(r.error());
             },
@@ -325,7 +388,7 @@ PYBIND11_MODULE(_hydrobricks, m) {
                 auto r = m.InitializeWithBasin(ms, bs);
                 if (!r) throw py::value_error(r.error());
             },
-            "Initialize the model and create the sub basin.", "model_settings"_a, "basin_settings"_a)
+            "Initialize the model and create the subbasin.", "model_settings"_a, "basin_settings"_a)
         .def("add_action", &ModelHydro::AddAction, "Adding a action to the model.", "action"_a)
         .def("get_action_count", &ModelHydro::GetActionCount, "Get the number of actions.")
         .def("get_sporadic_action_item_count", &ModelHydro::GetSporadicActionItemCount,
@@ -352,7 +415,28 @@ PYBIND11_MODULE(_hydrobricks, m) {
             py::call_guard<py::gil_scoped_release>(), "Run the model.")
         .def("reset", &ModelHydro::Reset, "Reset the model before another run.")
         .def("save_as_initial_state", &ModelHydro::SaveAsInitialState, "Save the model state as initial conditions.")
-        .def("get_outlet_discharge", &ModelHydro::GetOutletDischarge, "Get the outlet discharge.")
+        .def("get_outlet_discharge", &ModelHydro::GetOutletDischarge,
+             "Get the outlet discharge (mm over the catchment area).")
+        .def("get_subbasin_discharge", &ModelHydro::GetSubbasinDischarge,
+             "Get the discharge at a subbasin outlet (mm over its drained area).", "subbasin_id"_a)
+        .def("get_subbasin_count", &ModelHydro::GetSubbasinCount, "Get the number of subbasins.")
+        .def("get_subbasin_ids", &ModelHydro::GetSubbasinIds, "Get the subbasin ids (processing order, outlet last).")
+        .def("get_subbasin_downstream_ids", &ModelHydro::GetSubbasinDownstreamIds,
+             "Get the downstream subbasin ids (0: catchment outlet).")
+        .def("get_subbasin_local_areas", &ModelHydro::GetSubbasinLocalAreas,
+             "Get the area of each subbasin's own hydro units [m2].")
+        .def("get_subbasin_drained_areas", &ModelHydro::GetSubbasinDrainedAreas,
+             "Get the area drained at each subbasin outlet [m2].")
+        .def("get_reach_lengths", &ModelHydro::GetReachLengths,
+             "Get the length of each subbasin's reach [m], in the order of get_subbasin_ids().")
+        .def("get_reach_slopes", &ModelHydro::GetReachSlopes,
+             "Get the slope of each subbasin's reach [m/m], in the order of get_subbasin_ids().")
+        .def("get_reach_travel_times", &ModelHydro::GetReachTravelTimes,
+             "Get the travel time of each subbasin's reach at the reference discharge [days].")
+        .def("get_reach_subreach_counts", &ModelHydro::GetReachSubreachCounts,
+             "Get the number of sub reaches each subbasin's reach is divided into.")
+        .def("get_channel_routing_scheme", &ModelHydro::GetChannelRoutingScheme,
+             "Get the name of the channel routing scheme in use.")
         .def("get_total_outlet_discharge", &ModelHydro::GetTotalOutletDischarge, "Get the outlet discharge total.")
         .def("get_total_et", &ModelHydro::GetTotalET, "Get the total amount of water lost by evapotranspiration.")
         .def("get_total_water_storage_changes", &ModelHydro::GetTotalWaterStorageChanges,
@@ -369,7 +453,11 @@ PYBIND11_MODULE(_hydrobricks, m) {
         .def("get_recorded_hydro_unit_fraction_labels", &ModelHydro::GetRecordedHydroUnitFractionLabels,
              "Get the labels of the recorded land-cover fractions.")
         .def("get_hydro_unit_ids", &ModelHydro::GetHydroUnitIds, "Get the hydro unit ids in recorded order.")
-        .def("get_hydro_unit_areas", &ModelHydro::GetHydroUnitAreas, "Get the hydro unit areas in recorded order.");
+        .def("get_hydro_unit_areas", &ModelHydro::GetHydroUnitAreas, "Get the hydro unit areas in recorded order.")
+        .def("get_hydro_unit_label_basis", &ModelHydro::GetHydroUnitLabelBasis,
+             "Get the area a recorded hydro unit component is expressed over.", "label"_a)
+        .def("get_hydro_unit_subbasin_fractions", &ModelHydro::GetHydroUnitSubbasinFractions,
+             "Get the share of its subbasin's area covered by each hydro unit, in recorded order.");
 
     py::class_<Action>(m, "Action").def(py::init<>());
 

@@ -1,12 +1,12 @@
 #include "Connector.h"
 
-#include "SubBasin.h"
+#include "Subbasin.h"
 
 Connector::Connector()
     : _in(nullptr),
       _out(nullptr) {}
 
-void Connector::Connect(SubBasin* in, SubBasin* out) {
+void Connector::Connect(Subbasin* in, Subbasin* out) {
     assert(in);
     assert(out);
     _in = in;

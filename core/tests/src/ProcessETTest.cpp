@@ -72,10 +72,10 @@ RunResults RunSoilModel(SettingsModel& settings) {
     basinSettings.AddHydroUnit(1, 100);
     basinSettings.AddLandCover("ground", "", 1.0);
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     EXPECT_TRUE(model.Initialize(settings, basinSettings));
     EXPECT_TRUE(model.IsValid());
 

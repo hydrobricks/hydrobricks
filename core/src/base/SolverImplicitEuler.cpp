@@ -60,24 +60,32 @@ void SolverImplicitEuler::ComputeBrickRates(Brick* brick, double content, double
             // Empty bracket: the low bound is the answer.
             StoreRatesAndTotalAt(brick, contentDelta, lo - content, _endRates);
         } else if (gHi > 0) {
+            // Rates at the high bound, which the evaluation below at the low bound overwrites.
+            _hiRates = _endRates;
             double gLo = residualAt(lo);
             if (gLo < 0) {
                 // Illinois iteration: regula falsi with the stalled endpoint halved. It keeps
                 // the bracket and converges in a handful of evaluations, where plain bisection
                 // needed about fifty of them per brick per step.
                 int retainedSide = 0;
+                bool converged = false;
                 for (int iter = 0; iter < 100; ++iter) {
                     double s = (lo * gHi - hi * gLo) / (gHi - gLo);
                     if (!(s > lo && s < hi)) {
                         s = (lo + hi) / 2;
                     }
                     double gS = residualAt(s);
-                    if (std::abs(gS) <= tolerance || hi - lo <= tolerance) {
+                    if (std::abs(gS) <= tolerance) {
+                        converged = true;
+                        break;
+                    }
+                    if (hi - lo <= tolerance) {
                         break;
                     }
                     if (gS > 0) {
                         hi = s;
                         gHi = gS;
+                        _hiRates = _endRates;
                         if (retainedSide == 1) {
                             gLo /= 2;
                         }
@@ -90,6 +98,15 @@ void SolverImplicitEuler::ComputeBrickRates(Brick* brick, double content, double
                         }
                         retainedSide = -1;
                     }
+                }
+                if (!converged) {
+                    // The bracket closed on a jump of the rates rather than on a root: a rate
+                    // that switches off when the store runs dry (a constant percolation) puts
+                    // the root at the empty store, approached from above. The last content
+                    // evaluated may then be read as empty, with all its rates at zero, which
+                    // would keep the water in the store. The rates at the high bound drain at
+                    // least the available water, and the constraints trim them to it.
+                    _endRates = _hiRates;
                 }
             }
             // gLo >= 0: the low bound is the root, and _endRates holds the rates it was

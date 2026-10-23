@@ -7,7 +7,7 @@
 #include "Includes.h"
 #include "Solver.h"
 
-class ModelHydro;
+class Subbasin;
 class Splitter;
 
 class Processor {
@@ -28,7 +28,7 @@ class Processor {
      *
      * @param model model to set.
      */
-    void SetModel(ModelHydro* model);
+    void SetSubbasin(Subbasin* subbasin);
 
     /**
      * Connect the processor to the elements to solve.
@@ -218,12 +218,12 @@ class Processor {
 
   protected:
     std::unique_ptr<Solver> _solver;  // owning
-    ModelHydro* _model;               // non-owning reference
+    Subbasin* _subbasin;              // non-owning reference: the subbasin this processor integrates
     int _solvableConnectionCount;
     int _directConnectionCount;
     int _directRateCount;  // size of the direct change-rate buffer (fixed slices)
     vecDoublePt _stateVariableChanges;
-    vector<Brick*> _iterableBricks;  // non-owning views into HydroUnits/SubBasin
+    vector<Brick*> _iterableBricks;  // non-owning views into HydroUnits/Subbasin
     // Flattened traversal of the solvable bricks and processes, built once at
     // initialization: the model structure is fixed after the build, so the
     // brick -> process -> connection hierarchy needs no virtual walk on every solver
@@ -246,6 +246,13 @@ class Processor {
      * @throws ModelConfigError if a solved brick feeds a brick computed directly.
      */
     void ValidateFluxTopology() const;
+
+    /**
+     * Mark the fluxes from bricks computed directly to solved bricks as static: their
+     * amount is settled by the direct pass, before the solver runs, and must be counted as
+     * available water when the constraints of the receiving brick are enforced.
+     */
+    void MarkDirectToSolverFluxesAsStatic() const;
 
     /**
      * Store the state variable changes.

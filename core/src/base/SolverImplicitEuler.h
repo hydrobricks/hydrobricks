@@ -30,6 +30,7 @@ class SolverImplicitEuler : public SolverSequential {
 
   private:
     vecDouble _endRates;  // reusable buffer for the end-of-step process rates
+    vecDouble _hiRates;   // reusable buffer for the process rates at the high bound of the bracket
 };
 
 #endif  // HYDROBRICKS_SOLVER_IMPLICIT_EULER_H

@@ -122,10 +122,10 @@ TEST_F(SnowRedistributionModel, SnowRedistributionSimple) {
     basinSettings.AddLateralConnection(3, 4, 1.0);
     basinSettings.AddLateralConnection(4, 5, 1.0);
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     EXPECT_TRUE(model.Initialize(_model, basinSettings, false));
 
     ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));
@@ -185,11 +185,11 @@ TEST_F(SnowRedistributionModel, SnowRedistributionDifferentLandCoverFractions) {
     basinSettings.AddLateralConnection(3, 4, 1.0);
     basinSettings.AddLateralConnection(4, 5, 1.0);
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinSettings));
-    EXPECT_TRUE(subBasin.IsValid(false));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinSettings));
+    EXPECT_TRUE(subbasin.IsValid(false));
 
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     EXPECT_TRUE(model.Initialize(_model, basinSettings, false));
 
     ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));
@@ -253,11 +253,11 @@ TEST_F(SnowRedistributionModel, SnowRedistributionComplex) {
     basinSettings.AddLateralConnection(3, 5, 0.2);
     basinSettings.AddLateralConnection(4, 5, 1.0);
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinSettings));
-    EXPECT_TRUE(subBasin.IsValid(false));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinSettings));
+    EXPECT_TRUE(subbasin.IsValid(false));
 
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     EXPECT_TRUE(model.Initialize(_model, basinSettings, false));
 
     ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));
@@ -308,8 +308,8 @@ TEST_F(SnowRedistributionModel, SlidesTheWholeExcessWhateverTheTimeStep) {
         basinSettings.AddLandCover("glacier", "", 0.5);
         basinSettings.AddLateralConnection(1, 2, 1.0);
 
-        SubBasin subBasin;
-        EXPECT_TRUE(subBasin.Initialize(basinSettings));
+        Subbasin subbasin;
+        EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
         _model.SetTimer("2020-01-01", "2020-01-10", stepInHours, "hour");
 
@@ -336,7 +336,7 @@ TEST_F(SnowRedistributionModel, SlidesTheWholeExcessWhateverTheTimeStep) {
         auto tsTemp = std::make_unique<TimeSeriesUniform>(VariableType::Temperature);
         tsTemp->SetData(std::move(temperature));
 
-        ModelHydro model(&subBasin);
+        ModelHydro model(&subbasin);
         EXPECT_TRUE(model.Initialize(_model, basinSettings, false));
         EXPECT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(tsPrecip))));
         EXPECT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(tsTemp))));

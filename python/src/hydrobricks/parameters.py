@@ -57,6 +57,86 @@ class ParameterTransform:
 
 
 # -----------------------------------------------------------------------------
+# Channel routing between the subbasins of a river network (component 'channel').
+# Distinct from the in-catchment 'routing:*' processes (unit hydrographs, MAXBAS).
+# -----------------------------------------------------------------------------
+
+_ROUTING_CELERITY = ParamSpec(
+    name="celerity",
+    unit="m/s",
+    aliases=["channel_celerity"],
+    min=0.1,
+    max=5.0,
+    default=1.0,
+)
+
+# Optional: a non-zero exponent makes the celerity vary with the discharge, as
+# celerity (Q / reference_discharge) ** exponent. Manning gives about 0.4 for a wide
+# channel. Zero (the default) keeps the celerity constant.
+_ROUTING_CELERITY_VARIATION = [
+    ParamSpec(
+        name="celerity_exponent",
+        unit="-",
+        aliases=["channel_celerity_exponent"],
+        min=0.0,
+        max=0.8,
+        default=0.0,
+        mandatory=False,
+    ),
+    ParamSpec(
+        name="reference_discharge",
+        unit="m3/s",
+        aliases=["channel_reference_discharge"],
+        min=0.001,
+        max=1000.0,
+        default=1.0,
+        mandatory=False,
+    ),
+]
+
+# Muskingum-Cunge: the channel geometry replaces the calibrated celerity. The reach
+# length and slope come from the subbasin table (the delineation provides them).
+_ROUTING_GEOMETRY = [
+    ParamSpec(
+        name="width",
+        unit="m",
+        aliases=["channel_width"],
+        min=0.5,
+        max=500.0,
+        default=10.0,
+        mandatory=False,
+    ),
+    ParamSpec(
+        name="manning",
+        unit="s/m^(1/3)",
+        aliases=["channel_manning"],
+        min=0.01,
+        max=0.15,
+        default=0.035,
+        mandatory=False,
+    ),
+]
+
+CHANNEL_ROUTING_PARAM_SPECS: dict[str, list[ParamSpec]] = {
+    "lag": [_ROUTING_CELERITY, *_ROUTING_CELERITY_VARIATION],
+    "muskingum": [
+        _ROUTING_CELERITY,
+        ParamSpec(
+            name="x",
+            unit="-",
+            aliases=["muskingum_x"],
+            min=0.0,
+            max=0.5,
+            default=0.2,
+        ),
+        *_ROUTING_CELERITY_VARIATION,
+    ],
+    # Muskingum-Cunge needs no celerity: it is computed from the geometry and the
+    # discharge at every time step.
+    "muskingum_cunge": list(_ROUTING_GEOMETRY),
+}
+
+# -----------------------------------------------------------------------------
 # Unified registry for process-like parameter specs.
 # Bricks (e.g., reservoirs) keep a separate registry.
 # -----------------------------------------------------------------------------
@@ -285,12 +365,14 @@ PROCESS_PARAM_SPECS: dict[str, list[ParamSpec]] = {
         # These correct gauge undercatch, which raises the measured amount and
         # is worse for snow: a few per cent for rain in summer, occasionally
         # over 40 % for snowfall at altitude (Sevruk 1985, and the MeteoSwiss
-        # RhiresD product documentation). The bounds follow that asymmetry.
+        # RhiresD product documentation). The bounds follow that asymmetry, but
+        # stay open below 1 because a calibrated factor also absorbs the bias of
+        # the interpolation onto the catchment (PREVAH Ticino calibrates 0.78).
         ParamSpec(
             name="rain_correction_factor",
             unit="-",
             aliases=["rain_correction_factor", "rain_corr_factor", "rfcf", "rcf"],
-            min=0.8,
+            min=0.7,
             max=1.3,
             default=1.0,
             mandatory=False,
@@ -311,7 +393,7 @@ PROCESS_PARAM_SPECS: dict[str, list[ParamSpec]] = {
             name="rain_correction_factor",
             unit="-",
             aliases=["rain_correction_factor", "rain_corr_factor", "rfcf", "rcf"],
-            min=0.8,
+            min=0.7,
             max=1.3,
             default=1.0,
             mandatory=False,
@@ -1688,7 +1770,7 @@ class ParameterSet:
         This is the combination of ``set_spatial`` and ``set_monthly_values``, for a
         parameter that varies both in space and through the year — PREVAH's soil
         moisture capacity, for instance, which combines a per-unit soil map with a
-        rooting depth that depends on the land use and the month.
+        rooting depth that depends on the cover class and the month.
 
         The per-unit values are given as 12 properties rather than as a per-unit
         value times a monthly shape, because the two are not always separable: PREVAH
@@ -2126,6 +2208,7 @@ class ParameterSet:
         # General parameters
         self._generate_snow_parameters(options, land_cover_types, land_cover_names)
         self._generate_precipitation_correction_parameters(options)
+        self._generate_channel_routing_parameters(options)
 
         # Parameters for the glaciers
         self._generate_glacier_parameters(land_cover_types, land_cover_names, structure)
@@ -2505,6 +2588,26 @@ class ParameterSet:
                 self.define_constraint(
                     "r_snow", "<", alias_map["radiation_coefficient"][0]
                 )
+
+    def _generate_channel_routing_parameters(self, options: dict) -> None:
+        """Register the channel routing parameters of a river network.
+
+        The routing along the reaches is a model-wide setting (option
+        ``channel_routing``):
+        ``lag`` needs the wave celerity (the travel time of a reach is its length
+        over the celerity), ``muskingum`` needs the celerity and the weighting
+        factor. Nothing is registered without channel routing.
+
+        Parameters
+        ----------
+        options
+            Model options dictionary (uses 'channel_routing').
+        """
+        scheme = str(options.get("channel_routing", "none") or "none")
+        if scheme == "none":
+            return
+        for spec in CHANNEL_ROUTING_PARAM_SPECS[scheme]:
+            self._register(component="channel", spec=spec)
 
     def _generate_precipitation_correction_parameters(self, options: dict) -> None:
         """Register the optional precipitation correction factors.

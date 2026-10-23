@@ -72,11 +72,11 @@ TEST_F(ModelHBV96, ModelBuildsCorrectly) {
     basinSettings.AddHydroUnit(1, 100);
     basinSettings.AddLandCover("ground", "", 1.0);
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
     GenerateStructureHBV96(_model);
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     EXPECT_TRUE(model.Initialize(_model, basinSettings));
     EXPECT_TRUE(model.IsValid());
 }
@@ -86,11 +86,11 @@ TEST_F(ModelHBV96, ModelRunsCorrectly) {
     basinSettings.AddHydroUnit(1, 100);
     basinSettings.AddLandCover("ground", "", 1.0);
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
     GenerateStructureHBV96(_model);
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     EXPECT_TRUE(model.Initialize(_model, basinSettings));
     EXPECT_TRUE(model.IsValid());
 
@@ -103,11 +103,11 @@ TEST_F(ModelHBV96, WaterBalanceClosesWithRain) {
     basinSettings.AddHydroUnit(1, 100);
     basinSettings.AddLandCover("ground", "", 1.0);
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
     GenerateStructureHBV96(_model);
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     EXPECT_TRUE(model.Initialize(_model, basinSettings));
     EXPECT_TRUE(model.IsValid());
 
@@ -125,13 +125,13 @@ TEST_F(ModelHBV96, WaterBalanceClosesWithSnowAccumulation) {
     basinSettings.AddHydroUnit(1, 100);
     basinSettings.AddLandCover("ground", "", 1.0);
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
     SetColdThenWarmTemperatures();
 
     GenerateStructureHBV96(_model);
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     EXPECT_TRUE(model.Initialize(_model, basinSettings));
     EXPECT_TRUE(model.IsValid());
 
@@ -150,13 +150,13 @@ TEST_F(ModelHBV96, WaterBalanceClosesWithFreezeThawCycles) {
     basinSettings.AddHydroUnit(1, 100);
     basinSettings.AddLandCover("ground", "", 1.0);
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
     SetFreezeThawTemperatures();
 
     GenerateStructureHBV96(_model);
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     EXPECT_TRUE(model.Initialize(_model, basinSettings));
     EXPECT_TRUE(model.IsValid());
 
@@ -175,11 +175,11 @@ TEST_F(ModelHBV96, WaterBalanceClosesWithoutSnowRoutine) {
     basinSettings.AddHydroUnit(1, 100);
     basinSettings.AddLandCover("ground", "", 1.0);
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
     GenerateStructureHBV96(_model, false);
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     EXPECT_TRUE(model.Initialize(_model, basinSettings));
     EXPECT_TRUE(model.IsValid());
 
@@ -201,15 +201,15 @@ TEST_F(ModelHBV96, MaxbasSpreadsTheDischarge) {
     basinSettings.AddHydroUnit(1, 100);
     basinSettings.AddLandCover("ground", "", 1.0);
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
     GenerateStructureHBV96(_model);
     _model.SelectHydroUnitBrick("routing");
     _model.SelectProcess("routing");
     _model.SetProcessParameterValue("maxbas", 4.0f);
 
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     EXPECT_TRUE(model.Initialize(_model, basinSettings));
     EXPECT_TRUE(model.IsValid());
 
@@ -228,15 +228,15 @@ TEST_F(ModelHBV96, WaterBalanceClosesWithCapillaryFlux) {
     basinSettings.AddHydroUnit(1, 100);
     basinSettings.AddLandCover("ground", "", 1.0);
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
     GenerateStructureHBV96(_model, false);
     _model.SelectHydroUnitBrick("upper_zone");
     _model.SelectProcess("capillary");
     _model.SetProcessParameterValue("max_capillary_flux", 1.0f);
 
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     EXPECT_TRUE(model.Initialize(_model, basinSettings));
     EXPECT_TRUE(model.IsValid());
 
@@ -258,8 +258,8 @@ TEST_F(ModelHBV96, WaterBalanceClosesWithCapillaryFluxAndLargeCapacity) {
     basinSettings.AddHydroUnit(1, 100);
     basinSettings.AddLandCover("ground", "", 1.0);
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
     GenerateStructureHBV96(_model, false);
     _model.SelectHydroUnitBrick("soil_moisture");
@@ -268,7 +268,7 @@ TEST_F(ModelHBV96, WaterBalanceClosesWithCapillaryFluxAndLargeCapacity) {
     _model.SelectProcess("capillary");
     _model.SetProcessParameterValue("max_capillary_flux", 1.0f);
 
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     EXPECT_TRUE(model.Initialize(_model, basinSettings));
     EXPECT_TRUE(model.IsValid());
 
@@ -290,8 +290,8 @@ TEST_F(ModelHBV96, RainOnColdSnowpackIsRetained) {
     basinSettings.AddHydroUnit(1, 100);
     basinSettings.AddLandCover("ground", "", 1.0);
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
     // Cold days build the snowpack, then T = 1 °C: with the linear transition (0-2 °C)
     // half of the precipitation falls as rain on a snowpack that does not melt
@@ -307,7 +307,7 @@ TEST_F(ModelHBV96, RainOnColdSnowpackIsRetained) {
     _model.SelectProcess("melt");
     _model.SetProcessParameterValue("melting_temperature", 2.0f);
 
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     EXPECT_TRUE(model.Initialize(_model, basinSettings));
     EXPECT_TRUE(model.IsValid());
 
@@ -330,8 +330,8 @@ TEST_F(ModelHBV96, RainToSnowpackDoesNotAlterRainOnlySimulations) {
         basinSettings.AddHydroUnit(1, 100);
         basinSettings.AddLandCover("ground", "", 1.0);
 
-        SubBasin subBasin;
-        EXPECT_TRUE(subBasin.Initialize(basinSettings));
+        Subbasin subbasin;
+        EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
         SettingsModel settingsModel;
         settingsModel.SetLogAll();
@@ -339,7 +339,7 @@ TEST_F(ModelHBV96, RainToSnowpackDoesNotAlterRainOnlySimulations) {
         settingsModel.SetTimer("2020-01-01", "2020-01-15", 1, "day");
         GenerateStructureHBV96(settingsModel, true, rainToSnowpack);
 
-        ModelHydro model(&subBasin);
+        ModelHydro model(&subbasin);
         EXPECT_TRUE(model.Initialize(settingsModel, basinSettings));
         EXPECT_TRUE(model.IsValid());
 
@@ -382,11 +382,11 @@ TEST_F(ModelHBV96, NoPrecipitationProducesNoDischarge) {
     basinSettings.AddHydroUnit(1, 100);
     basinSettings.AddLandCover("ground", "", 1.0);
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
     GenerateStructureHBV96(_model);
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     EXPECT_TRUE(model.Initialize(_model, basinSettings));
     EXPECT_TRUE(model.IsValid());
 

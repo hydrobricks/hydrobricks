@@ -1,6 +1,7 @@
 from hydrobricks.preprocessing.catchment_connectivity import CatchmentConnectivity
 from hydrobricks.preprocessing.catchment_discretization import CatchmentDiscretization
 from hydrobricks.preprocessing.catchment_land_cover import CatchmentLandCover
+from hydrobricks.preprocessing.catchment_network import CatchmentNetwork
 from hydrobricks.preprocessing.catchment_topography import CatchmentTopography
 from hydrobricks.preprocessing.glacier_cover import (
     initialize_glacier_cover_from_extent,
@@ -16,6 +17,7 @@ __all__ = (
     "CatchmentConnectivity",
     "CatchmentDiscretization",
     "CatchmentLandCover",
+    "CatchmentNetwork",
     "CatchmentTopography",
     "GlacierEvolutionDeltaH",
     "GlacierEvolutionAreaScaling",

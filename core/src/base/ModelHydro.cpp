@@ -7,9 +7,8 @@
 #include "Includes.h"
 #include "ModelBuilder.h"
 
-ModelHydro::ModelHydro(SubBasin* subBasin)
-    : _subBasin(subBasin) {
-    _processor.SetModel(this);
+ModelHydro::ModelHydro(Subbasin* subbasin)
+    : _subbasin(subbasin) {
     _actionsManager.SetModel(this);
     _timer.SetActionsManager(&_actionsManager);
     _timer.SetParametersUpdater(&_parametersUpdater);
@@ -18,17 +17,27 @@ ModelHydro::ModelHydro(SubBasin* subBasin)
 ModelHydro::~ModelHydro() = default;
 
 ModelResult ModelHydro::InitializeWithBasin(SettingsModel& modelSettings, SettingsBasin& basinSettings) {
-    _ownedSubBasin = std::make_unique<SubBasin>();
-    _subBasin = _ownedSubBasin.get();
-    if (auto r = _subBasin->Initialize(basinSettings); !r) {
+    _network = std::make_unique<RiverNetwork>();
+    if (auto r = _network->Initialize(basinSettings); !r) {
         return r;
     }
+    _subbasin = _network->GetOutlet();
 
-    // Assign each unit its structure variant from its land covers before building.
-    ModelBuilder builder(_subBasin, &_timer, &_logger);
-    builder.AssignHydroUnitStructures(modelSettings, basinSettings);
+    // Assign each unit, and each subbasin, its structure variant from the land covers before building.
+    for (Subbasin* subbasin : _network->GetProcessingOrder()) {
+        ModelBuilder builder(subbasin, &_timer, &_logger);
+        builder.AssignHydroUnitStructures(modelSettings, basinSettings);
+        builder.AssignSubbasinStructure(modelSettings, basinSettings);
+    }
 
     return Initialize(modelSettings, basinSettings);
+}
+
+std::vector<Subbasin*> ModelHydro::CollectSubbasins() const {
+    if (_network) {
+        return _network->GetProcessingOrder();
+    }
+    return {_subbasin};
 }
 
 ModelResult ModelHydro::Initialize(SettingsModel& modelSettings, SettingsBasin& basinSettings, bool checkProcesses) {
@@ -37,8 +46,15 @@ ModelResult ModelHydro::Initialize(SettingsModel& modelSettings, SettingsBasin& 
             return std::unexpected("Model settings are not valid.");
         }
 
-        ModelBuilder builder(_subBasin, &_timer, &_logger);
-        builder.BuildModelStructure(modelSettings);
+        _subbasins = CollectSubbasins();
+        for (Subbasin* subbasin : _subbasins) {
+            ModelBuilder builder(subbasin, &_timer, &_logger);
+            builder.BuildModelStructure(modelSettings);
+        }
+
+        if (_network) {
+            _network->SetChannelRouting(modelSettings.GetChannelRoutingSettings());
+        }
 
         _timer.Initialize(modelSettings.GetTimerSettings());
 
@@ -56,20 +72,36 @@ ModelResult ModelHydro::Initialize(SettingsModel& modelSettings, SettingsBasin& 
         _spinupSteps = static_cast<int>(modelSettings.GetTimerSettings().spinupDays / timeStepInDays);
         _spinupSteps = std::min(_spinupSteps, _timer.GetTimeStepCount());
 
-        _processor.Initialize(modelSettings.GetSolverSettings());
+        // One processor (and solver) per subbasin: their state vectors are independent.
+        _processors.clear();
+        for (Subbasin* subbasin : _subbasins) {
+            auto processor = std::make_unique<Processor>();
+            processor->SetSubbasin(subbasin);
+            processor->Initialize(modelSettings.GetSolverSettings());
+            _processors.push_back(std::move(processor));
+        }
+
         if (modelSettings.LogAll() || modelSettings.RecordsFractions()) {
             _logger.RecordFractions();
         }
-        _logger.InitContainers(_timer.GetTimeStepCount(), _subBasin, modelSettings);
-        if (auto r = _subBasin->AssignFractions(basinSettings); !r) {
-            return r;
+        _logger.InitContainers(_timer.GetTimeStepCount(), _subbasins, modelSettings);
+        for (Subbasin* subbasin : _subbasins) {
+            if (auto r = subbasin->AssignFractions(basinSettings); !r) {
+                return r;
+            }
+            if (!subbasin->IsValid(checkProcesses)) {
+                return std::unexpected(
+                    std::format("Subbasin {} failed validation after initialization.", subbasin->GetId()));
+            }
         }
 
-        if (!_subBasin->IsValid(checkProcesses)) {
-            return std::unexpected("Sub-basin failed validation after initialization.");
+        // The logger indexes the subbasins in processing order and the hydro units globally, in that order.
+        int unitOffset = 0;
+        for (int i = 0; i < static_cast<int>(_subbasins.size()); ++i) {
+            ModelBuilder builder(_subbasins[i], &_timer, &_logger, i, unitOffset);
+            builder.ConnectLoggerToValues(modelSettings);
+            unitOffset += _subbasins[i]->GetHydroUnitCount();
         }
-
-        builder.ConnectLoggerToValues(modelSettings);
     } catch (const std::exception& e) {
         return std::unexpected(std::format("Model initialization failed: {}", e.what()));
     }
@@ -78,13 +110,14 @@ ModelResult ModelHydro::Initialize(SettingsModel& modelSettings, SettingsBasin& 
 }
 
 void ModelHydro::UpdateParameters(SettingsModel& modelSettings) {
-    // Sub-basin parameters come from the primary structure (1); hydro-unit
-    // parameters are updated per unit against each unit's structure variant.
-    modelSettings.SelectStructure(1);
-
-    ModelBuilder builder(_subBasin, &_timer, &_logger);
-    builder.UpdateSubBasinParameters(modelSettings);
-    builder.UpdateHydroUnitsParameters(modelSettings);
+    // Subbasin parameters come from each subbasin's structure variant; hydro-unit
+    // parameters are updated per unit against each unit's variant.
+    for (Subbasin* subbasin : _subbasins) {
+        modelSettings.SelectStructure(subbasin->GetStructureId());
+        ModelBuilder builder(subbasin, &_timer, &_logger);
+        builder.UpdateSubbasinParameters(modelSettings);
+        builder.UpdateHydroUnitsParameters(modelSettings);
+    }
 
     // (Re)register the parameters carrying a time modifier (e.g. monthly canopy
     // capacity) with the updater so their values follow the calendar during the run.
@@ -96,8 +129,8 @@ void ModelHydro::UpdateParameters(SettingsModel& modelSettings) {
 
     // Register the per-unit monthly overrides too (a parameter that is both spatial and
     // monthly): the updater writes each unit's own value for the month.
-    for (int iUnit = 0; iUnit < _subBasin->GetHydroUnitCount(); ++iUnit) {
-        for (auto& [target, values] : _subBasin->GetHydroUnit(iUnit)->GetMonthlyParameterOverrides()) {
+    for (HydroUnit* unit : GetHydroUnits()) {
+        for (auto& [target, values] : unit->GetMonthlyParameterOverrides()) {
             _parametersUpdater.AddUnitMonthlyOverride(target, values);
         }
     }
@@ -133,18 +166,20 @@ ModelResult ModelHydro::CheckTimeStepCompatibility() {
                         process->GetName(), brick->GetName(), timeStepInDays));
     };
 
-    for (int iBrick = 0; iBrick < _subBasin->GetBrickCount(); ++iBrick) {
-        const Brick* brick = _subBasin->GetBrick(iBrick);
-        if (const Process* process = firstDailyOnly(brick)) {
-            return reject(brick, process);
-        }
-    }
-    for (int iUnit = 0; iUnit < _subBasin->GetHydroUnitCount(); ++iUnit) {
-        HydroUnit* unit = _subBasin->GetHydroUnit(iUnit);
-        for (int iBrick = 0; iBrick < unit->GetBrickCount(); ++iBrick) {
-            const Brick* brick = unit->GetBrick(iBrick);
+    for (Subbasin* subbasin : _subbasins) {
+        for (int iBrick = 0; iBrick < subbasin->GetBrickCount(); ++iBrick) {
+            const Brick* brick = subbasin->GetBrick(iBrick);
             if (const Process* process = firstDailyOnly(brick)) {
                 return reject(brick, process);
+            }
+        }
+        for (int iUnit = 0; iUnit < subbasin->GetHydroUnitCount(); ++iUnit) {
+            HydroUnit* unit = subbasin->GetHydroUnit(iUnit);
+            for (int iBrick = 0; iBrick < unit->GetBrickCount(); ++iBrick) {
+                const Brick* brick = unit->GetBrick(iBrick);
+                if (const Process* process = firstDailyOnly(brick)) {
+                    return reject(brick, process);
+                }
             }
         }
     }
@@ -153,13 +188,36 @@ ModelResult ModelHydro::CheckTimeStepCompatibility() {
 }
 
 bool ModelHydro::IsValid() const {
-    if (!_subBasin->IsValid()) return false;
+    if (_subbasins.empty()) {
+        return _subbasin != nullptr && _subbasin->IsValid();
+    }
+    for (Subbasin* subbasin : _subbasins) {
+        if (!subbasin->IsValid()) return false;
+    }
 
     return true;
 }
 
 void ModelHydro::Validate() const {
-    _subBasin->Validate();
+    for (Subbasin* subbasin : CollectSubbasins()) {
+        subbasin->Validate();
+    }
+}
+
+bool ModelHydro::ProcessTimeStep() {
+    double timeStepInDays = *_timer.GetTimeStepPointer();
+    for (size_t i = 0; i < _subbasins.size(); ++i) {
+        Subbasin* subbasin = _subbasins[i];
+        // Upstream first: the outlet volumes of the upstream subbasins are already computed for this step.
+        if (_network) {
+            _network->TransferInflow(subbasin, timeStepInDays);
+        }
+        if (!_processors[i]->ProcessTimeStep(timeStepInDays)) {
+            return false;
+        }
+    }
+
+    return true;
 }
 
 bool ModelHydro::ForcingLoaded() const {
@@ -189,7 +247,7 @@ ModelResult ModelHydro::Run() {
     LogDebug("Simulation starting.");
 
     while (!_timer.IsOver()) {
-        if (!_processor.ProcessTimeStep(*_timer.GetTimeStepPointer())) {
+        if (!ProcessTimeStep()) {
             return std::unexpected("Time step processing failed.");
         }
         _logger.SetDate(_timer.GetDate());
@@ -218,7 +276,7 @@ ModelResult ModelHydro::RunSpinup() {
 
     ModelResult result{};
     for (int i = 0; i < _spinupSteps; ++i) {
-        if (!_processor.ProcessTimeStep(*_timer.GetTimeStepPointer())) {
+        if (!ProcessTimeStep()) {
             result = std::unexpected("Time step processing failed during spin-up.");
             break;
         }
@@ -244,7 +302,9 @@ ModelResult ModelHydro::RewindAfterSpinup() {
     // warmed-up storage states. The land cover area fractions are restored to their
     // initial values so the real run starts from the declared extents.
     _timer.Reset();
-    _subBasin->RestoreInitialAreaFractions();
+    for (Subbasin* subbasin : _subbasins) {
+        subbasin->RestoreInitialAreaFractions();
+    }
     if (auto r = InitializeTimeSeries(); !r) {
         return r;
     }
@@ -258,16 +318,26 @@ void ModelHydro::Reset() {
     _timer.Reset();
     _logger.Reset();
     // Roll back action bookkeeping (cursors, lookup-table row, ...); the land-cover
-    // extents and storages are restored by the sub-basin reset below. Land covers
+    // extents and storages are restored by the subbasin reset below. Land covers
     // capture their initial extent on the first reset (before the first run) and
     // restore it on every later reset, so a model can be re-run (e.g. in a calibration
     // loop) from the same initial conditions even when actions changed the extents.
     _actionsManager.Reset();
-    _subBasin->Reset();
+    for (Subbasin* subbasin : CollectSubbasins()) {
+        subbasin->Reset();
+    }
+    if (_network) {
+        _network->Reset();
+    }
 }
 
 void ModelHydro::SaveAsInitialState() {
-    _subBasin->SaveAsInitialState();
+    for (Subbasin* subbasin : CollectSubbasins()) {
+        subbasin->SaveAsInitialState();
+    }
+    if (_network) {
+        _network->SaveAsInitialState();
+    }
 }
 
 bool ModelHydro::DumpOutputs(const string& path) {
@@ -276,6 +346,104 @@ bool ModelHydro::DumpOutputs(const string& path) {
 
 axd ModelHydro::GetOutletDischarge() const {
     return _logger.GetOutletDischarge();
+}
+
+axd ModelHydro::GetSubbasinDischarge(int subbasinId) const {
+    return _logger.GetSubbasinDischarge(subbasinId);
+}
+
+int ModelHydro::GetSubbasinCount() const {
+    return _logger.GetSubbasinCount();
+}
+
+vecInt ModelHydro::GetSubbasinIds() const {
+    return _logger.GetSubbasinIds();
+}
+
+vecInt ModelHydro::GetSubbasinDownstreamIds() const {
+    return _logger.GetSubbasinDownstreamIds();
+}
+
+axd ModelHydro::GetSubbasinLocalAreas() const {
+    return _logger.GetSubbasinLocalAreas();
+}
+
+axd ModelHydro::GetSubbasinDrainedAreas() const {
+    return _logger.GetSubbasinDrainedAreas();
+}
+
+axd ModelHydro::GetReachLengths() const {
+    return GetReachProperty([](const Reach& reach) { return reach.GetLength(); });
+}
+
+axd ModelHydro::GetReachSlopes() const {
+    return GetReachProperty([](const Reach& reach) { return reach.GetSlope(); });
+}
+
+axd ModelHydro::GetReachTravelTimes() const {
+    return GetReachProperty([](const Reach& reach) { return reach.GetTravelTimeInDays(); });
+}
+
+axd ModelHydro::GetReachProperty(const std::function<double(const Reach&)>& get) const {
+    vecInt ids = GetSubbasinIds();
+    axd values = axd::Zero(static_cast<int>(ids.size()));
+    if (!_network) {
+        return values;
+    }
+    for (int i = 0; i < static_cast<int>(ids.size()); ++i) {
+        Subbasin* subbasin = _network->GetSubbasinById(ids[i]);
+        if (subbasin && subbasin->GetReach()) {
+            values[i] = get(*subbasin->GetReach());
+        }
+    }
+
+    return values;
+}
+
+vecInt ModelHydro::GetReachSubreachCounts() const {
+    vecInt ids = GetSubbasinIds();
+    vecInt counts(ids.size(), 1);
+    if (!_network) {
+        return counts;
+    }
+    for (size_t i = 0; i < ids.size(); ++i) {
+        Subbasin* subbasin = _network->GetSubbasinById(ids[i]);
+        if (subbasin && subbasin->GetReach()) {
+            counts[i] = subbasin->GetReach()->GetSubreachCount();
+        }
+    }
+
+    return counts;
+}
+
+string ModelHydro::GetChannelRoutingScheme() const {
+    if (!_network || _network->GetSubbasinCount() == 0) {
+        return "none";
+    }
+    Subbasin* subbasin = _network->GetSubbasin(0);
+    if (!subbasin || !subbasin->GetReach()) {
+        return "none";
+    }
+
+    return Reach::SchemeToString(subbasin->GetReach()->GetScheme());
+}
+
+HydroUnit* ModelHydro::GetHydroUnitById(int id) const {
+    if (_network) {
+        return _network->GetHydroUnitById(id);
+    }
+    return _subbasin ? _subbasin->GetHydroUnitById(id) : nullptr;
+}
+
+std::vector<HydroUnit*> ModelHydro::GetHydroUnits() const {
+    std::vector<HydroUnit*> units;
+    for (Subbasin* subbasin : CollectSubbasins()) {
+        if (subbasin == nullptr) continue;
+        for (int iUnit = 0; iUnit < subbasin->GetHydroUnitCount(); ++iUnit) {
+            units.push_back(subbasin->GetHydroUnit(iUnit));
+        }
+    }
+    return units;
 }
 
 double ModelHydro::GetTotalOutletDischarge() const {
@@ -334,6 +502,21 @@ vecInt ModelHydro::GetHydroUnitIds() const {
 
 axd ModelHydro::GetHydroUnitAreas() const {
     return _logger.GetHydroUnitAreas();
+}
+
+string ModelHydro::GetHydroUnitLabelBasis(const string& label) const {
+    const vecStr& labels = _logger.GetHydroUnitLabels();
+    auto it = std::find(labels.begin(), labels.end(), label);
+    if (it == labels.end()) {
+        throw std::invalid_argument("The hydro unit component '" + label +
+                                    "' was not recorded. Enable record_all to record it.");
+    }
+    int index = static_cast<int>(std::distance(labels.begin(), it));
+    return _logger.GetHydroUnitLabelBases()[index];
+}
+
+axd ModelHydro::GetHydroUnitSubbasinFractions() const {
+    return _logger.GetHydroUnitSubbasinFractions();
 }
 
 bool ModelHydro::AddTimeSeries(std::unique_ptr<TimeSeries> timeSeries) {
@@ -411,13 +594,13 @@ void ModelHydro::ClearTimeSeries() {
 }
 
 bool ModelHydro::AttachTimeSeriesToHydroUnits() {
-    assert(_subBasin);
+    assert(_subbasin);
 
+    std::vector<HydroUnit*> units = GetHydroUnits();
     for (const auto& timeSeries : _timeSeries) {
         VariableType type = timeSeries->GetVariableType();
 
-        for (int iUnit = 0; iUnit < _subBasin->GetHydroUnitCount(); ++iUnit) {
-            HydroUnit* unit = _subBasin->GetHydroUnit(iUnit);
+        for (HydroUnit* unit : units) {
             if (unit->HasForcing(type)) {
                 Forcing* forcing = unit->GetForcing(type);
                 forcing->AttachTimeSeriesData(timeSeries->GetDataPointer(unit->GetId()));
@@ -452,7 +635,9 @@ ModelResult ModelHydro::UpdateForcing() {
         }
     }
 
-    _subBasin->ResetForcingUpdates();
+    for (Subbasin* subbasin : _subbasins) {
+        subbasin->ResetForcingUpdates();
+    }
 
     return {};
 }

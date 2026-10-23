@@ -51,14 +51,16 @@ _PRECIP_PER_DAY = 5.0
 _PET_PER_DAY = 1.5
 
 
-def _run(tmp_path: Path, hours_per_step: int, n_days: int = _N_DAYS):
+def _run(tmp_path: Path, step: int, n_days: int = _N_DAYS, unit: str = "hour"):
     """Run PREVAH with the same daily information split into steps of that length.
 
     The forcing is an amount per step, so the precipitation and PET of a day are shared
     between its steps and the temperature is held at the daily value. Every step length
-    therefore sees the same daily totals.
+    therefore sees the same daily totals. The step is in hours, or in minutes with
+    ``unit='minute'``.
     """
-    sub = tmp_path / f"s{hours_per_step:02d}"
+    minutes_per_step = step * 60 if unit == "hour" else step
+    sub = tmp_path / f"s{minutes_per_step:04d}min"
     sub.mkdir(parents=True, exist_ok=True)
 
     hu_csv = sub / "hydro_units.csv"
@@ -66,13 +68,13 @@ def _run(tmp_path: Path, hours_per_step: int, n_days: int = _N_DAYS):
     units = hb.HydroUnits()
     units.load_from_csv(hu_csv, column_elevation="elevation", column_area="area")
 
-    n_steps = (n_days * 24) // hours_per_step
+    n_steps = (n_days * 1440) // minutes_per_step
     stamps = pd.date_range(
-        pd.Timestamp(_START), periods=n_steps, freq=f"{hours_per_step}h"
+        pd.Timestamp(_START), periods=n_steps, freq=f"{minutes_per_step}min"
     )
     doy = stamps.dayofyear.to_numpy(dtype=float)
     temp = 5.0 - 12.0 * np.cos(2.0 * np.pi * doy / 365.25)
-    share = hours_per_step / 24.0
+    share = minutes_per_step / 1440.0
 
     lines = ["date,precip,pet,temp"]
     for stamp, t in zip(stamps, temp):
@@ -109,8 +111,8 @@ def _run(tmp_path: Path, hours_per_step: int, n_days: int = _N_DAYS):
         output_path=str(sub),
         start_date=_START.strftime("%Y-%m-%d"),
         end_date=end.strftime("%Y-%m-%d"),
-        time_step=hours_per_step,
-        time_step_unit="hour",
+        time_step=step,
+        time_step_unit=unit,
     )
     model.run(parameters=parameters, forcing=forcing)
     return model
@@ -225,6 +227,43 @@ def test_refining_the_step_converges(tmp_path):
     steps = [abs(totals[b] - totals[a]) for a, b in ((24, 12), (12, 6), (6, 3))]
     assert steps[1] < steps[0]
     assert steps[2] < steps[1]
+
+
+def test_a_60_minute_step_is_the_hourly_step(tmp_path):
+    """The same step declared in minutes and in hours must be the very same run."""
+    hourly = _run(tmp_path, 1, n_days=30)
+    minutes = _run(tmp_path, 60, n_days=30, unit="minute")
+    assert np.asarray(minutes.get_outlet_discharge()) == pytest.approx(
+        np.asarray(hourly.get_outlet_discharge()), rel=1e-12
+    )
+    assert minutes.get_total_et() == pytest.approx(hourly.get_total_et(), rel=1e-12)
+
+
+def _per_hour(model, steps_per_hour: int) -> np.ndarray:
+    """The outlet discharge summed per hour (it is an amount per step, not a rate)."""
+    q = np.asarray(model.get_outlet_discharge())[:-1]  # drop the closing step
+    return q.reshape(-1, steps_per_hour).sum(axis=1)
+
+
+@pytest.mark.parametrize("minutes", [30, 15])
+def test_minute_steps_agree_with_the_hourly_step(tmp_path, minutes):
+    """A step of minutes runs the same water through, at the hourly scale."""
+    # Long enough to reach the spring melt: the winter months produce no discharge.
+    hourly = _per_hour(_run(tmp_path, 1, n_days=150), 1)
+    finer = _per_hour(_run(tmp_path, minutes, n_days=150, unit="minute"), 60 // minutes)
+    assert finer.size == hourly.size
+    assert hourly.sum() > 0
+    nse = 1 - np.sum((finer - hourly) ** 2) / np.sum((hourly - hourly.mean()) ** 2)
+    assert nse > 0.999
+    assert finer.sum() == pytest.approx(hourly.sum(), rel=0.01)
+
+
+def test_water_balance_closes_at_a_minute_step(tmp_path):
+    model = _run(tmp_path, 30, n_days=30, unit="minute")
+    # 29 whole days plus the last step of the run.
+    steps = 29 * 48 + 1
+    expected = _PRECIP_PER_DAY / 48.0 * steps
+    assert _balance(model) == pytest.approx(expected, rel=1e-4)
 
 
 def test_snow_ages_in_days_not_in_steps(tmp_path):

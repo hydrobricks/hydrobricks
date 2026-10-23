@@ -41,8 +41,8 @@ TEST_F(Splitters, SnowRain) {
     SettingsBasin basinSettings;
     basinSettings.AddHydroUnit(1, 100);
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
     _model.AddHydroUnitSplitter("snow_rain", "snow_rain:linear");
     _model.AddSplitterForcing("precipitation");
@@ -55,7 +55,7 @@ TEST_F(Splitters, SnowRain) {
     _model.AddSplitterParameter("transition_end", 2.0f);
     _model.AddLoggingToItem("outlet");
 
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     EXPECT_TRUE(model.Initialize(_model, basinSettings));
     EXPECT_TRUE(model.IsValid());
 
@@ -66,7 +66,7 @@ TEST_F(Splitters, SnowRain) {
     EXPECT_TRUE(model.Run());
 
     // Check resulting sum (only the sum of rain and snow)
-    vecAxd basinOutputs = model.GetLogger()->GetSubBasinValues();
+    vecAxd basinOutputs = model.GetLogger()->GetSubbasinValues();
 
     vecDouble expectedOutputs = {0.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 0.0};
 

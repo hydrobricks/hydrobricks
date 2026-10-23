@@ -50,10 +50,10 @@ TEST_F(FluxWeightedModel, SingleUnitWith1Brick100Percent) {
     basinProp.AddLandCover("item_1", "", 1.0);
     basinProp.AddLandCover("item_2", "", 0.0);
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinProp));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinProp));
 
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     EXPECT_TRUE(model.Initialize(_model, basinProp));
     EXPECT_TRUE(model.IsValid());
 
@@ -63,7 +63,7 @@ TEST_F(FluxWeightedModel, SingleUnitWith1Brick100Percent) {
     EXPECT_TRUE(model.Run());
 
     // Check resulting discharge
-    vecAxd basinOutputs = model.GetLogger()->GetSubBasinValues();
+    vecAxd basinOutputs = model.GetLogger()->GetSubbasinValues();
 
     vecDouble expectedOutputs = {0.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 0.0, 0.0};
 
@@ -106,10 +106,10 @@ TEST_F(FluxWeightedModel, SingleUnitWith2Bricks50Percent) {
     basinProp.AddLandCover("item_1", "", 0.5);
     basinProp.AddLandCover("item_2", "", 0.5);
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinProp));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinProp));
 
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     EXPECT_TRUE(model.Initialize(_model, basinProp));
     EXPECT_TRUE(model.IsValid());
 
@@ -119,7 +119,7 @@ TEST_F(FluxWeightedModel, SingleUnitWith2Bricks50Percent) {
     EXPECT_TRUE(model.Run());
 
     // Check resulting discharge
-    vecAxd basinOutputs = model.GetLogger()->GetSubBasinValues();
+    vecAxd basinOutputs = model.GetLogger()->GetSubbasinValues();
 
     vecDouble expectedOutputs = {0.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 0.0, 0.0};
 
@@ -166,10 +166,10 @@ TEST_F(FluxWeightedModel, SingleUnitWith2BricksDifferentPercent) {
     basinProp.AddLandCover("item_1", "", 0.7);
     basinProp.AddLandCover("item_2", "", 0.3);
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinProp));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinProp));
 
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     EXPECT_TRUE(model.Initialize(_model, basinProp));
     EXPECT_TRUE(model.IsValid());
 
@@ -179,7 +179,7 @@ TEST_F(FluxWeightedModel, SingleUnitWith2BricksDifferentPercent) {
     EXPECT_TRUE(model.Run());
 
     // Check resulting discharge
-    vecAxd basinOutputs = model.GetLogger()->GetSubBasinValues();
+    vecAxd basinOutputs = model.GetLogger()->GetSubbasinValues();
 
     vecDouble expectedOutputs = {0.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 0.0, 0.0};
 
@@ -221,14 +221,14 @@ TEST_F(FluxWeightedModel, TwoUnitsWithTwoLandCoverBricks) {
     basinProp.AddHydroUnit(1, 150);
     basinProp.AddLandCover("item_1", "", 0.5);
     basinProp.AddLandCover("item_2", "", 0.5);
-    basinProp.AddHydroUnit(1, 50);
+    basinProp.AddHydroUnit(2, 50);
     basinProp.AddLandCover("item_1", "", 0.5);
     basinProp.AddLandCover("item_2", "", 0.5);
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinProp));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinProp));
 
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     EXPECT_TRUE(model.Initialize(_model, basinProp));
     EXPECT_TRUE(model.IsValid());
 
@@ -238,7 +238,7 @@ TEST_F(FluxWeightedModel, TwoUnitsWithTwoLandCoverBricks) {
     EXPECT_TRUE(model.Run());
 
     // Check resulting discharge
-    vecAxd basinOutputs = model.GetLogger()->GetSubBasinValues();
+    vecAxd basinOutputs = model.GetLogger()->GetSubbasinValues();
 
     vecDouble expectedOutputs = {0.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 0.0, 0.0};
 
@@ -288,14 +288,14 @@ TEST_F(FluxWeightedModel, TwoUnitsWithTwoLandCoverBricksDifferentArea) {
     basinProp.AddHydroUnit(1, 150);
     basinProp.AddLandCover("item_1", "", 2.0 / 3.0);
     basinProp.AddLandCover("item_2", "", 1.0 / 3.0);
-    basinProp.AddHydroUnit(1, 50);
+    basinProp.AddHydroUnit(2, 50);
     basinProp.AddLandCover("item_1", "", 4.0 / 5.0);
     basinProp.AddLandCover("item_2", "", 1.0 / 5.0);
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinProp));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinProp));
 
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     EXPECT_TRUE(model.Initialize(_model, basinProp));
     EXPECT_TRUE(model.IsValid());
 
@@ -305,7 +305,7 @@ TEST_F(FluxWeightedModel, TwoUnitsWithTwoLandCoverBricksDifferentArea) {
     EXPECT_TRUE(model.Run());
 
     // Check resulting discharge
-    vecAxd basinOutputs = model.GetLogger()->GetSubBasinValues();
+    vecAxd basinOutputs = model.GetLogger()->GetSubbasinValues();
 
     vecDouble expectedOutputs = {0.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 0.0, 0.0};
 
@@ -368,10 +368,10 @@ TEST(Fluxes, ToAtmosphereInstantaneous) {
     SettingsBasin basinSettings;
     basinSettings.AddHydroUnit(1, 100);
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
-    ModelHydro hydroModel(&subBasin);
+    ModelHydro hydroModel(&subbasin);
     EXPECT_TRUE(hydroModel.Initialize(model, basinSettings));
 
     ASSERT_TRUE(hydroModel.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(tsPet))));

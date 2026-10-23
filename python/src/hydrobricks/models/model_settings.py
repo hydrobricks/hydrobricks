@@ -13,7 +13,12 @@ class ModelSettings:
     """Base class for the model settings"""
 
     def __init__(
-        self, solver: str = "crank_nicolson", record_all: bool = False, **kwargs: Any
+        self,
+        solver: str = "exponential_euler",
+        record_all: bool = False,
+        channel_routing: str = "none",
+        route_local_runoff: bool = False,
+        **kwargs: Any,
     ) -> None:
         """
         Parameters
@@ -21,7 +26,7 @@ class ModelSettings:
         solver
             Numerical solver used to integrate the reservoir ODEs. One of:
 
-            - ``"crank_nicolson"`` (alias ``"trapezoidal"``) -- default;
+            - ``"crank_nicolson"`` (alias ``"trapezoidal"``) --
               implicit trapezoidal rule, second-order and unconditionally
               stable for any process; no transit lag.
             - ``"heun_explicit"`` -- explicit, second-order; good
@@ -36,7 +41,7 @@ class ModelSettings:
             - ``"implicit_euler"`` (alias ``"euler_implicit"``) -- backward
               Euler, first-order; unconditionally stable for any process, no
               transit lag; most robust for very stiff reservoirs.
-            - ``"exponential_euler"`` -- analytic integration of the
+            - ``"exponential_euler"`` -- default; analytic integration of the
               per-step linearized system; unconditionally stable, no
               transit lag.
 
@@ -44,12 +49,59 @@ class ModelSettings:
             choose: https://hydrobricks.readthedocs.io/en/latest/doc/solvers.html
         record_all
             Record all state and flux values
+        channel_routing
+            Channel routing scheme between the subbasins of a river network (see
+            :meth:`set_channel_routing`). Default: ``"none"``
+        route_local_runoff
+            Whether a subbasin's own runoff travels through half of its reach
+            instead of joining at its outlet. Default: False
         kwargs
             Keyword arguments
         """
         self.settings: SettingsModel = SettingsModel()
         self.settings.log_all(record_all)
         self.settings.set_solver(solver)
+        self.settings.set_channel_routing(channel_routing, route_local_runoff)
+
+    def set_channel_routing(
+        self, scheme: str, route_local_runoff: bool = False
+    ) -> None:
+        """
+        Set the channel routing scheme between the subbasins of a river network.
+
+        This is the routing along the reaches of the network, not the in-catchment
+        ``routing:*`` processes of a model structure (unit hydrographs, MAXBAS, ...).
+
+        Parameters
+        ----------
+        scheme
+            One of:
+
+            - ``"none"`` -- the water leaving a subbasin reaches the outlet of the
+              downstream subbasin within the same time step (default).
+            - ``"lag"`` -- pure translation by the travel time ``length / celerity``
+              of each reach.
+            - ``"muskingum"`` -- the Muskingum method with ``K = length / celerity``
+              and the weighting factor ``x``.
+            - ``"muskingum_cunge"`` -- the Muskingum method with ``K`` and ``x``
+              derived at every time step from the channel geometry (reach length,
+              slope, width and Manning roughness) and the discharge, so nothing has
+              to be calibrated.
+
+            The reach ``length`` [m] and ``slope`` [m/m] are subbasin properties;
+            ``celerity`` [m/s], ``x`` [-], ``width`` [m] and ``manning``
+            [s/m^(1/3)] are model parameters (component ``channel``), which the
+            subbasin properties ``celerity``, ``muskingum_x``, ``width`` and
+            ``manning`` override reach by reach. With ``lag`` and ``muskingum``,
+            a non-zero ``celerity_exponent`` makes the celerity vary with the
+            discharge, as ``celerity (Q / reference_discharge) ** exponent``.
+
+        route_local_runoff
+            Whether a subbasin's own runoff travels through half of its reach
+            (it is generated along the reach, so it travels half of it on average)
+            instead of joining at its outlet with no delay. Default: False
+        """
+        self.settings.set_channel_routing(scheme, route_local_runoff)
 
     def set_solver(self, solver: str) -> None:
         """
@@ -401,7 +453,7 @@ class ModelSettings:
         """
         self.settings.add_hydro_unit_brick(name, kind)
 
-    def add_sub_basin_brick(self, name: str, kind: str) -> None:
+    def add_subbasin_brick(self, name: str, kind: str) -> None:
         """
         Add a sub basin brick
 
@@ -412,7 +464,10 @@ class ModelSettings:
         kind
             Type of the sub basin brick
         """
-        self.settings.add_sub_basin_brick(name, kind)
+        self.settings.add_subbasin_brick(name, kind)
+
+    # Former spelling, kept for one release.
+    add_sub_basin_brick = add_subbasin_brick
 
     def select_hydro_unit_brick(self, name: str) -> None:
         """
@@ -508,6 +563,23 @@ class ModelSettings:
         store and routing, where processes apply an exact discrete update each step.
         """
         self.settings.set_current_brick_computed_directly()
+
+    def set_current_brick_area_of(self, land_cover: str) -> None:
+        """
+        Make the selected brick represent the area of a land cover.
+
+        For a per-cover store (e.g. a per-land-cover soil moisture store): its
+        capacity parameter applies to that cover's area, and the capacity and the
+        evapotranspiration are scaled by the cover's area fraction in each hydro unit
+        (zero where the cover is absent). The fraction is read live, so land cover
+        changes apply during the run.
+
+        Parameters
+        ----------
+        land_cover
+            Name of the land cover.
+        """
+        self.settings.set_current_brick_area_of(land_cover)
 
     def add_process_parameter(
         self, name: str, value: int | float | bool, kind: str = "constant"

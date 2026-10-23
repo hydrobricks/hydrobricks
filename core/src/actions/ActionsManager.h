@@ -4,7 +4,7 @@
 #include "HydroUnit.h"
 #include "Includes.h"
 
-class SubBasin;
+class Subbasin;
 class ModelHydro;
 class Action;
 
@@ -65,11 +65,11 @@ class ActionsManager {
     void DateUpdate(double date);
 
     /**
-     * Get the sub basin associated with the model.
+     * Get the subbasin associated with the model.
      *
-     * @return pointer to the sub basin.
+     * @return pointer to the subbasin.
      */
-    [[nodiscard]] SubBasin* GetSubBasin() const;
+    [[nodiscard]] Subbasin* GetSubbasin() const;
 
     /**
      * Get hydro unit by ID.
@@ -78,6 +78,13 @@ class ActionsManager {
      * @return pointer to the hydro unit.
      */
     [[nodiscard]] HydroUnit* GetHydroUnitById(int id) const;
+
+    /**
+     * Get every hydro unit of the model, in every subbasin.
+     *
+     * @return the hydro units.
+     */
+    [[nodiscard]] std::vector<HydroUnit*> GetHydroUnits() const;
 
     /**
      * Get the list of sporadic action dates (i.e., actions that are not recursive).

@@ -22,6 +22,11 @@ from hydrobricks._optional import (
 )
 from hydrobricks._utils import compute_area
 from hydrobricks.hydro_units import HydroUnits
+from hydrobricks.soils import (
+    PREVAH_SOIL_AWC_CLASSES,
+    PREVAH_SOIL_CONDUCTIVITY_CLASSES,
+    PREVAH_SOIL_DEPTH_CLASSES,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -108,6 +113,9 @@ class Catchment:
         The aspect map of the catchment.
     map_unit_ids : np.ndarray
         The unit ids as a numpy array matching the DEM extent.
+    map_subbasin_ids : np.ndarray
+        The subbasin ids as a numpy array matching the DEM extent (after
+        :meth:`delineate_subbasins`).
     hydro_units : HydroUnits
         The hydro units of the catchment.
     """
@@ -144,6 +152,7 @@ class Catchment:
         self._dem_memfile: Any = None
         self.attributes: dict[str, dict] = {}
         self.map_unit_ids: np.ndarray | None = None
+        self.map_subbasin_ids: np.ndarray | None = None
         self.hydro_units: HydroUnits = HydroUnits(
             land_cover_types, land_cover_names, hydro_units_data
         )
@@ -267,6 +276,20 @@ class Catchment:
         from hydrobricks.preprocessing import CatchmentConnectivity
 
         return CatchmentConnectivity(self)
+
+    @lazy_property
+    def network(self) -> Any:
+        """
+        Lazy-loaded river network delineation module.
+
+        Returns
+        -------
+        CatchmentNetwork
+            Subbasin delineation processor for the catchment, loaded on first access.
+        """
+        from hydrobricks.preprocessing import CatchmentNetwork
+
+        return CatchmentNetwork(self)
 
     @lazy_property
     def solar_radiation(self) -> Any:
@@ -624,6 +647,160 @@ class Catchment:
 
         return True
 
+    def extract_unit_property_from_raster(
+        self,
+        raster_path: str | Path,
+        name: str,
+        unit: str = "-",
+        reclassify: dict | None = None,
+        statistic: str = "mean",
+        resampling: str | None = None,
+        reproject_crs: bool = False,
+    ) -> np.ndarray:
+        """
+        Add a hydro unit property from a raster (e.g. a soil map).
+
+        The raster is warped onto the DEM grid, optionally reclassified from class
+        codes to physical values, and aggregated over the cells of each hydro unit.
+        The result becomes a hydro-unit property, which a parameter can then follow
+        per unit through ``ParameterSet.set_spatial``.
+
+        Parameters
+        ----------
+        raster_path
+            Path of the raster file.
+        name
+            Name of the hydro unit property to create. The warped raster is also
+            kept under this name in ``self.attributes``.
+        unit
+            Unit of the property (e.g. '%', 'm'), as shown in the hydro units table.
+        reclassify
+            Mapping of the raster class codes to the values to aggregate, for a map
+            given as classes rather than as values (e.g.
+            :data:`~hydrobricks.soils.PREVAH_SOIL_AWC_CLASSES`). Cells whose code is
+            not in the mapping are ignored. The cell values are rounded to the
+            nearest integer before the lookup. Default: None = the raster already
+            holds the values.
+        statistic
+            Statistic aggregating the cells of a unit. Only 'mean' is supported.
+        resampling
+            Resampling method used to warp the raster onto the DEM grid. Defaults to
+            'nearest' when 'reclassify' is given (class codes must not be averaged)
+            and to 'average' otherwise.
+        reproject_crs
+            If True, the raster may be in another CRS than the catchment.
+
+        Returns
+        -------
+        The value of each hydro unit, in the order of the hydro units table.
+
+        Raises
+        ------
+        ConfigurationError
+            If the catchment has not been discretized, or the statistic is unknown.
+        """
+        if statistic != "mean":
+            raise ConfigurationError(
+                "Only the 'mean' statistic is supported.",
+                item_name="statistic",
+                item_value=statistic,
+                reason="Unsupported statistic",
+            )
+        if self.map_unit_ids is None:
+            raise ConfigurationError(
+                "Catchment has not been discretized. "
+                "Please run create_elevation_bands() or discretize_by() first.",
+                reason="Catchment not discretized",
+            )
+
+        if resampling is None:
+            resampling = "nearest" if reclassify else "average"
+
+        self.extract_attribute_raster(
+            raster_path,
+            name,
+            resampling=resampling,
+            replace_nans_by_zeros=False,
+            reproject_crs=reproject_crs,
+        )
+        data = self.attributes[name]["data"].astype(float)
+
+        if reclassify:
+            codes = np.rint(data)
+            values = np.full(data.shape, np.nan)
+            for code, value in reclassify.items():
+                values[codes == code] = value
+            data = values
+
+        unit_ids = np.unique(self.map_unit_ids)
+        unit_ids = unit_ids[unit_ids != 0]
+        res = []
+        for unit_id in unit_ids:
+            cells = data[self.map_unit_ids == unit_id]
+            cells = cells[~np.isnan(cells)]
+            # A unit can fall entirely outside the raster, or on classes that the
+            # reclassification does not cover.
+            res.append(float(np.mean(cells)) if cells.size else np.nan)
+
+        res_arr = np.array(res)
+        self.hydro_units.add_property((name, unit), res_arr)
+
+        return res_arr
+
+    def extract_soil_properties(
+        self,
+        available_water_content: str | Path | None = None,
+        soil_depth: str | Path | None = None,
+        conductivity: str | Path | None = None,
+        reclassify: bool | dict[str, dict] = False,
+    ) -> None:
+        """
+        Add the soil properties of the hydro units from soil maps.
+
+        A convenience over :meth:`extract_unit_property_from_raster` naming the
+        properties the models expect: ``awc`` [%], ``soil_depth`` [m] and
+        ``conductivity`` [-]. The first two feed
+        :meth:`~hydrobricks.models.PrevahUniBE.apply_cover_field_capacity` (the
+        soil moisture capacity) and the third
+        :meth:`~hydrobricks.models.PrevahUniBE.apply_cover_percolation` (PREVAH's
+        KWPER percolation factor).
+
+        Parameters
+        ----------
+        available_water_content
+            Path of the raster of the available water content of the soil [Vol-%].
+        soil_depth
+            Path of the raster of the soil depth [m].
+        conductivity
+            Path of the raster of the soil hydraulic conductivity.
+        reclassify
+            How to turn class codes into values, for maps given as classes. True
+            applies PREVAH's tables for the Swiss soil suitability map
+            (:mod:`hydrobricks.soils`). A dict gives a mapping per property, keyed by
+            'available_water_content', 'soil_depth' and 'conductivity'; a property
+            left out is read as values. Default: False = the rasters hold values.
+        """
+        if reclassify is True:
+            tables = {
+                "available_water_content": PREVAH_SOIL_AWC_CLASSES,
+                "soil_depth": PREVAH_SOIL_DEPTH_CLASSES,
+                "conductivity": PREVAH_SOIL_CONDUCTIVITY_CLASSES,
+            }
+        else:
+            tables = reclassify or {}
+
+        properties = [
+            ("available_water_content", available_water_content, "awc", "%"),
+            ("soil_depth", soil_depth, "soil_depth", "m"),
+            ("conductivity", conductivity, "conductivity", "-"),
+        ]
+        for key, path, name, unit in properties:
+            if path is None:
+                continue
+            self.extract_unit_property_from_raster(
+                path, name, unit, reclassify=tables.get(key)
+            )
+
     def get_hydro_unit_count(self) -> int:
         """
         Get the number of hydro units.
@@ -678,6 +855,13 @@ class Catchment:
             self.hydro_units.add_property(("id", "-"), unit_ids, set_first=True)
         else:
             unit_ids = self.hydro_units.hydro_units["id"].values.tolist()
+
+        # Hydro units created after the subbasins (e.g. from a unit raster) get their
+        # subbasin; the discretization sets it itself.
+        if self.map_subbasin_ids is not None and not self.hydro_units.has(
+            self.hydro_units.SUBBASIN_COLUMN
+        ):
+            self.network.assign_hydro_units()
 
         res_area = []
         res_elevation = []
@@ -1117,6 +1301,28 @@ class Catchment:
         Call the calculate_connectivity method of the Connectivity class.
         """
         return self.connectivity.calculate(*args, **kwargs)
+
+    def delineate_subbasins(self, *args, **kwargs) -> pd.DataFrame:
+        """
+        Delineate the subbasins of a river network from outlet points (gauges), or
+        read them from subbasin polygons (local areas, nested drained areas, or both).
+
+        See :meth:`CatchmentNetwork.delineate
+        <hydrobricks.preprocessing.CatchmentNetwork.delineate>` for the parameters.
+        The subbasin table is set on the hydro units (with their ``subbasin``
+        column once they are created) and returned. The subbasins come first: the
+        hydro units are then created within them, and delineating the subbasins of a
+        catchment that already has hydro units is refused.
+        """
+        return self.network.delineate(*args, **kwargs)
+
+    def save_subbasin_ids_raster(self, *args, **kwargs) -> None:
+        """
+        Save the subbasin ids raster (see
+        :meth:`CatchmentNetwork.save_subbasin_ids_raster
+        <hydrobricks.preprocessing.CatchmentNetwork.save_subbasin_ids_raster>`).
+        """
+        self.network.save_subbasin_ids_raster(*args, **kwargs)
 
     def calculate_daily_potential_radiation(self, *args, **kwargs) -> None:
         """

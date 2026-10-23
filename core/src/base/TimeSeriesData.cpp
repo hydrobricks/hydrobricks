@@ -39,7 +39,7 @@ TimeSeriesDataRegular::TimeSeriesDataRegular(double start, double end, int timeS
 
 bool TimeSeriesDataRegular::SetValues(vecDouble values) {
     double calcEnd = IncrementDateBy(_start, _timeStep * static_cast<int>(values.size() - 1), _timeStepUnit);
-    if (calcEnd != _end) {
+    if (!NearlyEqual(calcEnd, _end)) {
         LogError("The size of the time series data does not match the time properties.");
         LogError("End of the data ({}) != end of the dates ({}).", calcEnd, _end);
         return false;
@@ -67,11 +67,11 @@ double TimeSeriesDataRegular::GetSum() {
 }
 
 bool TimeSeriesDataRegular::SetCursorToDate(double date) {
-    if (date < _start) {
+    if (LessThan(date, _start)) {
         LogError("The desired date is before the data starting date.");
         return false;
     }
-    if (date > _end) {
+    if (GreaterThan(date, _end)) {
         LogError("The desired date is after the data ending date.");
         return false;
     }

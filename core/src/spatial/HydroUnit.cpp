@@ -230,7 +230,7 @@ double HydroUnit::GetSnowCoverFraction(double sweThreshold) const {
     return std::min(snowFraction, 1.0);
 }
 
-double HydroUnit::GetSnowAlbedo(double albedoLand, double sweThreshold) const {
+double HydroUnit::GetSnowAlbedo(double albedoLand, const LandCover* cover, double sweThreshold) const {
     double snowFraction = 0.0;
     double weightedSnowAlbedo = 0.0;
     for (const auto& brick : _bricks) {
@@ -244,9 +244,18 @@ double HydroUnit::GetSnowAlbedo(double albedoLand, double sweThreshold) const {
         if (surfaceComponent == nullptr || !surfaceComponent->HasParent()) {
             continue;
         }
+        if (cover != nullptr && surfaceComponent->GetParent() != cover) {
+            continue;
+        }
+        double snowAlbedo = PrevahSnowAlbedo(dynamic_cast<Snowpack*>(brick.get())->GetSnowAge());
+        if (cover != nullptr) {
+            // The snowpack covers its parent entirely, so the surface of the cover is
+            // snow: no weighting, as in a PREVAH hydrotope.
+            return snowAlbedo;
+        }
         double fraction = surfaceComponent->GetParentAreaFraction();
         snowFraction += fraction;
-        weightedSnowAlbedo += fraction * PrevahSnowAlbedo(dynamic_cast<Snowpack*>(brick.get())->GetSnowAge());
+        weightedSnowAlbedo += fraction * snowAlbedo;
     }
 
     snowFraction = std::min(snowFraction, 1.0);

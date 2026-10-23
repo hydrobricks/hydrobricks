@@ -25,8 +25,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- The default solver is now `exponential_euler` instead of `crank_nicolson`: as accurate at about half the cost (see the solvers page of the documentation). Models relying on the default give slightly different results. PREVAH-UniBE and GR4J/GR6J keep their own defaults.
-- `exponential_euler` is more accurate for non-linear stores and for stores filling from empty.
+- The default solver is now `exponential_euler` instead of `crank_nicolson`: more accurate at about three quarters of the cost (see the solvers page of the documentation). Models relying on the default give slightly different results. PREVAH-UniBE and GR4J/GR6J keep their own defaults.
+- `exponential_euler` is more accurate for non-linear stores and for stores filling from empty, and no process takes more than its own rate (a constant percolation could exceed it).
 - HBV-96 per-class soils and PREVAH-UniBE with `share_soil=False`: `fc_<cover>` is now the capacity of the cover's own soil (mm over the cover area) rather than a share of the unit's soil.
 - `sub_basin` spellings renamed `subbasin` in the user-facing API and the results file; the old spellings are still accepted on input for one release.
 - PREVAH `et:prevah` with per-cover soils reads the snow-albedo reduction from the cover owning the soil, not the unit-wide mean.

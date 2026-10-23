@@ -68,10 +68,10 @@ TEST_F(SnowpackModel, DegreeDay) {
     SettingsBasin basinSettings;
     basinSettings.AddHydroUnit(1, 100);
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     EXPECT_TRUE(model.Initialize(_model, basinSettings));
     EXPECT_TRUE(model.IsValid());
 
@@ -108,10 +108,10 @@ TEST_F(SnowpackModel, ModelClosesBalance) {
     SettingsBasin basinProp;
     basinProp.AddHydroUnit(1, 1000);
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinProp));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinProp));
 
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     EXPECT_TRUE(model.Initialize(_model, basinProp));
     EXPECT_TRUE(model.IsValid());
 
@@ -209,10 +209,10 @@ TEST_F(SnowpackModelWithAspect, DegreeDayAspect) {
     basinSettings.SelectUnit(3);
     basinSettings.AddHydroUnitPropertyString("aspect_class", "S");
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     EXPECT_TRUE(model.Initialize(_model, basinSettings));
     EXPECT_TRUE(model.IsValid());
 
@@ -270,10 +270,10 @@ TEST_F(GlacierModel, UnlimitedSupply) {
     basinSettings.AddHydroUnit(1, 100);
     basinSettings.AddLandCover("glacier", "glacier", 1);
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     EXPECT_TRUE(model.Initialize(_model, basinSettings));
     EXPECT_TRUE(model.IsValid());
 
@@ -360,10 +360,10 @@ TEST_F(GlacierModelWithSnowpack, NoIceMeltIfSnowCover) {
     basinProp.AddHydroUnit(1, 1000);
     basinProp.AddLandCover("glacier", "glacier", 1);
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinProp));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinProp));
 
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     EXPECT_TRUE(model.Initialize(_model, basinProp));
     EXPECT_TRUE(model.IsValid());
 
@@ -376,7 +376,7 @@ TEST_F(GlacierModelWithSnowpack, NoIceMeltIfSnowCover) {
     Logger* logger = model.GetLogger();
 
     // Check resulting discharge
-    vecAxd basinOutputs = logger->GetSubBasinValues();
+    vecAxd basinOutputs = logger->GetSubbasinValues();
 
     vecDouble expectedOutputs = {0.0, 4.0, 10.0, 6.0, 6.0, 6.0, 6.0, 6.0};
     axd modelOutputs = logger->GetOutletDischarge();
@@ -402,10 +402,10 @@ TEST_F(GlacierModelWithSnowpack, ModelClosesBalance) {
     basinProp.AddHydroUnit(1, 1000);
     basinProp.AddLandCover("glacier", "glacier", 1);
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinProp));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinProp));
 
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     EXPECT_TRUE(model.Initialize(_model, basinProp));
     EXPECT_TRUE(model.IsValid());
 
@@ -511,10 +511,10 @@ TEST_F(MultiGlaciersModelWithTemperatureIndex, TemperatureIndexMelt) {
     basinProp.AddLandCover("glacier_ice", "glacier", 0.3);
     basinProp.AddLandCover("glacier_debris", "glacier", 0.2);
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinProp));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinProp));
 
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     EXPECT_TRUE(model.Initialize(_model, basinProp));
     EXPECT_TRUE(model.IsValid());
 

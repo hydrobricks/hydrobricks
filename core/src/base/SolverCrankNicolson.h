@@ -31,6 +31,7 @@ class SolverCrankNicolson : public SolverSequential {
   private:
     vecDouble _startRates;  // scratch: per-connection rates at the start-of-step content
     vecDouble _endRates;    // scratch: per-connection rates at the end-of-step content
+    vecDouble _hiRates;     // scratch: per-connection rates at the high bound of the bracket
 };
 
 #endif  // HYDROBRICKS_SOLVER_CRANK_NICOLSON_H

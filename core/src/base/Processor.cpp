@@ -3,12 +3,11 @@
 #include <algorithm>
 
 #include "FluxToBrick.h"
-#include "ModelHydro.h"
-#include "SubBasin.h"
+#include "Subbasin.h"
 
 Processor::Processor()
     : _solver(nullptr),
-      _model(nullptr),
+      _subbasin(nullptr),
       _solvableConnectionCount(0),
       _directConnectionCount(0),
       _directRateCount(0) {}
@@ -25,6 +24,7 @@ void Processor::Initialize(const SolverSettings& solverSettings) {
     _solver->Connect(this);
     ConnectToElementsToSolve();
     ValidateFluxTopology();
+    MarkDirectToSolverFluxesAsStatic();
     BuildTraversalTables();
     _solver->InitializeContainers();
     _changeRatesNoSolver = axd::Zero(_directRateCount);
@@ -55,12 +55,44 @@ void Processor::ValidateFluxTopology() const {
     }
 }
 
-void Processor::SetModel(ModelHydro* model) {
-    _model = model;
+void Processor::MarkDirectToSolverFluxesAsStatic() const {
+    // The direct pass settles the amount a direct brick sends to a solved brick before the
+    // solver runs, and then clears the rate it was computed from. Read as a rate, that inflow
+    // would be zero when the solver enforces the constraints of the receiving brick, whose
+    // outflows would be limited to its start-of-step content: the water would only leave it
+    // at the following time step. As a static flux, its amount is counted as available.
+    int hydroUnitCount = _subbasin->GetHydroUnitCount();
+    for (int iUnit = 0; iUnit < hydroUnitCount; ++iUnit) {
+        HydroUnit* unit = _subbasin->GetHydroUnit(iUnit);
+        for (int iBrick = 0; iBrick < unit->GetBrickCount(); ++iBrick) {
+            Brick* brick = unit->GetBrick(iBrick);
+            if (brick->NeedsSolver()) {
+                continue;
+            }
+            for (int i = 0; i < brick->GetProcessCount(); ++i) {
+                auto process = brick->GetProcess(i);
+                for (int j = 0; j < process->GetOutputFluxCount(); ++j) {
+                    Flux* flux = process->GetOutputFlux(j);
+                    auto fluxToBrick = dynamic_cast<FluxToBrick*>(flux);
+                    if (fluxToBrick == nullptr || flux->IsInstantaneous() || flux->IsStatic()) {
+                        continue;
+                    }
+                    Brick* target = fluxToBrick->GetTargetBrick();
+                    if (target && target->NeedsSolver()) {
+                        flux->SetAsStatic();
+                    }
+                }
+            }
+        }
+    }
+}
+
+void Processor::SetSubbasin(Subbasin* subbasin) {
+    _subbasin = subbasin;
 }
 
 void Processor::ConnectToElementsToSolve() {
-    SubBasin* basin = _model->GetSubBasin();
+    Subbasin* basin = _subbasin;
 
     // Two-phase time step contract: bricks computed directly (surface components, land
     // covers) form the discrete phase, processed sequentially in declaration order before
@@ -145,7 +177,7 @@ void Processor::BuildTraversalTables() {
     // Same flattening for the direct pass. The rate slices are assigned once here, so a
     // brick that is null on a given time step simply leaves its own slots untouched
     // instead of shifting everyone else's, as the running index used to do.
-    SubBasin* basin = _model->GetSubBasin();
+    Subbasin* basin = _subbasin;
     int directRateOffset = 0;
     int hydroUnitCount = basin->GetHydroUnitCount();
     _directUnits.reserve(hydroUnitCount);
@@ -302,9 +334,9 @@ void Processor::FinalizeTimeStep() {
 }
 
 bool Processor::ProcessTimeStep(double timeStepInDays) {
-    assert(_model);
+    assert(_subbasin);
 
-    SubBasin* basin = _model->GetSubBasin();
+    Subbasin* basin = _subbasin;
 
     // Process the bricks that do not need a solver.
     for (const auto& unitEntry : _directUnits) {
@@ -326,7 +358,7 @@ bool Processor::ProcessTimeStep(double timeStepInDays) {
         return false;
     }
 
-    if (!basin->ComputeOutletDischarge()) {
+    if (!basin->ComputeOutletDischarge(timeStepInDays)) {
         return false;
     }
 

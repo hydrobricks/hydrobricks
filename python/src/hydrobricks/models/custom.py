@@ -51,7 +51,7 @@ with ``target`` (a declared brick, a generated one such as
 the flux instantaneous. ``gate: <brick>`` names a brick whose state modulates
 the process rate without receiving its flux (required by state-gated processes
 such as ``percolation:prevah``). Bricks attach to each hydro unit by default;
-use ``attach_to: sub_basin`` for catchment-level stores.
+use ``attach_to: subbasin`` for catchment-level stores.
 """
 
 from __future__ import annotations
@@ -86,7 +86,14 @@ _SNOW_OPTION_DEFAULTS: dict[str, Any] = {
     "rain_to_snowpack": False,
     "forest_interception": False,
 }
-_BRICK_KEYS = {"kind", "attach_to", "computed_directly", "parameters", "processes"}
+_BRICK_KEYS = {
+    "kind",
+    "attach_to",
+    "computed_directly",
+    "area_of",
+    "parameters",
+    "processes",
+}
 _PROCESS_KEYS = {"kind", "target", "targets", "log", "instantaneous", "gate"}
 _CONSTRAINT_OPERATORS = ("<", "<=", ">", ">=")
 _TARGETLESS_PREFIXES = ("et:", "interception:", "sublimation:")
@@ -197,15 +204,17 @@ def _validate_brick(brick: Any, where: str, errors: list[str]) -> None:
         brick.setdefault("attach_to", "hydro_unit")
     else:
         attach_to = brick.setdefault("attach_to", "hydro_unit")
-        if attach_to not in ("hydro_unit", "sub_basin"):
+        if attach_to not in ("hydro_unit", "subbasin", "sub_basin"):
             errors.append(
-                f"{where}.attach_to: expected 'hydro_unit' or 'sub_basin', "
+                f"{where}.attach_to: expected 'hydro_unit' or 'subbasin', "
                 f"got {attach_to!r}."
             )
     if "computed_directly" in brick and not isinstance(
         brick["computed_directly"], bool
     ):
         errors.append(f"{where}.computed_directly: expected true or false.")
+    if "area_of" in brick and not isinstance(brick["area_of"], str):
+        errors.append(f"{where}.area_of: expected a land cover name.")
     parameters = brick.get("parameters", {})
     if not isinstance(parameters, dict):
         errors.append(f"{where}.parameters: expected a mapping of name to value.")

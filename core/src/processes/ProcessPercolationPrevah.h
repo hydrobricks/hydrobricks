@@ -28,14 +28,15 @@ class Snowpack;
  * promises more than their fixed 5 mm or 3 mm. That branch is off under snow (SWE
  * above 0.1 mm), where the ET limit above the capacity stops the percolation
  * altogether. 'constant_fraction' is the share of the unit following that branch
- * (0 or 1 for a unit carrying a single land use); the snowpacks given as gate
+ * (0 or 1 for a unit carrying a single cover class); the snowpacks given as gate
  * bricks tell its snow-covered part, each weighted by the area of its land cover.
  *
  * With several soil gate bricks (one soil moisture store per land cover), the contents
  * and the capacities are summed before the ratio is taken, which is the
  * area-weighted mean saturation of the hydro unit: the stores are fed by their land
- * cover, whose outgoing fluxes already carry its area fraction, so their contents
- * are expressed over the whole unit.
+ * cover, whose outgoing fluxes already carry its area fraction, and their capacity is
+ * expressed over that cover and scaled by its area fraction, so both are expressed
+ * over the whole unit. A cover with no area in the unit contributes neither.
  */
 class ProcessPercolationPrevah : public ProcessOutflow {
   public:

@@ -13,6 +13,7 @@ model:
   options:
     soil_storage_nb: 2
     surface_runoff: linear_storage
+    solver: heun_explicit
 
 hydro_units:
   # CSV of elevation bands, with two header rows (names, then units).

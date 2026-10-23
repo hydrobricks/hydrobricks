@@ -9,6 +9,11 @@ import HydroErr
 import numpy as np
 import pandas as pd
 
+from hydrobricks._area_basis import (
+    check_area_basis,
+    convert_area_basis,
+    land_cover_of_label,
+)
 from hydrobricks._exceptions import ConfigurationError, ModelError
 from hydrobricks._hydrobricks import ModelHydro, close_log, init_log
 from hydrobricks._utils import Timer, date_as_mjd, dump_config_file, validate_kwargs
@@ -17,6 +22,7 @@ from hydrobricks.forcing import Forcing
 from hydrobricks.hydro_units import HydroUnits
 from hydrobricks.land_covers import GENERIC_COVER_ALIASES, GENERIC_SOIL_COVER_TYPES
 from hydrobricks.models.model_settings import ModelSettings
+from hydrobricks.network import RiverNetworkGraph
 from hydrobricks.parameters import ParameterSet
 from hydrobricks.periods import Period, spinup_to_days
 from hydrobricks.structure import StructureGraph
@@ -29,6 +35,25 @@ if TYPE_CHECKING:
     from hydrobricks.results import Results
 
 logger = logging.getLogger(__name__)
+
+#: The unit strings understood as a volumetric discharge by the discharge getters.
+VOLUMETRIC_UNITS = ("m3/s", "m^3/s", "m³/s", "cms", "cumecs")
+
+
+def _is_volumetric(units: str) -> bool:
+    """Whether a discharge unit string asks for m³/s rather than mm per time step."""
+    key = str(units).replace(" ", "").lower()
+    if key in VOLUMETRIC_UNITS:
+        return True
+    if key in ("mm", "mm/step", "mm/d", "mm/day", "mm/h", "mm/hour"):
+        return False
+    raise ConfigurationError(
+        f"Unknown discharge units '{units}': expected 'mm' (per time step) or 'm3/s'.",
+        item_name="units",
+        item_value=units,
+        reason="Unknown units",
+    )
+
 
 # Name of the netCDF file written by dump_outputs() into the output directory.
 RESULTS_FILENAME = "results.nc"
@@ -48,7 +73,8 @@ class Model(ABC):
             Name identifier for the model instance. Default: None
         **kwargs
             Additional keyword arguments for model configuration.
-            Allowed keys: 'solver', 'record_all', 'land_cover_types', 'land_cover_names'
+            Allowed keys: 'solver', 'record_all', 'channel_routing',
+            'route_local_runoff', 'land_cover_types', 'land_cover_names'
 
         Raises
         ------
@@ -68,6 +94,8 @@ class Model(ABC):
         self.allowed_kwargs: set[str] = {
             "solver",
             "record_all",
+            "channel_routing",
+            "route_local_runoff",
             "land_cover_types",
             "land_cover_names",
         }
@@ -75,8 +103,14 @@ class Model(ABC):
 
         # Default options
         self.options: dict[str, Any] = dict()
-        self.solver: str = "crank_nicolson"
+        self.solver: str = "exponential_euler"
         self.record_all: bool = False
+        # Channel routing between the subbasins of a river network ('none', 'lag' or
+        # 'muskingum'); irrelevant for a catchment without a declared network. Not to be
+        # confused with the in-catchment 'routing:*' processes of a model structure.
+        self.channel_routing: str = "none"
+        # Whether a subbasin's own runoff travels through half of its reach.
+        self.route_local_runoff: bool = False
         self.land_cover_types: list[str] = ["open"]
         self.land_cover_names: list[str] = ["open"]
         self.allowed_land_cover_types: list[str] = ["open"]
@@ -99,7 +133,10 @@ class Model(ABC):
 
         # Setting base settings
         self.settings: ModelSettings = ModelSettings(
-            solver=self.solver, record_all=self.record_all
+            solver=self.solver,
+            record_all=self.record_all,
+            channel_routing=self.channel_routing,
+            route_local_runoff=self.route_local_runoff,
         )
 
     def __del__(self) -> None:
@@ -501,6 +538,8 @@ class Model(ABC):
         settings = {
             "base": self.name,
             "solver": self.solver,
+            "channel_routing": self.channel_routing,
+            "route_local_runoff": self.route_local_runoff,
             "options": self.options,
             "land_covers": {
                 "names": self.land_cover_names,
@@ -510,11 +549,92 @@ class Model(ABC):
         }
         dump_config_file(settings, directory, name, file_type)
 
-    def get_outlet_discharge(self) -> np.ndarray:
+    def get_outlet_discharge(self, units: str = "mm") -> np.ndarray:
         """
         Get the computed outlet discharge.
+
+        Parameters
+        ----------
+        units
+            ``"mm"`` (default) for mm per time step over the catchment area, as the
+            model computes it, or ``"m3/s"`` for the volumetric discharge a gauge
+            records.
         """
-        return self.model.get_outlet_discharge()
+        discharge = self.model.get_outlet_discharge()
+        if _is_volumetric(units):
+            return discharge * self._volumetric_factor(self.get_subbasin_ids()[-1])
+        return discharge
+
+    def get_subbasin_discharge(self, subbasin_id: int, units: str = "mm") -> np.ndarray:
+        """
+        Get the computed discharge at the outlet of a subbasin.
+
+        Parameters
+        ----------
+        subbasin_id
+            The ID of the subbasin (see :meth:`get_subbasin_ids`).
+        units
+            ``"mm"`` (default) for mm per time step over the area drained at the
+            subbasin outlet, or ``"m3/s"`` for the volumetric discharge.
+
+        Returns
+        -------
+        The discharge time series. In mm, it is expressed over the area drained at
+        the subbasin outlet (its own hydro units plus every upstream subbasin). For
+        the terminal subbasin this is :meth:`get_outlet_discharge`.
+        """
+        discharge = self.model.get_subbasin_discharge(int(subbasin_id))
+        if _is_volumetric(units):
+            return discharge * self._volumetric_factor(int(subbasin_id))
+        return discharge
+
+    def _volumetric_factor(self, subbasin_id: int) -> float:
+        """The factor turning mm per time step at a subbasin outlet into m³/s."""
+        areas = self.get_subbasin_areas()
+        if subbasin_id not in areas.index:
+            raise ConfigurationError(
+                f"Unknown subbasin {subbasin_id}; declared: {list(areas.index)}.",
+                item_name="subbasin_id",
+                item_value=subbasin_id,
+                reason="Unknown subbasin",
+            )
+        drained_area = float(areas.at[subbasin_id, "drained"])
+        step_seconds = self.time_step_in_days * 86400.0
+
+        return drained_area / 1000.0 / step_seconds
+
+    def get_subbasin_ids(self) -> list[int]:
+        """
+        Get the IDs of the subbasins, in processing order (upstream first, the
+        catchment outlet last). A catchment without a declared network has one
+        subbasin with the ID 1.
+        """
+        return list(self.model.get_subbasin_ids())
+
+    def get_subbasin_downstream_ids(self) -> list[int]:
+        """
+        Get the downstream subbasin ID of every subbasin (0 for the catchment outlet),
+        in the order of :meth:`get_subbasin_ids`.
+        """
+        return list(self.model.get_subbasin_downstream_ids())
+
+    def get_subbasin_areas(self) -> pd.DataFrame:
+        """
+        Get the areas of the subbasins.
+
+        Returns
+        -------
+        A DataFrame indexed by subbasin ID with the columns ``local`` (the area of the
+        subbasin's own hydro units) and ``drained`` (the area drained at its outlet),
+        in m2.
+        """
+        return pd.DataFrame(
+            {
+                "local": np.asarray(self.model.get_subbasin_local_areas()),
+                "drained": np.asarray(self.model.get_subbasin_drained_areas()),
+            },
+            index=pd.Index(self.get_subbasin_ids(), name="subbasin"),
+        )
 
     def get_total_outlet_discharge(self) -> float:
         """
@@ -611,7 +731,9 @@ class Model(ABC):
         """
         return list(self.model.get_recorded_hydro_unit_labels())
 
-    def get_recorded_hydro_unit_values(self, label: str) -> np.ndarray:
+    def get_recorded_hydro_unit_values(
+        self, label: str, basis: str | None = None
+    ) -> np.ndarray:
         """
         Get a recorded hydro-unit component series directly from memory.
 
@@ -623,6 +745,11 @@ class Model(ABC):
         ----------
         label
             The recorded component label (e.g. 'glacier_snowpack:snow_content').
+        basis
+            The area to express the values over: 'land_cover', 'hydro_unit' or
+            'subbasin'. None (default) returns them as recorded, over the area given
+            by :meth:`get_recorded_hydro_unit_basis`. Converting to or from a land
+            cover needs the land-cover fractions (``record_all``).
 
         Returns
         -------
@@ -632,7 +759,44 @@ class Model(ABC):
         """
         # The engine stores the series as (time, units); transpose to the
         # (units, time) convention used by the Results reader.
-        return np.asarray(self.model.get_hydro_unit_values(label)).T
+        values = np.asarray(self.model.get_hydro_unit_values(label)).T
+        if basis is None:
+            return values
+
+        check_area_basis(basis)
+        cover = land_cover_of_label(
+            label, list(self.model.get_recorded_hydro_unit_fraction_labels())
+        )
+        fraction = (
+            self.get_recorded_hydro_unit_fractions(cover) if cover is not None else None
+        )
+        return convert_area_basis(
+            values,
+            label,
+            source=self.get_recorded_hydro_unit_basis(label),
+            target=basis,
+            land_cover_fraction=fraction,
+            subbasin_fraction=np.asarray(
+                self.model.get_hydro_unit_subbasin_fractions()
+            ),
+        )
+
+    def get_recorded_hydro_unit_basis(self, label: str) -> str:
+        """
+        Get the area a recorded hydro-unit component is expressed over.
+
+        Parameters
+        ----------
+        label
+            The recorded component label (e.g. 'glacier:melt:output').
+
+        Returns
+        -------
+        'land_cover' (over the area of its land cover), 'hydro_unit' (over the
+        unit) or 'subbasin' (a flux to the outlet or to a subbasin brick, over the
+        local area of the subbasin).
+        """
+        return str(self.model.get_hydro_unit_label_basis(label))
 
     def get_recorded_hydro_unit_fractions(self, label: str) -> np.ndarray:
         """
@@ -699,7 +863,8 @@ class Model(ABC):
         observations
             The observations: an array with dates matching the simulated series, or
             a :class:`~hydrobricks.evaluation.discharge.DischargeObservations`
-            (sliced by its own dates when a period is given).
+            (sliced by its own dates when a period is given). A gauge on a subbasin
+            (``subbasin`` set) is compared with that subbasin's outlet discharge.
         warmup
             The number of days of warmup period. This option is used to
             discard the warmup period from the evaluation. It is useful when
@@ -718,12 +883,12 @@ class Model(ABC):
         -------
         The value of the selected metric.
         """
-        sim = self.get_outlet_discharge()
-        obs_values = (
-            observations
-            if isinstance(observations, np.ndarray)
-            else observations.data[0]
-        )
+        if isinstance(observations, np.ndarray):
+            sim = self.get_outlet_discharge()
+            obs_values = observations
+        else:
+            sim = observations.simulated_series(self)
+            obs_values = observations.data[0]
 
         if period is None:
             return evaluate(sim[warmup:], obs_values[warmup:], metric)
@@ -848,6 +1013,63 @@ class Model(ABC):
         """Return a compact textual summary of the model structure."""
         return self.get_structure_graph(structure_id).to_text()
 
+    def get_network_graph(self) -> RiverNetworkGraph:
+        """
+        Build the river network graph: the subbasin tree, its reaches and its travel
+        times.
+
+        The reach properties are read from the model, so they are the ones the routing
+        uses, the per-subbasin overrides included. The model must have been set up; the
+        sub reach counts of the Muskingum-Cunge scheme are known only after the first
+        time step has been run.
+
+        Returns
+        -------
+        RiverNetworkGraph
+            The network graph object, which can be tabulated
+            (:meth:`~hydrobricks.network.RiverNetworkGraph.to_dataframe`), summarized
+            (:meth:`~hydrobricks.network.RiverNetworkGraph.to_text`) and plotted
+            (:meth:`~hydrobricks.network.RiverNetworkGraph.plot`).
+
+        Raises
+        ------
+        ModelError
+            If the model has not been set up.
+        """
+        if not self._is_initialized:
+            raise ModelError(
+                "The model must be set up before its river network can be inspected: "
+                "call setup() first.",
+                is_initialized=False,
+            )
+        return RiverNetworkGraph.from_model(self)
+
+    def network_summary(self) -> str:
+        """Return a textual report of the river network and its travel times."""
+        return self.get_network_graph().to_text()
+
+    def print_network(self) -> None:
+        """Print a textual report of the river network and its travel times."""
+        print(self.network_summary())
+
+    def plot_network(self, path: str | None = None, **kwargs):
+        """Plot the subbasin tree with its travel times (requires ``graphviz``).
+
+        Parameters
+        ----------
+        path
+            Output file path without extension; if None, the graph object is returned
+            without writing a file.
+        kwargs
+            Passed to :meth:`~hydrobricks.network.RiverNetworkGraph.plot` (``fmt``,
+            ``view``, ``legend``, ``nodesep``, ``ranksep``, ``dpi``).
+
+        Returns
+        -------
+        The ``graphviz.Digraph`` object.
+        """
+        return self.get_network_graph().plot(path, **kwargs)
+
     def print_structure(self, structure_id: int = 1) -> None:
         """Print a compact textual summary of the model structure."""
         print(self.summary(structure_id))
@@ -947,6 +1169,9 @@ class Model(ABC):
             if key in ["solver", "record_all", "land_cover_types", "land_cover_names"]:
                 continue
             self.options[key] = value
+        # The channel routing is a basic option, but the parameter generation reads it.
+        self.options["channel_routing"] = self.channel_routing
+        self.options["route_local_runoff"] = self.route_local_runoff
 
         self._set_specific_options(kwargs)
         self._check_cover_types()
@@ -1047,6 +1272,8 @@ class Model(ABC):
         Extracts and applies the following options if present:
         - 'solver': Numerical solver name
         - 'record_all': Whether to record all state/flux values
+        - 'channel_routing': Channel routing scheme between subbasins
+        - 'route_local_runoff': Whether the local runoff travels through the reach
         - 'land_cover_types': List of land cover types
         - 'land_cover_names': List of land cover names
 
@@ -1059,6 +1286,10 @@ class Model(ABC):
             self.solver = kwargs["solver"]
         if "record_all" in kwargs:
             self.record_all = kwargs["record_all"]
+        if "channel_routing" in kwargs:
+            self.channel_routing = str(kwargs["channel_routing"])
+        if "route_local_runoff" in kwargs:
+            self.route_local_runoff = bool(kwargs["route_local_runoff"])
         if "land_cover_types" in kwargs:
             self.land_cover_types = kwargs["land_cover_types"]
         if "land_cover_names" in kwargs:
@@ -1163,6 +1394,10 @@ class Model(ABC):
             if brick.get("computed_directly", False):
                 self.settings.set_current_brick_computed_directly()
 
+            # Make the brick represent a land cover's area instead of the unit's
+            if "area_of" in brick:
+                self.settings.set_current_brick_area_of(brick["area_of"])
+
             # Add brick parameters if any
             if "parameters" in brick:
                 for param, value in brick["parameters"].items():
@@ -1174,6 +1409,13 @@ class Model(ABC):
                     self._set_structure_process(key, process, process_data)
 
         self.settings.add_logging_to("outlet")
+        # The reach values (in mm over the drained area, like the outlet) are logged
+        # whenever the channel routing is on: three series per subbasin, the state of
+        # the routing. A catchment without a network has no use for them, and adding
+        # labels would change the recorded set of existing runs.
+        if self.channel_routing != "none":
+            for item in ("reach:inflow", "reach:outflow", "reach:storage"):
+                self.settings.add_logging_to(item)
 
     def _define_structure_variants(
         self,
@@ -1181,12 +1423,12 @@ class Model(ABC):
         """Define the ordered structure variants of the model.
 
         Each entry is a (land_cover_names, land_cover_types, structure) tuple emitted
-        as a separate model structure. The **first** is the primary (structure 1) and
-        defines the catchment-level sub-basin components; the rest are alternative
-        variants. Units are auto-assigned (in the C++ core) to the variant whose
-        land-cover set matches their present land covers, so a unit lacking a cover
-        carries no zero-area brick for it. The default is a single variant (the model's
-        own structure). Models override this (e.g. Socont makes the glacier-free
+        as a separate model structure. The **first** is the primary (structure 1); the
+        rest are alternative variants. Units, and the subbasins for their
+        catchment-level components, are auto-assigned (in the C++ core) to the variant
+        whose land-cover set matches their present land covers, so a unit lacking a
+        cover carries no zero-area brick for it. The default is a single variant (the
+        model's own structure). Models override this (e.g. Socont makes the glacier-free
         variant the base and adds a with-glacier variant).
 
         An entry may optionally be a 4-tuple
@@ -1205,12 +1447,13 @@ class Model(ABC):
     ) -> list[tuple[list[str], list[str], dict[str, Any]]]:
         """Split a structure that may contain glacier covers into glacier variants.
 
-        Returns a glacier-free **base** variant (the glacier land covers dropped) plus
-        a **with-glacier** variant (all covers), so glacier-free units carry no glacier
-        brick while glacierized units do. The catchment-level glacier reservoirs added
-        by the glacier module are kept in the base, so the sub-basin (built from the
-        primary structure) owns and shares them. Returns the single input variant when
-        there is no glacier cover or no glacier module is set.
+        Returns a glacier-free **base** variant (the glacier land covers dropped, and
+        the catchment-level bricks the glacier module lists with them) plus a
+        **with-glacier** variant (all covers), so glacier-free units carry no glacier
+        brick while glacierized units do. Each subbasin builds its catchment-level
+        bricks from the variant matching the covers of its units, so a subbasin
+        without glaciers carries no glacier reservoir either. Returns the single input
+        variant when there is no glacier cover or no glacier module is set.
 
         Models that support glaciers call this from ``_define_structure_variants`` (the
         glacier handling is thus shared, with the formulation pluggable via the glacier
@@ -1231,8 +1474,7 @@ class Model(ABC):
             key: brick for key, brick in structure.items() if key not in land_cover_keys
         }
 
-        # Glacier-free base first (primary, builds the shared sub-basin), then the
-        # with-glacier variant.
+        # Glacier-free base first (primary), then the with-glacier variant.
         return [
             (base_names, base_types, base_structure),
             (names, types, structure),
@@ -1324,8 +1566,8 @@ class Model(ABC):
         else:
             if brick["attach_to"] == "hydro_unit":
                 self.settings.add_hydro_unit_brick(key, brick["kind"])
-            elif brick["attach_to"] == "sub_basin":
-                self.settings.add_sub_basin_brick(key, brick["kind"])
+            elif brick["attach_to"] in ("subbasin", "sub_basin"):
+                self.settings.add_subbasin_brick(key, brick["kind"])
             else:
                 raise ConfigurationError(
                     f'Brick {key} has an invalid "attach_to" value.',

@@ -10,7 +10,7 @@
 #include "ModelHydro.h"
 #include "SettingsBasin.h"
 #include "SettingsModel.h"
-#include "SubBasin.h"
+#include "Subbasin.h"
 #include "TimeSeriesUniform.h"
 #include "Utils.h"
 
@@ -52,13 +52,13 @@ TEST(MultiStructure, HeterogeneousUnitsBuildAndLogPerStructure) {
     basin.AddHydroUnit(2, 100);
     basin.AddLandCover("ground", "", 1.0);
 
-    SubBasin subBasin;
-    ASSERT_TRUE(subBasin.Initialize(basin));
+    Subbasin subbasin;
+    ASSERT_TRUE(subbasin.Initialize(basin));
 
     // Assign the second unit (index 1) to structure 2; the first keeps the default 1.
-    subBasin.GetHydroUnit(1)->SetStructureId(2);
+    subbasin.GetHydroUnit(1)->SetStructureId(2);
 
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     auto initResult = model.Initialize(settings, basin);
     ASSERT_TRUE(initResult.has_value()) << "Initialize failed: " << initResult.error();
     EXPECT_TRUE(model.IsValid());
@@ -160,18 +160,18 @@ TEST(MultiStructure, StructureAutoAssignedFromLandCovers) {
     basin.AddHydroUnit(2, 100);
     basin.AddLandCover("ground", "generic_land_cover", 1.0);
 
-    // InitializeWithBasin builds the SubBasin and auto-assigns structures from covers.
+    // InitializeWithBasin builds the Subbasin and auto-assigns structures from covers.
     ModelHydro model;
     auto initResult = model.InitializeWithBasin(settings, basin);
     ASSERT_TRUE(initResult.has_value()) << "Initialize failed: " << initResult.error();
-    SubBasin* subBasin = model.GetSubBasin();
+    Subbasin* subbasin = model.GetSubbasin();
 
     // Units matched the variant that fits their land covers.
-    EXPECT_EQ(subBasin->GetHydroUnit(0)->GetStructureId(), 1);
-    EXPECT_EQ(subBasin->GetHydroUnit(1)->GetStructureId(), 2);
+    EXPECT_EQ(subbasin->GetHydroUnit(0)->GetStructureId(), 1);
+    EXPECT_EQ(subbasin->GetHydroUnit(1)->GetStructureId(), 2);
 
     // The 'forest' brick exists only where forest is present (no zero-area brick).
-    EXPECT_TRUE(subBasin->GetHydroUnit(0)->HasBrick("forest"));
-    EXPECT_FALSE(subBasin->GetHydroUnit(1)->HasBrick("forest"));
-    EXPECT_TRUE(subBasin->GetHydroUnit(1)->HasBrick("ground"));
+    EXPECT_TRUE(subbasin->GetHydroUnit(0)->HasBrick("forest"));
+    EXPECT_FALSE(subbasin->GetHydroUnit(1)->HasBrick("forest"));
+    EXPECT_TRUE(subbasin->GetHydroUnit(1)->HasBrick("ground"));
 }

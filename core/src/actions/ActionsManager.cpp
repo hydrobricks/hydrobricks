@@ -2,7 +2,7 @@
 
 #include "Action.h"
 #include "ModelHydro.h"
-#include "SubBasin.h"
+#include "Subbasin.h"
 #include "Utils.h"
 
 ActionsManager::ActionsManager()
@@ -103,12 +103,16 @@ void ActionsManager::DateUpdate(double date) {
     }
 }
 
-SubBasin* ActionsManager::GetSubBasin() const {
-    return _model->GetSubBasin();
+Subbasin* ActionsManager::GetSubbasin() const {
+    return _model->GetSubbasin();
 }
 
 HydroUnit* ActionsManager::GetHydroUnitById(int id) const {
-    return _model->GetSubBasin()->GetHydroUnitById(id);
+    return _model->GetHydroUnitById(id);
+}
+
+std::vector<HydroUnit*> ActionsManager::GetHydroUnits() const {
+    return _model->GetHydroUnits();
 }
 
 bool ActionsManager::IsValid() const {

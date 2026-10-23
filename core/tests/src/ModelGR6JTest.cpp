@@ -36,11 +36,11 @@ TEST_F(ModelGR6JBasic, ModelBuildsCorrectly) {
     basinSettings.AddHydroUnit(1, 100);
     basinSettings.AddLandCover("ground", "", 1.0);
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
     GenerateStructureGR6J(_model);
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     EXPECT_TRUE(model.Initialize(_model, basinSettings));
     EXPECT_TRUE(model.IsValid());
 }
@@ -50,11 +50,11 @@ TEST_F(ModelGR6JBasic, ModelRunsCorrectly) {
     basinSettings.AddHydroUnit(1, 100);
     basinSettings.AddLandCover("ground", "", 1.0);
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
     GenerateStructureGR6J(_model);
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     EXPECT_TRUE(model.Initialize(_model, basinSettings));
     EXPECT_TRUE(model.IsValid());
 
@@ -70,11 +70,11 @@ TEST_F(ModelGR6JBasic, WaterBalanceClosesX2Zero) {
     basinSettings.AddHydroUnit(1, 100);
     basinSettings.AddLandCover("ground", "", 1.0);
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
     GenerateStructureGR6J(_model);
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     EXPECT_TRUE(model.Initialize(_model, basinSettings));
     EXPECT_TRUE(model.IsValid());
 
@@ -96,11 +96,11 @@ TEST_F(ModelGR6JBasic, WaterBalanceClosesX2ZeroWithSolver) {
     basinSettings.AddHydroUnit(1, 100);
     basinSettings.AddLandCover("ground", "", 1.0);
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
     GenerateStructureGR6J(_model, false);
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     EXPECT_TRUE(model.Initialize(_model, basinSettings));
     EXPECT_TRUE(model.IsValid());
 
@@ -122,11 +122,11 @@ TEST_F(ModelGR6JBasic, WaterBalanceClosesNoPrecip) {
     basinSettings.AddHydroUnit(1, 100);
     basinSettings.AddLandCover("ground", "", 1.0);
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
     GenerateStructureGR6J(_model);
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     EXPECT_TRUE(model.Initialize(_model, basinSettings));
     EXPECT_TRUE(model.IsValid());
 
@@ -153,11 +153,11 @@ TEST_F(ModelGR6JBasic, WaterBalanceClosesNoPET) {
     basinSettings.AddHydroUnit(1, 100);
     basinSettings.AddLandCover("ground", "", 1.0);
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
     GenerateStructureGR6J(_model);
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     EXPECT_TRUE(model.Initialize(_model, basinSettings));
     EXPECT_TRUE(model.IsValid());
 
@@ -184,15 +184,15 @@ TEST_F(ModelGR6JBasic, PositiveExchangeDischargeNonNegative) {
     basinSettings.AddHydroUnit(1, 100);
     basinSettings.AddLandCover("ground", "", 1.0);
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
     GenerateStructureGR6J(_model);
     _model.SelectHydroUnitBrick("uh_input");
     _model.SelectProcess("routing");
     _model.SetProcessParameterValue("exchange_factor", 1.0f);  // X2
 
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     EXPECT_TRUE(model.Initialize(_model, basinSettings));
     EXPECT_TRUE(model.IsValid());
 
@@ -209,15 +209,15 @@ TEST_F(ModelGR6JBasic, NegativeExchangeDischargeNonNegative) {
     basinSettings.AddHydroUnit(1, 100);
     basinSettings.AddLandCover("ground", "", 1.0);
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
     GenerateStructureGR6J(_model);
     _model.SelectHydroUnitBrick("uh_input");
     _model.SelectProcess("routing");
     _model.SetProcessParameterValue("exchange_factor", -3.0f);  // X2
 
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     EXPECT_TRUE(model.Initialize(_model, basinSettings));
     EXPECT_TRUE(model.IsValid());
 
@@ -234,15 +234,15 @@ TEST_F(ModelGR6JBasic, SmallX4Works) {
     basinSettings.AddHydroUnit(1, 100);
     basinSettings.AddLandCover("ground", "", 1.0);
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
     GenerateStructureGR6J(_model);
     _model.SelectHydroUnitBrick("uh_input");
     _model.SelectProcess("routing");
     _model.SetProcessParameterValue("uh_base_time", 0.51f);
 
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     EXPECT_TRUE(model.Initialize(_model, basinSettings));
     EXPECT_TRUE(model.IsValid());
 
@@ -259,15 +259,15 @@ TEST_F(ModelGR6JBasic, SmallX6Works) {
     basinSettings.AddHydroUnit(1, 100);
     basinSettings.AddLandCover("ground", "", 1.0);
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
     GenerateStructureGR6J(_model);
     _model.SelectHydroUnitBrick("uh_input");
     _model.SelectProcess("routing");
     _model.SetProcessParameterValue("exp_store_coeff", 0.05f);  // X6 minimum
 
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     EXPECT_TRUE(model.Initialize(_model, basinSettings));
     EXPECT_TRUE(model.IsValid());
 
@@ -291,8 +291,8 @@ void RunGR6J(SettingsModel& model, float X1, float X2, float X3, float X4, float
     basinSettings.AddHydroUnit(1, 100);
     basinSettings.AddLandCover("ground", "", 1.0);
 
-    SubBasin subBasin;
-    ASSERT_TRUE(subBasin.Initialize(basinSettings));
+    Subbasin subbasin;
+    ASSERT_TRUE(subbasin.Initialize(basinSettings));
 
     GenerateStructureGR6J(model);
     model.SelectHydroUnitBrick("production_store");
@@ -305,7 +305,7 @@ void RunGR6J(SettingsModel& model, float X1, float X2, float X3, float X4, float
     model.SetProcessParameterValue("exchange_threshold", X5);
     model.SetProcessParameterValue("exp_store_coeff", X6);
 
-    ModelHydro hydro(&subBasin);
+    ModelHydro hydro(&subbasin);
     ASSERT_TRUE(hydro.Initialize(model, basinSettings));
     ASSERT_TRUE(hydro.IsValid());
     ASSERT_TRUE(hydro.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(tsPrecip))));

@@ -1,4 +1,4 @@
-id,elevation,area_open,area_forest,area_wetland,land_use,awc,soil_depth,mez
+id,elevation,area_open,area_forest,area_wetland,cover_class,awc,soil_depth,mez
 -,m,m2,m2,m2,-,%,m,-
 1,2799,3250000.0,0.0,0.0,rock,1.27,0.13,28
 2,3038,250000.0,0.0,0.0,glacier_ice,0.0,0.0,30

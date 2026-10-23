@@ -285,21 +285,48 @@ def test_hbv96_zero_precipitation_produces_no_discharge(tmp_path):
 def test_hbv96_maxbas_spreads_the_peak(tmp_path):
     """A larger MAXBAS must lower and spread a storm peak (same total volume)."""
 
-    def _q_storm(maxbas: float) -> np.ndarray:
+    def _q_storm(maxbas: float) -> tuple[np.ndarray, float]:
         # Warm (rain only), dry except a 3-day 50 mm/d storm.
         n_days = 60
         precip = [0.0] * n_days
         precip[10:13] = [50.0, 50.0, 50.0]
         meteo = _meteo_csv_series(tmp_path, precip, [1.0] * n_days, [10.0] * n_days)
         model, _ = _run_model(
-            tmp_path, meteo, n_days, params={"maxbas": maxbas, "k_uz": 0.3}
+            tmp_path,
+            meteo,
+            n_days,
+            params={"maxbas": maxbas, "k_uz": 0.3},
+            record_all=True,
         )
-        return model.get_outlet_discharge()
+        # The baseflow still in transit through the routing at the end of the run.
+        in_routing = np.nansum(
+            model.get_recorded_hydro_unit_values("routing:water_content")[:, -1]
+        )
+        return model.get_outlet_discharge(), in_routing
 
-    q1 = _q_storm(1.0)
-    q4 = _q_storm(4.0)
+    q1, routed1 = _q_storm(1.0)
+    q4, routed4 = _q_storm(4.0)
     assert np.max(q4) < np.max(q1)
-    assert np.sum(q4) == pytest.approx(np.sum(q1), rel=1e-3)
+    assert np.sum(q4) + routed4 == pytest.approx(np.sum(q1) + routed1, rel=1e-9)
+
+
+def test_hbv96_percolation_never_exceeds_its_rate(tmp_path):
+    """A storm filling the empty upper zone must not percolate faster than the
+    constant percolation rate, whatever share of the outflow the solver gives it."""
+    n_days = 30
+    precip = [0.0] * n_days
+    precip[10:13] = [50.0, 50.0, 50.0]
+    meteo = _meteo_csv_series(tmp_path, precip, [1.0] * n_days, [10.0] * n_days)
+    model, _ = _run_model(
+        tmp_path,
+        meteo,
+        n_days,
+        params={"k_uz": 0.3, "perc": 0.5},
+        solver="exponential_euler",
+        record_all=True,
+    )
+    percolation = model.get_recorded_hydro_unit_values("upper_zone:percolation:output")
+    assert np.nanmax(percolation) <= 0.5 + 1e-9
 
 
 def test_hbv96_rain_on_cold_snowpack_is_retained(tmp_path):
@@ -536,6 +563,30 @@ def test_hbv96_per_class_soil_capillary_fanout_balance_closes(tmp_path):
     params["cflux"] = 1.0
     model, forcing = _run_2cover(tmp_path, share_soil=False, params=params)
     assert _balance(model, forcing) == pytest.approx(0, abs=1e-6)
+
+
+def test_hbv96_per_class_soil_capacity_is_expressed_over_the_cover(tmp_path):
+    """fc_<cover> is the cover's own capacity: per-class soils with the same
+    parameters as a shared soil give the same ET and discharge (each store's
+    capacity and ET are scaled by its cover's area fraction)."""
+    common = {
+        k: v
+        for k, v in _PARAMS_2COVER_PERCLASS.items()
+        if not k.startswith(("fc_", "lp_", "beta_"))
+    }
+    common.update({"beta_open": 2.0, "beta_forest": 2.0, "cflux": 1.0})
+    per_class = {**common, "fc_open": 200.0, "fc_forest": 200.0}
+    per_class.update({"lp_open": 0.9, "lp_forest": 0.9})
+    shared = {**common, "fc": 200.0, "lp": 0.9}
+
+    (tmp_path / "pc").mkdir()
+    (tmp_path / "sh").mkdir()
+    model_pc, _ = _run_2cover(tmp_path / "pc", share_soil=False, params=per_class)
+    model_sh, _ = _run_2cover(tmp_path / "sh", share_soil=True, params=shared)
+    assert model_pc.get_total_et() == pytest.approx(model_sh.get_total_et(), rel=1e-6)
+    assert model_pc.get_total_outlet_discharge() == pytest.approx(
+        model_sh.get_total_outlet_discharge(), rel=1e-6
+    )
 
 
 def _run_open_forest(

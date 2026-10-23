@@ -82,7 +82,7 @@ class Process {
      * model builder before SetParameters so per-unit (spatial) parameter overrides can be
      * resolved. Non-virtual so subclass SetHydroUnitProperties overrides cannot bypass it.
      *
-     * @param unit the related hydro unit (may be null for sub-basin processes).
+     * @param unit the related hydro unit (may be null for subbasin processes).
      * @param brick the brick owning this process.
      */
     void SetParentContext(HydroUnit* unit, Brick* brick);

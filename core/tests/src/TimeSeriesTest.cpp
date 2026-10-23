@@ -24,6 +24,17 @@ TEST(TimeSeriesDataRegular, SetValueTooShort) {
     EXPECT_FALSE(tsData.SetValues({1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0}));
 }
 
+TEST(TimeSeriesDataRegular, SetValueHourlyEndRoundedDifferently) {
+    // 1981-01-01 to 2020-12-31 23:00, hourly. The end date as the Python side passes it
+    // differs from the start incremented by 350639 hours in the last bits only.
+    double start = GetMJD(1981, 1, 1);
+    double end = 59214.95833333333;
+    ASSERT_NE(IncrementDateBy(start, 350639, TimeUnit::Hour), end);
+    TimeSeriesDataRegular tsData = TimeSeriesDataRegular(start, end, 1, TimeUnit::Hour);
+    EXPECT_TRUE(tsData.SetValues(vecDouble(350640, 1.0)));
+    EXPECT_DOUBLE_EQ(tsData.GetValueFor(end), 1.0);
+}
+
 TEST(TimeSeries, ParseFile) {
     std::vector<std::unique_ptr<TimeSeries>> vecTimeSeries;
     EXPECT_TRUE(TimeSeries::Parse("files/time-series-data.nc", vecTimeSeries));

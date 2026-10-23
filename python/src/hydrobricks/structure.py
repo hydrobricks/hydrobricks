@@ -50,7 +50,7 @@ class Node:
     name: str
     role: str  # brick | splitter | forcing | outlet | atmosphere
     kind: str = ""  # brick/splitter type (e.g. 'storage', 'snow_rain:linear')
-    level: str = ""  # hydro_unit | sub_basin
+    level: str = ""  # hydro_unit | subbasin
     is_land_cover: bool = False
     computed_directly: bool = False
     forcing: list[str] = field(default_factory=list)
@@ -181,15 +181,13 @@ class StructureGraph:
             add_forcing(name, item.get("forcing", []))
 
         # Nodes: bricks then splitters (so targets resolve to existing nodes).
-        for brick in variant["hydro_unit_bricks"] + variant["sub_basin_bricks"]:
+        for brick in variant["hydro_unit_bricks"] + variant["subbasin_bricks"]:
             add_component(brick, "brick")
-        for splitter in (
-            variant["hydro_unit_splitters"] + variant["sub_basin_splitters"]
-        ):
+        for splitter in variant["hydro_unit_splitters"] + variant["subbasin_splitters"]:
             add_component(splitter, "splitter")
 
         # Edges: brick processes (fluxes), with the process name on each edge.
-        for brick in variant["hydro_unit_bricks"] + variant["sub_basin_bricks"]:
+        for brick in variant["hydro_unit_bricks"] + variant["subbasin_bricks"]:
             for process in brick.get("processes", []):
                 add_forcing(brick["name"], process.get("forcing", []))
                 outputs = process.get("outputs", [])
@@ -216,9 +214,7 @@ class StructureGraph:
                     )
 
         # Edges: splitter outputs (precipitation routing).
-        for splitter in (
-            variant["hydro_unit_splitters"] + variant["sub_basin_splitters"]
-        ):
+        for splitter in variant["hydro_unit_splitters"] + variant["subbasin_splitters"]:
             add_forcing(splitter["name"], splitter.get("forcing", []))
             for out in splitter.get("outputs", []):
                 ensure_sink(out["target"])
@@ -293,18 +289,18 @@ class StructureGraph:
             'arrowsize=0.8, color="#333333"];',
         ]
         for node in self.nodes:
-            if node.level != "sub_basin":
+            if node.level != "subbasin":
                 lines.append(f'    "{node.name}" [{self._dot_node_attrs(node)}];')
         # Group the basin-level (catchment) stores in their own shaded region.
-        sub_basin = [n for n in self.nodes if n.level == "sub_basin"]
-        if sub_basin:
-            lines.append("    subgraph cluster_sub_basin {")
-            lines.append('        label="Sub-basin (catchment level)";')
+        subbasin = [n for n in self.nodes if n.level == "subbasin"]
+        if subbasin:
+            lines.append("    subgraph cluster_subbasin {")
+            lines.append('        label="Subbasin (catchment level)";')
             lines.append(
                 f'        style="filled"; fillcolor="{COLOR_SUB_BASIN_BG}"; '
                 f'color="{COLOR_SUB_BASIN_BG}"; fontcolor="#555555";'
             )
-            for node in sub_basin:
+            for node in subbasin:
                 lines.append(f'        "{node.name}" [{self._dot_node_attrs(node)}];')
             lines.append("    }")
         for edge in self.edges:
@@ -467,7 +463,7 @@ class StructureGraph:
                 inst = " (instantaneous)" if edge.instantaneous else ""
                 out.append(f"      {proc} -> {edge.target}{flux}{inst}")
 
-        for level, header in (("hydro_unit", "Hydro unit"), ("sub_basin", "Sub-basin")):
+        for level, header in (("hydro_unit", "Hydro unit"), ("subbasin", "Subbasin")):
             components = [
                 n
                 for n in self.nodes
@@ -573,20 +569,20 @@ class StructureGraph:
             color="#333333",
         )
         for node in self.nodes:
-            if node.level != "sub_basin":
+            if node.level != "subbasin":
                 dot.node(node.name, **self._gv_node_kwargs(node))
         # Group the basin-level (catchment) stores in their own shaded region.
-        sub_basin = [n for n in self.nodes if n.level == "sub_basin"]
-        if sub_basin:
-            with dot.subgraph(name="cluster_sub_basin") as c:
+        subbasin = [n for n in self.nodes if n.level == "subbasin"]
+        if subbasin:
+            with dot.subgraph(name="cluster_subbasin") as c:
                 c.attr(
-                    label="Sub-basin (catchment level)",
+                    label="Subbasin (catchment level)",
                     style="filled",
                     fillcolor=COLOR_SUB_BASIN_BG,
                     color=COLOR_SUB_BASIN_BG,
                     fontcolor="#555555",
                 )
-                for node in sub_basin:
+                for node in subbasin:
                     c.node(node.name, **self._gv_node_kwargs(node))
         for edge in self.edges:
             dot.edge(edge.source, edge.target, **self._gv_edge_kwargs(edge))

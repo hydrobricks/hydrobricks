@@ -300,12 +300,18 @@ class HydroUnit {
      * contributes the snow-free ground albedo:
      *   albedo = albedoLand * (1 - snowfrac) + sum_c fraction_c * snowAlbedo_c
      *
+     * Restricted to a single land cover, the mean collapses to the switch of a PREVAH
+     * hydrotope: a snowpack covers its parent entirely, so the albedo is that of the
+     * snow surface when the cover holds snow, and albedoLand otherwise.
+     *
      * @param albedoLand the snow-free ground albedo [-].
+     * @param cover restrict the albedo to this land cover (nullptr: the whole unit).
      * @param sweThreshold snow water equivalent above which a snowpack counts as
      *                     snow-covered [mm].
-     * @return the area-weighted albedo of the hydro unit [0, 1].
+     * @return the albedo seen by the ET of the unit, or of the cover [0, 1].
      */
-    [[nodiscard]] double GetSnowAlbedo(double albedoLand, double sweThreshold = 0.1) const;
+    [[nodiscard]] double GetSnowAlbedo(double albedoLand, const LandCover* cover = nullptr,
+                                       double sweThreshold = 0.1) const;
 
     /**
      * Get a land cover by its name.

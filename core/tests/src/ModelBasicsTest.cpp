@@ -63,10 +63,10 @@ TEST_F(ModelBasics, Model1BuildsCorrectly) {
     SettingsBasin basinSettings;
     basinSettings.AddHydroUnit(1, 100);
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     ASSERT_TRUE(model.Initialize(_model1, basinSettings));
 
     EXPECT_TRUE(model.IsValid());
@@ -76,10 +76,10 @@ TEST_F(ModelBasics, Model1RunsCorrectly) {
     SettingsBasin basinSettings;
     basinSettings.AddHydroUnit(1, 100);
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     ASSERT_TRUE(model.Initialize(_model1, basinSettings));
 
     ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));
@@ -92,10 +92,10 @@ TEST_F(ModelBasics, Model2BuildsCorrectly) {
     SettingsBasin basinSettings;
     basinSettings.AddHydroUnit(1, 100);
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     ASSERT_TRUE(model.Initialize(_model2, basinSettings));
 
     EXPECT_TRUE(model.IsValid());
@@ -105,10 +105,10 @@ TEST_F(ModelBasics, Model2RunsCorrectly) {
     SettingsBasin basinSettings;
     basinSettings.AddHydroUnit(1, 100);
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     ASSERT_TRUE(model.Initialize(_model2, basinSettings));
 
     ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));
@@ -121,10 +121,10 @@ TEST_F(ModelBasics, TimeSeriesEndsTooEarly) {
     SettingsBasin basinSettings;
     basinSettings.AddHydroUnit(1, 100);
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     ASSERT_TRUE(model.Initialize(_model1, basinSettings));
 
     auto data = std::make_unique<TimeSeriesDataRegular>(GetMJD(2020, 1, 1), GetMJD(2020, 1, 9), 1, TimeUnit::Day);
@@ -138,10 +138,10 @@ TEST_F(ModelBasics, TimeSeriesStartsTooLate) {
     SettingsBasin basinSettings;
     basinSettings.AddHydroUnit(1, 100);
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     ASSERT_TRUE(model.Initialize(_model1, basinSettings));
 
     auto data = std::make_unique<TimeSeriesDataRegular>(GetMJD(2020, 1, 2), GetMJD(2020, 1, 10), 1, TimeUnit::Day);
@@ -155,10 +155,10 @@ TEST_F(ModelBasics, ModelDumpsOutputs) {
     SettingsBasin basinSettings;
     basinSettings.AddHydroUnit(1, 100);
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     ASSERT_TRUE(model.Initialize(_model2, basinSettings));
 
     ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));
@@ -173,10 +173,10 @@ TEST_F(ModelBasics, InMemoryHydroUnitValuesMatchLogger) {
     SettingsBasin basinSettings;
     basinSettings.AddHydroUnit(1, 100);
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     ASSERT_TRUE(model.Initialize(_model1, basinSettings));
 
     ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));
@@ -221,10 +221,10 @@ TEST_F(ModelBasics, Model1WithEulerExplicitWithNoOutflowClosesBalance) {
     SettingsBasin basinSettings;
     basinSettings.AddHydroUnit(1, 100);
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     SettingsModel settingsModel = _model1;
     settingsModel.SetSolver("euler_explicit");
     settingsModel.SelectHydroUnitBrick("storage");
@@ -257,10 +257,10 @@ TEST_F(ModelBasics, Model1WithHeunExplicitWithNoOutflowClosesBalance) {
     SettingsBasin basinSettings;
     basinSettings.AddHydroUnit(1, 100);
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     SettingsModel settingsModel = _model1;
     settingsModel.SetSolver("heun_explicit");
     settingsModel.SelectHydroUnitBrick("storage");
@@ -293,10 +293,10 @@ TEST_F(ModelBasics, Model1WithRungeKuttaWithNoOutflowClosesBalance) {
     SettingsBasin basinSettings;
     basinSettings.AddHydroUnit(1, 100);
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     SettingsModel settingsModel = _model1;
     settingsModel.SetSolver("runge_kutta");
     settingsModel.SelectHydroUnitBrick("storage");
@@ -329,10 +329,10 @@ TEST_F(ModelBasics, Model1WithEulerExplicitClosesBalance) {
     SettingsBasin basinSettings;
     basinSettings.AddHydroUnit(1, 100);
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     SettingsModel settingsModel = _model1;
     settingsModel.SetSolver("euler_explicit");
     ASSERT_TRUE(model.Initialize(settingsModel, basinSettings));
@@ -361,10 +361,10 @@ TEST_F(ModelBasics, Model1WithHeunExplicitClosesBalance) {
     SettingsBasin basinSettings;
     basinSettings.AddHydroUnit(1, 100);
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     SettingsModel settingsModel = _model1;
     settingsModel.SetSolver("heun_explicit");
     ASSERT_TRUE(model.Initialize(settingsModel, basinSettings));
@@ -393,10 +393,10 @@ TEST_F(ModelBasics, Model2ClosesBalance) {
     SettingsBasin basinSettings;
     basinSettings.AddHydroUnit(1, 100);
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     ASSERT_TRUE(model.Initialize(_model2, basinSettings));
 
     ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));

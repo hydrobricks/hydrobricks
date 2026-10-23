@@ -4,7 +4,7 @@
 # original PREVAH control file (cal_2020pest.inp) and every parameter is the value
 # calibrated there. Nothing is calibrated in hydrobricks.
 #
-# The PREVAH land-use tables cannot be expressed here, so this file is loaded by
+# The PREVAH cover tables cannot be expressed here, so this file is loaded by
 # prevah_ticino.py, which adds them and runs the model. Relative paths are resolved
 # from this file's directory.
 
@@ -36,7 +36,7 @@ hydro_units:
   file: ../../tests/files/catchments/ch_ticino_bellinzona/hydro_units.csv
   columns:
     elevation: elevation
-    land_use: land_use      # the PREVAH land use of the hydrotope
+    cover_class: cover_class      # the PREVAH cover class of the hydrotope
     awc: awc                # available water content of the soil [Vol-%]
     soil_depth: soil_depth  # soil depth [m]
     mez: mez                # meteo zone, an elevation band of this catchment

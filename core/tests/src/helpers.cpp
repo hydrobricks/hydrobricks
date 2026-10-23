@@ -56,9 +56,9 @@ bool GenerateStructureSocont(SettingsModel& settings, vecStr& landCoverTypes, ve
     }
 
     // Basin storages for contributions from the glacierized area
-    settings.AddSubBasinBrick("glacier_area_rain_snowmelt_storage", "storage");
+    settings.AddSubbasinBrick("glacier_area_rain_snowmelt_storage", "storage");
     settings.AddBrickProcess("outflow", "outflow:linear", "outlet");
-    settings.AddSubBasinBrick("glacier_area_icemelt_storage", "storage");
+    settings.AddSubbasinBrick("glacier_area_icemelt_storage", "storage");
     settings.AddBrickProcess("outflow", "outflow:linear", "outlet");
 
     // Infiltration and overflow

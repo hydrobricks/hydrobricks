@@ -49,10 +49,10 @@ class ModelSpinup : public ::testing::Test {
         SettingsBasin basinSettings;
         basinSettings.AddHydroUnit(1, 100);
 
-        SubBasin subBasin;
-        EXPECT_TRUE(subBasin.Initialize(basinSettings));
+        Subbasin subbasin;
+        EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
-        ModelHydro model(&subBasin);
+        ModelHydro model(&subbasin);
         EXPECT_TRUE(model.Initialize(modelSettings, basinSettings));
         EXPECT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(BuildConstantPrecip())));
         EXPECT_TRUE(model.AttachTimeSeriesToHydroUnits());
@@ -95,10 +95,10 @@ TEST_F(ModelSpinup, WholePeriodSpinupMatchesManualTwoPassRun) {
     SettingsBasin basinSettings;
     basinSettings.AddHydroUnit(1, 100);
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     ASSERT_TRUE(model.Initialize(modelSettings, basinSettings));
     ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(BuildConstantPrecip())));
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
@@ -123,10 +123,10 @@ TEST_F(ModelSpinup, SpinupIsRepeatableAcrossResets) {
     SettingsBasin basinSettings;
     basinSettings.AddHydroUnit(1, 100);
 
-    SubBasin subBasin;
-    EXPECT_TRUE(subBasin.Initialize(basinSettings));
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinSettings));
 
-    ModelHydro model(&subBasin);
+    ModelHydro model(&subbasin);
     ASSERT_TRUE(model.Initialize(modelSettings, basinSettings));
     ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(BuildConstantPrecip())));
     ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());

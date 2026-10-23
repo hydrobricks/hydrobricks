@@ -7,13 +7,13 @@ import numpy as np
 
 from hydrobricks._exceptions import ConfigurationError, ModelError
 from hydrobricks.land_covers import (
-    PREVAH_LAND_USE_COVER_TYPES,
-    PREVAH_LAND_USE_FIELD_CAPACITY_FIXED,
-    PREVAH_LAND_USE_FIELD_CAPACITY_MIN,
-    PREVAH_LAND_USE_FIELD_CAPACITY_MIN_DEF,
-    PREVAH_LAND_USE_ROOT_DEPTH,
-    PREVAH_LAND_USE_SI_MAX,
-    PREVAH_LAND_USE_VEG_COV,
+    PREVAH_COVER_FIELD_CAPACITY_FIXED,
+    PREVAH_COVER_FIELD_CAPACITY_MIN,
+    PREVAH_COVER_FIELD_CAPACITY_MIN_DEF,
+    PREVAH_COVER_ROOT_DEPTH,
+    PREVAH_COVER_SI_MAX,
+    PREVAH_COVER_TYPES,
+    PREVAH_COVER_VEG_COV,
 )
 from hydrobricks.models.model import Model
 from hydrobricks.modules.glacier import GlacierModule
@@ -166,21 +166,17 @@ class PrevahUniBE(Model):
         Optional snow redistribution process (e.g. 'transport:snow_slide').
     share_soil : bool
         Share a single soil moisture store across the soil-bearing land covers
-        (default: True). A PREVAH hydrotope carries one land use and one soil, so a
-        shared store is the right model when each hydro unit is dominated by one
-        cover. Set it to False when a unit mixes covers and you want PREVAH's
-        per-land-use soil parameterization: each cover then gets its own store with
-        its own ``fc_<cover>`` and ``lp_<cover>``, and the percolation is gated by
-        their area-weighted mean saturation. Note that a per-cover store is fed by
-        its land cover, whose outgoing fluxes already carry the cover area fraction,
-        so ``fc_<cover>`` is expressed over the whole hydro unit rather than over the
-        cover itself (as for the per-class soils of
-        :class:`~hydrobricks.models.hbv.HBV`): the capacities of the covers add up to
-        the unit's soil storage. It is therefore only meaningful when every cover
-        holds a share of every unit: a cover with no area in a unit still contributes
-        its capacity to that unit's percolation gate while its store stays empty,
-        which would hold the gate shut. Keep the shared store for a discretization
-        that gives each unit a single land use (a PREVAH hydrotope).
+        (default: True). Set it to False for PREVAH's per-cover-class soil
+        parameterization: each cover then gets its own store with its own
+        ``fc_<cover>`` and ``lp_<cover>``, and the percolation is gated by their
+        area-weighted mean saturation. With ``soil_et_process='et:prevah'``, each
+        store then also reads the snow-albedo reduction from its own cover rather
+        than from the unit as a whole. ``fc_<cover>`` is the capacity of the cover's
+        own soil (in mm over the cover area); each unit scales it by the cover's area
+        fraction, read live so that land cover changes apply. A cover absent from a
+        unit therefore holds no capacity there and does not affect its percolation,
+        which suits both a discretization giving each unit a single cover class (a
+        PREVAH hydrotope) and units mixing several covers.
     forest_interception : bool
         Enable the canopy interception (default: True). ``False`` disables it
         unless ``interception_covers`` names covers explicitly.
@@ -191,10 +187,10 @@ class PrevahUniBE(Model):
         on every hydrotope). With canopy_et_process='et:open_water_prevah', each
         canopy gets an ``et_factor`` parameter (alias
         ``canopy_et_factor[_<cover>]``) for the monthly PREVAH veg_cov fraction.
-        A cover named after a PREVAH land use (e.g. ``pasture``) gets its monthly
+        A cover named after a PREVAH cover class (e.g. ``pasture``) gets its monthly
         tables from :meth:`generate_parameters`; for a generic name (``open``,
-        ``forest``), call :meth:`apply_land_use` with the land use it stands for,
-        or the capacity and the factor stay constant.
+        ``forest``), call :meth:`apply_cover_parameters` with the cover class it
+        stands for, or the capacity and the factor stay constant.
     canopy_interception_process : str
         Throughfall process of the forest canopy (default: 'interception:menzel',
         PREVAH's Menzel (1997) asymptotic filling). Use 'outflow:threshold' for a
@@ -205,7 +201,9 @@ class PrevahUniBE(Model):
         from the unit's snow-covered fraction, which suppresses the soil ET under
         snow). The snow albedo is age-dependent (0.4 + 0.45 exp(-0.15 age), ~0.85
         fresh to 0.4 old); ``albedo_land`` (default 0.2) is the snow-free ground
-        albedo (neutral). 'et:hbv' is the plain HBV limitation.
+        albedo (neutral). With ``share_soil=False`` the reduction reads the snow of
+        the cover owning the store instead, as a PREVAH hydrotope does. 'et:hbv' is
+        the plain HBV limitation.
     canopy_et_process : str
         Canopy evaporation process (default: 'et:open_water_prevah', the potential
         rate with the same age-dependent snow-albedo reduction). 'et:open_water'
@@ -236,32 +234,32 @@ class PrevahUniBE(Model):
     the groundwater store SLZ1 directly, the rest passing through the soil
     routine.
 
-    The original PREVAH also carries a fixed table of land uses (coniferous /
+    The original PREVAH also carries a fixed table of cover classes (coniferous /
     deciduous / mixed forest, pasture, cereals, alpine meadow, grapes, ...), but only
-    the six above behave differently: every other land use runs the same routines and
+    the six above behave differently: every other cover class runs the same routines and
     differs only through monthly vegetation tables. They are therefore ordinary land
     covers, declared under their own name and typed ``open`` or ``forest``:
 
     .. code-block:: python
 
-        from hydrobricks.land_covers import PREVAH_LAND_USE_COVER_TYPES
+        from hydrobricks.land_covers import PREVAH_COVER_TYPES
 
         covers = ["coniferous_forest", "pasture", "wetland"]
         model = PrevahUniBE(
             land_cover_names=covers,
-            land_cover_types=[PREVAH_LAND_USE_COVER_TYPES[c] for c in covers],
+            land_cover_types=[PREVAH_COVER_TYPES[c] for c in covers],
             interception_covers=covers,
             canopy_et_process="et:open_water_prevah",
         )
         parameters = model.generate_parameters()
         ...
         for cover in covers:
-            model.apply_land_use(parameters, cover)
+            model.apply_cover_parameters(parameters, cover)
 
-    :meth:`apply_land_use` sets the monthly canopy parameters of a cover from
-    PREVAH's land-use tables (``PREVAH_LAND_USE_*`` in :mod:`hydrobricks.land_covers`);
-    :meth:`land_use_field_capacity` gives the soil moisture capacity PREVAH derives
-    from a soil map, and :meth:`apply_land_use_field_capacity` sets it per hydro unit
+    :meth:`apply_cover_parameters` sets the monthly canopy parameters of a cover from
+    PREVAH's cover tables (``PREVAH_COVER_*`` in :mod:`hydrobricks.land_covers`);
+    :meth:`cover_field_capacity` gives the soil moisture capacity PREVAH derives
+    from a soil map, and :meth:`apply_cover_field_capacity` sets it per hydro unit
     and per month in one call.
 
     PREVAH processes by default
@@ -277,8 +275,9 @@ class PrevahUniBE(Model):
     - a vapour-density Hamon PET (``forcing.compute_pet(method=
       "Hamon_vapor_density")``): the snow evaporation has no parameter to absorb a
       PET of another magnitude (pyet's default Hamon runs ~1.5 times hotter);
-    - the monthly vegetation tables of the land uses (``apply_land_use``, applied
-      automatically to the covers named after a PREVAH land use).
+    - the monthly vegetation tables of the cover classes
+      (``apply_cover_parameters``, applied automatically to the covers named
+      after a PREVAH cover class).
 
     Any of them can be swapped for a simpler process through the options above
     (e.g. ``snow_melt_process='melt:degree_day_seasonal'`` without a radiation
@@ -363,9 +362,9 @@ class PrevahUniBE(Model):
         receives water only from the covers.
 
         A single soil moisture store is shared by the soil covers by default (a
-        PREVAH hydrotope carries one land use and one soil); ``share_soil=False``
+        PREVAH hydrotope carries one cover class and one soil); ``share_soil=False``
         gives each cover its own store and its own field capacity, as PREVAH
-        parameterizes the soil per land-use class. The soil store(s) also gate the
+        parameterizes the soil per cover class. The soil store(s) also gate the
         soil-moisture-dependent percolation: with several, the percolation reads
         their area-weighted mean saturation.
         """
@@ -479,7 +478,10 @@ class PrevahUniBE(Model):
         # the CU fraction (lp = CU). The overflow is a numerical safety only (the
         # infiltration vanishes at FC). With soil_et_process='et:prevah' the potential
         # rate additionally carries the PREVAH snow-albedo reduction (1 - albedo)/0.8,
-        # driven by the unit's snow-covered fraction (ET-under-snow suppression).
+        # driven by the unit's snow-covered fraction (ET-under-snow suppression). One
+        # store per cover reads the snow of that cover alone (the cover as gate brick),
+        # as a PREVAH hydrotope does; a shared store spans several covers, so it keeps
+        # the mean over the unit.
         soil_et = self.options["soil_et_process"]
         if soil_et not in ("et:hbv", "et:prevah"):
             raise ConfigurationError(
@@ -510,8 +512,18 @@ class PrevahUniBE(Model):
                     "overflow": {"kind": "overflow", "target": "upper_zone"},
                 },
             }
-            if not self._shared_soil and multi_cover:
-                soil["alias_suffix"] = f"_{cover_name}"
+            if not self._shared_soil:
+                # The store represents its cover's area: fc_<cover> is the cover's own
+                # capacity, and the capacity and the ET are scaled by the cover's area
+                # fraction in each unit. A cover absent from a unit holds no capacity,
+                # so it does not dilute the percolation gate.
+                soil["area_of"] = cover_name
+                if multi_cover:
+                    soil["alias_suffix"] = f"_{cover_name}"
+                # The snow-albedo reduction of the soil ET is read from the cover
+                # owning the store rather than from the whole unit.
+                if soil_et == "et:prevah":
+                    soil["processes"]["et"]["gate"] = cover_name
             self.structure[soil_name] = soil
 
         # Upper zone (SUZ): threshold surface runoff, interflow and the
@@ -526,8 +538,8 @@ class PrevahUniBE(Model):
                     "kind": "percolation:prevah",
                     "target": "slz1",
                     # With one soil store per cover, the percolation is gated by their
-                    # area-weighted mean saturation (the contents already carry the
-                    # cover area fractions).
+                    # area-weighted mean saturation (the contents and the capacities
+                    # both carry the cover area fractions).
                     "gate": self._gate_bricks(),
                 },
             },
@@ -583,43 +595,43 @@ class PrevahUniBE(Model):
         }
 
     @staticmethod
-    def land_use_interception_capacity(land_use: str) -> list[float]:
+    def cover_interception_capacity(cover_class: str) -> list[float]:
         """
-        Monthly canopy interception capacity of a PREVAH land use.
+        Monthly canopy interception capacity of a PREVAH cover class.
 
         PREVAH fills its interception store up to ``si_max * veg_cov``: the maximal
         storage scaled by the fraction of the surface actually covered by vegetation.
 
         Parameters
         ----------
-        land_use
-            Name of the land use (e.g. ``'pasture'``); see
-            :data:`~hydrobricks.land_covers.PREVAH_LAND_USE_COVER_TYPES`.
+        cover_class
+            Name of the cover class (e.g. ``'pasture'``); see
+            :data:`~hydrobricks.land_covers.PREVAH_COVER_TYPES`.
 
         Returns
         -------
         The 12 monthly capacities [mm], from January to December.
         """
-        PrevahUniBE._check_land_use(land_use)
+        PrevahUniBE._check_cover_class(cover_class)
 
         return [
             s * v
             for s, v in zip(
-                PREVAH_LAND_USE_SI_MAX[land_use], PREVAH_LAND_USE_VEG_COV[land_use]
+                PREVAH_COVER_SI_MAX[cover_class], PREVAH_COVER_VEG_COV[cover_class]
             )
         ]
 
     @staticmethod
-    def land_use_field_capacity(
-        land_use: str,
+    def cover_field_capacity(
+        cover_class: str,
         available_water_content: float,
         soil_depth: float | None = None,
     ) -> list[float]:
         """
-        Monthly soil moisture storage capacity of a PREVAH land use.
+        Monthly soil moisture storage capacity of a PREVAH cover class.
 
         PREVAH derives the plant-available storage from the soil's available water
-        content and the monthly rooting depth of the land use::
+        content and the monthly rooting depth of the cover class::
 
             fc(month) = awc * min(root_depth(month) + 0.05, soil_depth) * 10
 
@@ -640,9 +652,9 @@ class PrevahUniBE(Model):
 
         Parameters
         ----------
-        land_use
-            Name of the land use; see
-            :data:`~hydrobricks.land_covers.PREVAH_LAND_USE_COVER_TYPES`.
+        cover_class
+            Name of the cover class; see
+            :data:`~hydrobricks.land_covers.PREVAH_COVER_TYPES`.
         available_water_content
             Available water content of the soil [Vol-%], from a soil map (the ``NFC``
             column of a PREVAH hydrotope table).
@@ -654,17 +666,17 @@ class PrevahUniBE(Model):
         -------
         The 12 monthly capacities [mm], from January to December.
         """
-        PrevahUniBE._check_land_use(land_use)
+        PrevahUniBE._check_cover_class(cover_class)
 
-        cover = PREVAH_LAND_USE_COVER_TYPES[land_use]
-        if cover in PREVAH_LAND_USE_FIELD_CAPACITY_FIXED:
-            return [PREVAH_LAND_USE_FIELD_CAPACITY_FIXED[cover]] * 12
+        cover = PREVAH_COVER_TYPES[cover_class]
+        if cover in PREVAH_COVER_FIELD_CAPACITY_FIXED:
+            return [PREVAH_COVER_FIELD_CAPACITY_FIXED[cover]] * 12
 
-        minimum = PREVAH_LAND_USE_FIELD_CAPACITY_MIN.get(
-            cover, PREVAH_LAND_USE_FIELD_CAPACITY_MIN_DEF
+        minimum = PREVAH_COVER_FIELD_CAPACITY_MIN.get(
+            cover, PREVAH_COVER_FIELD_CAPACITY_MIN_DEF
         )
         values = []
-        for depth in PREVAH_LAND_USE_ROOT_DEPTH[land_use]:
+        for depth in PREVAH_COVER_ROOT_DEPTH[cover_class]:
             thickness = depth + 0.05
             if soil_depth is not None:
                 thickness = min(thickness, soil_depth)
@@ -672,11 +684,11 @@ class PrevahUniBE(Model):
 
         return values
 
-    def apply_land_use_field_capacity(
+    def apply_cover_field_capacity(
         self,
         parameters: Any,
         hydro_units: Any,
-        land_use: Any,
+        cover_class: Any,
         available_water_content: Any,
         soil_depth: Any = None,
         cover_name: str | None = None,
@@ -685,10 +697,10 @@ class PrevahUniBE(Model):
         Set the soil moisture capacity per hydro unit *and* per month, as PREVAH does.
 
         PREVAH's capacity varies in space (through the soil map) and through the year
-        (through the rooting depth of the land use), and the two do not separate into
+        (through the rooting depth of the cover class), and the two do not separate into
         a per-unit value times a shared monthly shape, because each unit's own soil
         depth caps its rooting depth. This method builds the full per-unit monthly
-        table with :meth:`land_use_field_capacity`, stores it as 12 hydro-unit
+        table with :meth:`cover_field_capacity`, stores it as 12 hydro-unit
         properties and binds the parameter to them with
         ``ParameterSet.set_spatial_monthly``.
 
@@ -698,10 +710,10 @@ class PrevahUniBE(Model):
             The :class:`~hydrobricks.parameters.ParameterSet` to fill.
         hydro_units
             The :class:`~hydrobricks.hydro_units.HydroUnits` to add the properties to.
-        land_use
-            Name of the land use (e.g. ``'pasture'``); see
-            :data:`~hydrobricks.land_covers.PREVAH_LAND_USE_COVER_TYPES`.
-            A PREVAH hydrotope carries a single land use, so a sequence of names is
+        cover_class
+            Name of the cover class (e.g. ``'pasture'``); see
+            :data:`~hydrobricks.land_covers.PREVAH_COVER_TYPES`.
+            A PREVAH hydrotope carries a single cover class, so a sequence of names is
             accepted too, one per hydro unit.
         available_water_content
             Available water content of the soil [Vol-%], one value per hydro unit.
@@ -709,10 +721,10 @@ class PrevahUniBE(Model):
             Depth of the soil [m], one value per hydro unit. Without it the rooting
             depth is not capped.
         cover_name
-            Name of the land cover to parameterize. Defaults to the land-use name, and
-            is required when the land uses are given per unit. Only meaningful with
-            ``share_soil=False``, a shared soil store carrying a single capacity for
-            the whole unit.
+            Name of the land cover to parameterize. Defaults to the cover class
+            name, and is required when the classes are given per unit. Only
+            meaningful with ``share_soil=False``, a shared soil store carrying a
+            single capacity for the whole unit.
 
         Returns
         -------
@@ -720,32 +732,33 @@ class PrevahUniBE(Model):
         """
         awc = np.atleast_1d(np.asarray(available_water_content, dtype=float))
 
-        per_unit = not isinstance(land_use, str)
+        per_unit = not isinstance(cover_class, str)
         if per_unit:
-            land_uses = [str(name) for name in land_use]
-            if len(land_uses) != len(awc):
+            cover_classes = [str(name) for name in cover_class]
+            if len(cover_classes) != len(awc):
                 raise ConfigurationError(
-                    f"The land use has {len(land_uses)} values and the available "
-                    f"water content {len(awc)}; they must match (one per hydro unit).",
-                    item_name="land_use",
-                    item_value=len(land_uses),
+                    f"The cover class has {len(cover_classes)} values and the "
+                    f"available water content {len(awc)}; they must match "
+                    f"(one per hydro unit).",
+                    item_name="cover_class",
+                    item_value=len(cover_classes),
                     reason="Length mismatch",
                 )
         else:
-            land_uses = [land_use] * len(awc)
+            cover_classes = [cover_class] * len(awc)
             if cover_name is None:
-                cover_name = land_use
-        for name in set(land_uses):
-            self._check_land_use(name)
+                cover_name = cover_class
+        for name in set(cover_classes):
+            self._check_cover_class(name)
 
         # A model with a shared soil store exposes the alias without a cover suffix,
         # and then needs no cover name: the single store holds the whole unit's soil.
         if cover_name is None:
             if not parameters.has("fc"):
                 raise ConfigurationError(
-                    "The land uses are given per hydro unit and the soil stores are "
-                    "per cover, so the one to parameterize cannot be inferred: pass "
-                    "cover_name.",
+                    "The cover classes are given per hydro unit and the soil "
+                    "stores are per cover, so the one to parameterize cannot be "
+                    "inferred: pass cover_name.",
                     item_name="cover_name",
                     reason="Missing cover name",
                 )
@@ -776,8 +789,10 @@ class PrevahUniBE(Model):
         # (n_units, 12), each unit's own series.
         table = np.array(
             [
-                self.land_use_field_capacity(unit_land_use, unit_awc, unit_depth)
-                for unit_land_use, unit_awc, unit_depth in zip(land_uses, awc, depths)
+                self.cover_field_capacity(unit_cover_class, unit_awc, unit_depth)
+                for unit_cover_class, unit_awc, unit_depth in zip(
+                    cover_classes, awc, depths
+                )
             ]
         )
 
@@ -839,17 +854,17 @@ class PrevahUniBE(Model):
 
         return factor
 
-    def apply_land_use_percolation(
+    def apply_cover_percolation(
         self,
         parameters: Any,
         hydro_units: Any,
-        land_use: Any,
+        cover_class: Any,
         available_water_content: Any,
         soil_depth: Any = None,
         conductivity: Any = None,
     ) -> list[str]:
         """
-        Set PREVAH's per-unit percolation factors from the soil and the land use.
+        Set PREVAH's per-unit percolation factors from the soil and the cover class.
 
         Two things vary per hydro unit in PREVAH's percolation:
 
@@ -873,8 +888,8 @@ class PrevahUniBE(Model):
             The :class:`~hydrobricks.parameters.ParameterSet` to fill.
         hydro_units
             The :class:`~hydrobricks.hydro_units.HydroUnits` to add the properties to.
-        land_use
-            Land use of each hydro unit (or a single name for all).
+        cover_class
+            Cover class of each hydro unit (or a single name for all).
         available_water_content
             Available water content of the soil [Vol-%], one value per hydro unit.
         soil_depth
@@ -888,24 +903,24 @@ class PrevahUniBE(Model):
         """
         awc = np.atleast_1d(np.asarray(available_water_content, dtype=float))
         n_units = len(awc)
-        if isinstance(land_use, str):
-            land_uses = [land_use] * n_units
+        if isinstance(cover_class, str):
+            cover_classes = [cover_class] * n_units
         else:
-            land_uses = [str(name) for name in land_use]
+            cover_classes = [str(name) for name in cover_class]
         if soil_depth is None:
             depths: Any = [None] * n_units
         else:
             depths = np.atleast_1d(np.asarray(soil_depth, dtype=float))
-        if len(land_uses) != n_units or len(depths) != n_units:
+        if len(cover_classes) != n_units or len(depths) != n_units:
             raise ConfigurationError(
-                "The land use, the available water content and the soil depth must "
+                "The cover class, the available water content and the soil depth must "
                 "have one value per hydro unit.",
-                item_name="land_use",
-                item_value=len(land_uses),
+                item_name="cover_class",
+                item_value=len(cover_classes),
                 reason="Length mismatch",
             )
-        for name in set(land_uses):
-            self._check_land_use(name)
+        for name in set(cover_classes):
+            self._check_cover_class(name)
         for name in ("perc_const", "kwper", "cu_perc"):
             if not parameters.has(name):
                 raise ConfigurationError(
@@ -917,14 +932,14 @@ class PrevahUniBE(Model):
         # The constant branch: ET limit from the soil map >= the forced capacity.
         cu = parameters.get("cu_perc")
         table = np.zeros((n_units, 12))
-        for i, (unit_land_use, unit_awc, unit_depth) in enumerate(
-            zip(land_uses, awc, depths)
+        for i, (unit_cover_class, unit_awc, unit_depth) in enumerate(
+            zip(cover_classes, awc, depths)
         ):
-            cover = PREVAH_LAND_USE_COVER_TYPES[unit_land_use]
-            if cover not in PREVAH_LAND_USE_FIELD_CAPACITY_FIXED or cover == "glacier":
+            cover = PREVAH_COVER_TYPES[unit_cover_class]
+            if cover not in PREVAH_COVER_FIELD_CAPACITY_FIXED or cover == "glacier":
                 continue
-            forced = PREVAH_LAND_USE_FIELD_CAPACITY_FIXED[cover]
-            for month, depth in enumerate(PREVAH_LAND_USE_ROOT_DEPTH[unit_land_use]):
+            forced = PREVAH_COVER_FIELD_CAPACITY_FIXED[cover]
+            for month, depth in enumerate(PREVAH_COVER_ROOT_DEPTH[unit_cover_class]):
                 thickness = depth + 0.05
                 if unit_depth is not None:
                     thickness = min(thickness, unit_depth)
@@ -944,14 +959,14 @@ class PrevahUniBE(Model):
 
         return names
 
-    def apply_land_use(
+    def apply_cover_parameters(
         self,
         parameters: Any,
-        land_use: str,
+        cover_class: str,
         cover_name: str | None = None,
     ) -> None:
         """
-        Set the monthly vegetation parameters of a land cover from a PREVAH land use.
+        Set the monthly vegetation parameters of a land cover from a PREVAH cover class.
 
         Sets the canopy interception capacity (``ic``, to ``si_max * veg_cov``) and,
         when the canopy exposes it, the canopy evaporation factor
@@ -963,20 +978,20 @@ class PrevahUniBE(Model):
         ----------
         parameters
             The :class:`~hydrobricks.parameters.ParameterSet` to fill.
-        land_use
-            Name of the land use (e.g. ``'pasture'``); see
-            :data:`~hydrobricks.land_covers.PREVAH_LAND_USE_COVER_TYPES`.
+        cover_class
+            Name of the cover class (e.g. ``'pasture'``); see
+            :data:`~hydrobricks.land_covers.PREVAH_COVER_TYPES`.
         cover_name
-            Name of the land cover to parameterize. Defaults to the land-use name.
+            Name of the land cover to parameterize. Defaults to the cover class name.
 
         Raises
         ------
         ConfigurationError
-            If the land use is unknown, or the cover carries no canopy.
+            If the cover class is unknown, or the cover carries no canopy.
         """
-        self._check_land_use(land_use)
+        self._check_cover_class(cover_class)
         if cover_name is None:
-            cover_name = land_use
+            cover_name = cover_class
 
         # A model with a single canopy exposes the aliases without a cover suffix.
         suffix = f"_{cover_name}" if parameters.has(f"ic_{cover_name}") else ""
@@ -990,23 +1005,23 @@ class PrevahUniBE(Model):
             )
 
         parameters.set_monthly_values(
-            f"ic{suffix}", self.land_use_interception_capacity(land_use)
+            f"ic{suffix}", self.cover_interception_capacity(cover_class)
         )
         if parameters.has(f"canopy_et_factor{suffix}"):
             parameters.set_monthly_values(
-                f"canopy_et_factor{suffix}", PREVAH_LAND_USE_VEG_COV[land_use]
+                f"canopy_et_factor{suffix}", PREVAH_COVER_VEG_COV[cover_class]
             )
 
     @staticmethod
-    def _check_land_use(land_use: str) -> None:
-        """Reject an unknown land-use name."""
-        if land_use not in PREVAH_LAND_USE_COVER_TYPES:
+    def _check_cover_class(cover_class: str) -> None:
+        """Reject an unknown cover class name."""
+        if cover_class not in PREVAH_COVER_TYPES:
             raise ConfigurationError(
-                f'Unknown PREVAH land use "{land_use}". Available: '
-                f"{', '.join(sorted(PREVAH_LAND_USE_COVER_TYPES))}.",
-                item_name="land_use",
-                item_value=land_use,
-                reason="Unknown land use",
+                f'Unknown PREVAH cover class "{cover_class}". Available: '
+                f"{', '.join(sorted(PREVAH_COVER_TYPES))}.",
+                item_name="cover_class",
+                item_value=cover_class,
+                reason="Unknown cover class",
             )
 
     def _resolve_interception_covers(self) -> None:
@@ -1030,13 +1045,13 @@ class PrevahUniBE(Model):
         """
         Generate the parameter set, with PREVAH's vegetation tables where known.
 
-        Every canopy whose land cover is named after a PREVAH land use (e.g.
+        Every canopy whose land cover is named after a PREVAH cover class (e.g.
         ``pasture``, ``coniferous_forest``; see
-        :data:`~hydrobricks.land_covers.PREVAH_LAND_USE_COVER_TYPES`) gets the
-        monthly interception capacity and canopy evaporation factor of that land use
-        (see :meth:`apply_land_use`). Covers with a generic name (``open``,
-        ``forest``) keep the constant defaults: call :meth:`apply_land_use` with the
-        land use they stand for.
+        :data:`~hydrobricks.land_covers.PREVAH_COVER_TYPES`) gets the
+        monthly interception capacity and canopy evaporation factor of that cover class
+        (see :meth:`apply_cover_parameters`). Covers with a generic name (``open``,
+        ``forest``) keep the constant defaults: call
+        :meth:`apply_cover_parameters` with the cover class they stand for.
 
         Returns
         -------
@@ -1048,16 +1063,18 @@ class PrevahUniBE(Model):
         canopy_covers = self.options.get("interception_covers") or []
         generic = []
         for cover_name in canopy_covers:
-            if cover_name in PREVAH_LAND_USE_SI_MAX:
-                self.apply_land_use(parameters, cover_name, cover_name=cover_name)
+            if cover_name in PREVAH_COVER_SI_MAX:
+                self.apply_cover_parameters(
+                    parameters, cover_name, cover_name=cover_name
+                )
             else:
                 generic.append(cover_name)
         if generic:
             logger.info(
                 f"The canopy of the land cover(s) {generic} is not named after a "
-                f"PREVAH land use, so it keeps constant interception parameters. "
-                f"Call apply_land_use(parameters, <land use>, cover_name=<cover>) to "
-                f"use the monthly vegetation tables."
+                f"PREVAH cover class, so it keeps constant interception parameters. "
+                f"Call apply_cover_parameters(parameters, <cover class>, "
+                f"cover_name=<cover>) to use the monthly vegetation tables."
             )
 
         return parameters

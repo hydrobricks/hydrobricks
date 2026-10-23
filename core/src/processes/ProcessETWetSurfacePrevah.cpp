@@ -63,7 +63,7 @@ const vecDouble& ProcessETWetSurfacePrevah::GetRates() {
     }
 
     double albedo = _hydroUnit->GetSnowAlbedo(*_albedoLand);
-    double rate = *_etFactor * wetShare * (1.0 - albedo) / 0.8 * GetForcingRate(_pet);
+    double rate = *_etFactor * wetShare * (1.0 - albedo) / 0.8 * GetPetRate(_pet);
 
     if (_timeMachine != nullptr) {
         double maxRate = _container->GetContentWithChanges() / GetTimeStepInDays();

@@ -12,20 +12,19 @@ ActionGlacierSnowToIceTransformation::ActionGlacierSnowToIceTransformation(int m
 }
 
 bool ActionGlacierSnowToIceTransformation::Init() {
-    // Loop over all hydro units in the sub-basin and register those with the specified land cover.
+    // Loop over all hydro units in the subbasin and register those with the specified land cover.
     _hydroUnitIds.clear();
 
-    if (_manager->GetSubBasin() == nullptr) {
-        LogError("The model is likely not initialized (setup()) as the sub-basin is not defined.");
+    if (_manager->GetSubbasin() == nullptr) {
+        LogError("The model is likely not initialized (setup()) as the subbasin is not defined.");
         return false;
     }
-    if (!_manager->GetSubBasin()->HasHydroUnits()) {
-        LogError("The model is likely not initialized (setup()) as no hydro unit is defined in the sub-basin.");
+    if (!_manager->GetSubbasin()->HasHydroUnits()) {
+        LogError("The model is likely not initialized (setup()) as no hydro unit is defined in the subbasin.");
         return false;
     }
 
-    for (int i = 0; i < _manager->GetSubBasin()->GetHydroUnitCount(); ++i) {
-        auto unit = _manager->GetSubBasin()->GetHydroUnit(i);
+    for (HydroUnit* unit : _manager->GetHydroUnits()) {
         if (unit->TryGetLandCover(_landCoverName) != nullptr) {
             _hydroUnitIds.push_back(unit->GetId());
         }
@@ -39,11 +38,9 @@ void ActionGlacierSnowToIceTransformation::Reset() {
 }
 
 bool ActionGlacierSnowToIceTransformation::Apply(double) {
-    auto subBasin = _manager->GetSubBasin();
-
     // Transform snow to ice for each hydro unit.
     for (int id : _hydroUnitIds) {
-        HydroUnit* unit = subBasin->GetHydroUnitById(id);
+        HydroUnit* unit = _manager->GetHydroUnitById(id);
 
         // Get the glacier brick.
         LandCover* glacierLandCover = unit->TryGetLandCover(_landCoverName);

@@ -1,8 +1,14 @@
 from __future__ import annotations
 
 import numpy as np
+import pandas as pd
 
-from hydrobricks._exceptions import DependencyError
+from hydrobricks._area_basis import (
+    check_area_basis,
+    convert_area_basis,
+    land_cover_of_label,
+)
+from hydrobricks._exceptions import DataError, DependencyError
 from hydrobricks._optional import HAS_XARRAY, xr
 
 
@@ -47,6 +53,13 @@ class Results:
             "labels_land_covers"
         )
         self.hydro_units_ids: np.ndarray = self.results.hydro_units_ids.to_numpy()
+        #: The subbasin IDs (processing order, the catchment outlet last); ``[1]`` for
+        #: files written before the river network existed.
+        self.subbasin_ids: np.ndarray = (
+            self.results.subbasin_ids.to_numpy()
+            if "subbasin_ids" in self.results
+            else np.array([1])
+        )
 
     def close(self) -> None:
         """Close the netCDF dataset and release the file handle."""
@@ -85,21 +98,177 @@ class Results:
             for label in self.labels_distributed:
                 print("- " + label)
 
-    def list_sub_basin_components(self) -> None:
+    def list_subbasin_components(self) -> None:
         """
-        Print a list of the aggregated (sub-basin level) components.
+        Print a list of the aggregated (subbasin level) components.
 
-        Displays all component names that have aggregated values at the sub-basin level.
+        Displays all component names that have aggregated values at the subbasin level.
         These are typically fluxes or flows that are summed across the entire catchment
         (e.g., total runoff, evapotranspiration).
         """
-        print("Sub basins components:")
+        print("Subbasin components:")
         if isinstance(self.labels_aggregated, str):
             print("- " + self.labels_aggregated)
             return
         elif isinstance(self.labels_aggregated, list):
             for label in self.labels_aggregated:
                 print("- " + label)
+
+    # Former spelling, kept for one release.
+    list_sub_basin_components = list_subbasin_components
+
+    def get_subbasin_values(
+        self,
+        component: str,
+        subbasin_id: int | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> np.ndarray:
+        """
+        Get the time series of an aggregated (subbasin level) component.
+
+        Parameters
+        ----------
+        component
+            The component label, e.g. ``'outlet'`` (see
+            :meth:`list_subbasin_components`).
+        subbasin_id
+            The subbasin to read. None (default) reads the catchment outlet (the
+            terminal subbasin).
+        start_date
+            Start of the period to extract (``YYYY-MM-DD``), optional.
+        end_date
+            End of the period to extract (``YYYY-MM-DD``), optional.
+
+        Returns
+        -------
+        The values over time, in mm per time step (the ``outlet`` of a subbasin is
+        expressed over the area drained at its outlet, the other components over the
+        subbasin's own area).
+
+        Raises
+        ------
+        DataError
+            If the component or the subbasin does not exist in the file.
+        """
+        labels = self.labels_aggregated
+        if isinstance(labels, str):
+            labels = [labels]
+        if labels is None or component not in labels:
+            raise DataError(
+                f"The component '{component}' is not in the aggregated values.",
+                data_type="results",
+                reason="Unknown component",
+            )
+        i_label = list(labels).index(component)
+
+        if "subbasin_values" in self.results:
+            values = self.results["subbasin_values"]
+        elif "sub_basin_values" in self.results:
+            values = self.results["sub_basin_values"]  # files written before v0.10
+        else:
+            raise DataError(
+                "The results file has no aggregated values.",
+                data_type="results",
+                reason="Missing variable",
+            )
+
+        if values.ndim == 2:
+            # Before the river network: one series per label, a single subbasin.
+            if subbasin_id not in (None, 1):
+                raise DataError(
+                    f"The results file has a single subbasin; subbasin {subbasin_id} "
+                    "does not exist.",
+                    data_type="results",
+                    reason="Unknown subbasin",
+                )
+            data = values[i_label, :]
+        else:
+            ids = list(self.subbasin_ids)
+            if subbasin_id is None:
+                i_subbasin = len(ids) - 1  # the terminal subbasin is the last one
+            elif int(subbasin_id) in ids:
+                i_subbasin = ids.index(int(subbasin_id))
+            else:
+                raise DataError(
+                    f"Subbasin {subbasin_id} is not in the results file (ids: {ids}).",
+                    data_type="results",
+                    reason="Unknown subbasin",
+                )
+            data = values[i_label, i_subbasin, :]
+
+        return self._select_time(data, start_date, end_date)
+
+    def get_reach_water_balance(self) -> pd.DataFrame:
+        """
+        Get the water balance of every reach over the whole recorded period.
+
+        A reach conserves mass: what entered it either left it or is still in transit.
+        The balance is therefore a closure check of the routing, and the ``balance``
+        column should be zero to the rounding of the results file.
+
+        Returns
+        -------
+        A DataFrame indexed by subbasin id, in m³ over the recorded period, with the
+        columns ``inflow`` (what entered the reach: the upstream subbasins, plus the
+        subbasin's own runoff when it is routed), ``outflow`` (what reached the
+        outlet), ``storage`` (what is still in transit at the end) and ``balance``
+        (inflow - outflow - storage), plus ``relative`` (the balance over the inflow).
+
+        Raises
+        ------
+        DataError
+            If the reach values were not recorded, i.e. the channel routing was off.
+
+        Notes
+        -----
+        The period is the whole run because the reaches start empty: over a shorter
+        window the storage at its start would have to be subtracted too.
+        """
+        labels = self.labels_aggregated
+        labels = [labels] if isinstance(labels, str) else list(labels or [])
+        missing = [
+            c
+            for c in ("reach:inflow", "reach:outflow", "reach:storage")
+            if c not in labels
+        ]
+        if missing:
+            raise DataError(
+                f"The results file has no reach values ({', '.join(missing)}): the "
+                "channel routing was off when the model ran.",
+                data_type="results",
+                reason="Missing component",
+            )
+
+        ids = [int(i) for i in np.atleast_1d(self.subbasin_ids)]
+        rows = []
+        for subbasin_id in ids:
+            # The reach values are logged in mm over the area drained at the outlet.
+            factor = self._drained_area(subbasin_id) / 1000.0
+            inflow = float(
+                np.sum(self.get_subbasin_values("reach:inflow", subbasin_id))
+            )
+            outflow = float(
+                np.sum(self.get_subbasin_values("reach:outflow", subbasin_id))
+            )
+            storage = float(self.get_subbasin_values("reach:storage", subbasin_id)[-1])
+            inflow, outflow, storage = (
+                inflow * factor,
+                outflow * factor,
+                storage * factor,
+            )
+            balance = inflow - outflow - storage
+            rows.append(
+                {
+                    "inflow": inflow,
+                    "outflow": outflow,
+                    "storage": storage,
+                    "balance": balance,
+                    "relative": balance / inflow if inflow > 0 else 0.0,
+                }
+            )
+
+        return pd.DataFrame(rows, index=pd.Index(ids, name="subbasin"))
 
     def get_land_cover_areas(
         self,
@@ -146,6 +315,83 @@ class Results:
 
         return self._select_time(areas, start_date, end_date)
 
+    def get_discharge(
+        self,
+        subbasin_id: int | None = None,
+        units: str = "m3/s",
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> np.ndarray:
+        """
+        Get the discharge at a subbasin outlet, in mm per time step or in m³/s.
+
+        Parameters
+        ----------
+        subbasin_id
+            The subbasin to read. None (default) reads the catchment outlet.
+        units
+            ``"m3/s"`` (default) for the volumetric discharge a gauge records, or
+            ``"mm"`` for mm per time step over the area drained at that outlet, as
+            the model computes it.
+        start_date, end_date
+            Optional bounds of the period to extract (``YYYY-MM-DD``).
+
+        Returns
+        -------
+        The discharge over time.
+
+        Raises
+        ------
+        DataError
+            If the subbasin does not exist, or the units are not recognized.
+        """
+        values = self.get_subbasin_values("outlet", subbasin_id, start_date, end_date)
+        key = str(units).replace(" ", "").lower()
+        if key in ("mm", "mm/step", "mm/d", "mm/day", "mm/h", "mm/hour"):
+            return values
+        if key not in ("m3/s", "m^3/s", "m³/s", "cms", "cumecs"):
+            raise DataError(
+                f"Unknown discharge units '{units}': expected 'mm' or 'm3/s'.",
+                data_type="results",
+                reason="Unknown units",
+            )
+
+        return values * self._drained_area(subbasin_id) / 1000.0 / self._step_seconds()
+
+    def _drained_area(self, subbasin_id: int | None) -> float:
+        """The area drained at a subbasin outlet [m²], from the results file."""
+        if "subbasin_drained_areas" in self.results:
+            areas = self.results.subbasin_drained_areas.to_numpy()
+            ids = list(self.subbasin_ids)
+            index = len(ids) - 1 if subbasin_id is None else ids.index(int(subbasin_id))
+            return float(areas[index])
+        # Written before the river network: the single subbasin is the catchment.
+        return float(self.results.hydro_units_areas.to_numpy().sum())
+
+    def _step_seconds(self) -> float:
+        """The computation time step [s], from the recorded time axis."""
+        time = self.results.time.to_numpy()
+        if len(time) < 2:
+            raise DataError(
+                "The results hold a single time step; the time step cannot be "
+                "derived to convert the discharge to m3/s.",
+                data_type="results",
+                reason="Single time step",
+            )
+        step = np.median(np.diff(time))
+
+        return float(step / np.timedelta64(1, "s"))
+
+    def get_subbasin_structure_ids(self) -> np.ndarray:
+        """
+        Get the model structure variant used by each subbasin's catchment-level
+        components, in the order of :attr:`subbasin_ids` (ones for files written
+        before the structure ids were recorded).
+        """
+        if "subbasin_structure_ids" in self.results:
+            return self.results.subbasin_structure_ids.to_numpy()
+        return np.ones(len(self.subbasin_ids), dtype=int)
+
     def get_hydro_units_structure_ids(self) -> np.ndarray:
         """
         Get the model-structure id used by each hydro unit.
@@ -162,7 +408,11 @@ class Results:
         return self.results.hydro_units_structure_ids.to_numpy()
 
     def get_hydro_units_values(
-        self, component: str, start_date: str | None = None, end_date: str | None = None
+        self,
+        component: str,
+        start_date: str | None = None,
+        end_date: str | None = None,
+        basis: str | None = None,
     ) -> np.ndarray:
         """
         Get the values of a component at the hydro units.
@@ -181,6 +431,11 @@ class Results:
         end_date
             The end date of the period to extract (format: 'YYYY-MM-DD').
             If None, returns up to end of time series. Default: None
+        basis
+            The area to express the values over: 'land_cover', 'hydro_unit' or
+            'subbasin'. None (default) returns them as recorded, over the area given
+            by :meth:`get_hydro_units_basis`. Converting to or from a land cover
+            needs the land-cover fractions (recorded with ``record_all``).
 
         Returns
         -------
@@ -196,11 +451,69 @@ class Results:
         KeyError
             If date selection fails or dates are not in the time series.
         """
-        i_component, _ = self._resolve_component_label(component)
-
-        return self._select_time(
+        i_component, label = self._resolve_component_label(component)
+        values = self._select_time(
             self.results.hydro_units_values[i_component], start_date, end_date
         )
+        if basis is None:
+            return values
+
+        check_area_basis(basis)
+        if "hydro_units_subbasin_fractions" not in self.results:
+            raise DataError(
+                "The results file does not record the area basis of its values "
+                "(written by an older version); they cannot be converted.",
+                data_type="results",
+                reason="No area basis",
+            )
+        cover = land_cover_of_label(label, list(self.labels_land_cover or []))
+        fraction = None
+        if cover is not None:
+            i_land_cover = list(self.labels_land_cover).index(cover)
+            fraction = self._select_time(
+                self.results.land_cover_fractions[i_land_cover], start_date, end_date
+            )
+        return convert_area_basis(
+            values,
+            label,
+            source=self.get_hydro_units_basis(label),
+            target=basis,
+            land_cover_fraction=fraction,
+            subbasin_fraction=self.results.hydro_units_subbasin_fractions.to_numpy(),
+        )
+
+    def get_hydro_units_basis(self, component: str) -> str:
+        """
+        Get the area a hydro-unit component is expressed over.
+
+        Parameters
+        ----------
+        component
+            The name of the component (e.g. 'glacier:melt:output').
+
+        Returns
+        -------
+        'land_cover' (over the area of its land cover), 'hydro_unit' (over the
+        unit) or 'subbasin' (a flux to the outlet or to a subbasin brick, over the
+        local area of the subbasin).
+
+        Raises
+        ------
+        DataError
+            If the results file does not record the area bases (older versions).
+        """
+        i_component, _ = self._resolve_component_label(component)
+        bases = self.results.attrs.get("labels_distributed_basis")
+        if bases is None:
+            raise DataError(
+                "The results file does not record the area basis of its values "
+                "(written by an older version).",
+                data_type="results",
+                reason="No area basis",
+            )
+        if isinstance(bases, str):
+            bases = [bases]
+        return str(bases[i_component])
 
     def get_mean_hydro_units_values(
         self,

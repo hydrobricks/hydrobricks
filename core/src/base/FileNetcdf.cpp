@@ -212,6 +212,12 @@ void FileNetcdf::PutVar(int varId, const vecAxxd& values) {
     }
 }
 
+bool FileNetcdf::HasDim(const string& dimName) const {
+    int dimId;
+
+    return nc_inq_dimid(_ncId, dimName.c_str(), &dimId) == NC_NOERR;
+}
+
 bool FileNetcdf::HasVar(const string& varName) const {
     int varId;
 

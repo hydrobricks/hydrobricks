@@ -1,13 +1,19 @@
-"""Land cover types and land-use parameter tables shared across the models.
+"""Land cover types and land cover parameter tables shared across the models.
 
-Two terms are kept apart throughout hydrobricks:
+A **land cover** is a named cover of a hydro unit, with an area fraction in each
+unit. Covers differ along two independent axes:
 
-- a **land cover** is part of the model: a cover brick with a name, a type (``open``,
-  ``forest``, ``glacier``, ...) and an area fraction in each hydro unit;
-- a **land use** (or land-use class) is an entry of an external classification whose
-  tables supply parameters, such as PREVAH's 22 classes (``pasture``,
-  ``coniferous_forest``, ...). A land cover is parameterized from a land use, and may
-  be named after it, but several land uses can share one land cover.
+- their **type** (``open``, ``forest``, ``glacier``, ``water``, ``wetland``,
+  ``urban``, ``rock``) decides what the model builds: which bricks the cover gets
+  and which processes run on them. Several covers can share a type.
+- their **parameters** tell apart covers of the same type: ``pasture`` and ``bush``
+  are both ``open`` and run the same routines, but carry different monthly canopy
+  and soil values.
+
+A **cover class** is an entry of an external land cover classification (PREVAH's 22
+classes, CORINE's 44, the 11 of ESA WorldCover), used here only to look up the
+parameters of a cover. It is finer-grained than a type, and a cover is usually
+named after the class it stands for.
 """
 
 #: Canonical generic cover names (the "open areas" class and its backward-compatible
@@ -33,26 +39,30 @@ WATER_COVER_TYPE = "water"
 
 
 # ---------------------------------------------------------------------------
-# PREVAH's built-in land-use parameterization
+# PREVAH's built-in cover parameterization
 #
-# The original PREVAH ships a fixed table of land uses. Only six of them carry
-# distinct physics -- water, built-up, firn, bare ice, rock and wetlands -- and
-# those are the hydrobricks land cover types of the same name. Every other land use
-# runs the same snow, soil and runoff routines and differs only through the monthly
-# vegetation tables below, so it is an ordinary land cover carrying its own monthly
-# parameters. PREVAH's class numbers are not kept: the land uses are named, following
-# the hydrobricks conventions where a matching concept exists.
+# The original PREVAH ships a fixed table of 22 cover classes. PREVAH calls it a
+# land-use table, after the German Landnutzung, but the classes are land cover:
+# forests, meadows, crops, water, built-up, firn, bare ice, rock and wetland, and
+# the values read from them -- interception capacity, vegetation cover fraction,
+# rooting depth, albedo, LAI -- are physical properties of the canopy and the soil.
+#
+# Only six of the classes carry distinct physics -- water, built-up, firn, bare ice,
+# rock and wetland -- and those are the hydrobricks land cover types of the same
+# name. Every other class runs the same snow, soil and runoff routines and differs
+# only through the monthly tables below, so it is an ordinary cover carrying its own
+# monthly parameters. PREVAH's class numbers are not kept: the classes are named,
+# following the hydrobricks conventions where a matching concept exists.
 #
 # Transcribed from the reference XPREVAH implementation.
 # ---------------------------------------------------------------------------
 
 # fmt: off
-#: The land uses of PREVAH's built-in parameterization, and the hydrobricks land
-#: cover type each one behaves as. Only water, urban, glacier,
-#: rock and wetland carry distinct physics in PREVAH; every other land use is an
-#: ordinary soil-bearing cover that differs only through the monthly tables below,
-#: so it needs no dedicated cover type.
-PREVAH_LAND_USE_COVER_TYPES: dict[str, str] = {
+#: The cover classes of PREVAH's built-in parameterization, and the hydrobricks land
+#: cover type each one behaves as. Only water, urban, glacier, rock and wetland carry
+#: distinct physics in PREVAH; every other class is an ordinary soil-bearing cover
+#: that differs only through the monthly tables below, so it needs no dedicated type.
+PREVAH_COVER_TYPES: dict[str, str] = {
     "water": "water",
     "urban": "urban",
     "coniferous_forest": "forest",
@@ -77,9 +87,9 @@ PREVAH_LAND_USE_COVER_TYPES: dict[str, str] = {
     "grapes": "open",
 }
 
-#: Maximal interception storage [mm] of each land use, per month (January
+#: Maximal interception storage [mm] of each cover class, per month (January
 #: first).
-PREVAH_LAND_USE_SI_MAX: dict[str, list[float]] = {
+PREVAH_COVER_SI_MAX: dict[str, list[float]] = {
     "water": [0] * 12,
     "urban": [5] * 12,
     "coniferous_forest": [2.5, 2.8, 2.8, 2.5, 3.5, 4.3, 4.5, 4.3, 4.1, 3.9, 3, 2.5],
@@ -105,8 +115,8 @@ PREVAH_LAND_USE_SI_MAX: dict[str, list[float]] = {
     "grapes": [0.5, 0.5, 0.6, 1, 2, 2.5, 2.5, 2.2, 2, 0.9, 0.7, 0.5],
 }
 
-#: Fraction of the surface covered by vegetation [-], per land use and month.
-PREVAH_LAND_USE_VEG_COV: dict[str, list[float]] = {
+#: Fraction of the surface covered by vegetation [-], per cover class and month.
+PREVAH_COVER_VEG_COV: dict[str, list[float]] = {
     "water": [0] * 12,
     "urban": [0.2] * 12,
     "coniferous_forest": [0.92, 0.92, 0.93, 0.94, 0.95, 0.97,
@@ -133,9 +143,9 @@ PREVAH_LAND_USE_VEG_COV: dict[str, list[float]] = {
     "grapes": [0.5, 0.5, 0.55, 0.7, 0.9, 0.9, 0.9, 0.9, 0.9, 0.8, 0.6, 0.5],
 }
 
-#: Rooting depth [m], per land use and month. Drives the soil moisture capacity
-#: (see :meth:`~hydrobricks.models.PrevahUniBE.land_use_field_capacity`).
-PREVAH_LAND_USE_ROOT_DEPTH: dict[str, list[float]] = {
+#: Rooting depth [m], per cover class and month. Drives the soil moisture capacity
+#: (see :meth:`~hydrobricks.models.PrevahUniBE.cover_field_capacity`).
+PREVAH_COVER_ROOT_DEPTH: dict[str, list[float]] = {
     "water": [0] * 12,
     "urban": [0.1] * 12,
     "coniferous_forest": [1.5] * 12,
@@ -162,8 +172,8 @@ PREVAH_LAND_USE_ROOT_DEPTH: dict[str, list[float]] = {
 
 #: Soil moisture capacity [mm] PREVAH forces on the land cover types carrying no real
 #: soil, whatever the soil map says (see
-#: :meth:`~hydrobricks.models.PrevahUniBE.land_use_field_capacity`).
-PREVAH_LAND_USE_FIELD_CAPACITY_FIXED: dict[str, float] = {
+#: :meth:`~hydrobricks.models.PrevahUniBE.cover_field_capacity`).
+PREVAH_COVER_FIELD_CAPACITY_FIXED: dict[str, float] = {
     "urban": 5.0,
     "rock": 3.0,
     "glacier": 0.1,
@@ -172,17 +182,17 @@ PREVAH_LAND_USE_FIELD_CAPACITY_FIXED: dict[str, float] = {
 #: Minimum soil moisture capacity [mm] per land cover type, applied to the capacity
 #: from the soil map. Open water holds a deep store; the vegetated covers use the
 #: default below.
-PREVAH_LAND_USE_FIELD_CAPACITY_MIN: dict[str, float] = {
+PREVAH_COVER_FIELD_CAPACITY_MIN: dict[str, float] = {
     "water": 2500.0,
 }
 
 #: Minimum soil moisture capacity [mm] of the vegetated land covers.
-PREVAH_LAND_USE_FIELD_CAPACITY_MIN_DEF: float = 10.0
+PREVAH_COVER_FIELD_CAPACITY_MIN_DEF: float = 10.0
 
-#: Surface albedo [-], per land use and month. PREVAH derives it from the leaf
+#: Surface albedo [-], per cover class and month. PREVAH derives it from the leaf
 #: area index: ``albedo_bare(month) + 0.25 (albedo_veg - albedo_bare(month)) LAI``
-#: when ``0 < LAI <= 4``, and the land use's own value otherwise.
-PREVAH_LAND_USE_ALBEDO: dict[str, list[float]] = {
+#: when ``0 < LAI <= 4``, and the class's own value otherwise.
+PREVAH_COVER_ALBEDO: dict[str, list[float]] = {
     "water": [0.05] * 12,
     "urban": [0.1, 0.1, 0.1, 0.1, 0.175, 0.175, 0.175, 0.175, 0.1, 0.1, 0.1, 0.1],
     "coniferous_forest": [0.12] * 12,
@@ -224,10 +234,10 @@ PREVAH_LAND_USE_ALBEDO: dict[str, list[float]] = {
                0.2, 0.2, 0.2, 0.1625, 0.10625, 0.10625],
 }
 
-#: Leaf area index [-], per land use and month. Provided for reference: it feeds
+#: Leaf area index [-], per cover class and month. Provided for reference: it feeds
 #: the albedo above and the Penman-Monteith resistances, which hydrobricks does
 #: not implement (the PET is computed in preprocessing).
-PREVAH_LAND_USE_LAI: dict[str, list[float]] = {
+PREVAH_COVER_LAI: dict[str, list[float]] = {
     "water": [0] * 12,
     "urban": [1] * 12,
     "coniferous_forest": [6, 6, 6, 6, 7, 8, 8, 8, 8, 7, 6, 6],

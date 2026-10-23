@@ -78,11 +78,11 @@ def _forcing(hydro_units: hb.HydroUnits) -> hb.Forcing:
 def _run(hydro_units: hb.HydroUnits, out: Path) -> models.Socont:
     model = models.Socont(soil_storage_nb=2, surface_runoff="linear_storage")
     parameters = model.generate_parameters()
-    # A large capacity keeps the slow reservoir linear (no overflow), which the
-    # lumped-vs-split equivalence relies on.
+    # A large capacity (the upper bound of A) keeps the slow reservoir linear (no
+    # overflow), which the lumped-vs-split equivalence relies on.
     parameters.set_values(
         {
-            "A": 2000,
+            "A": 1000,
             "a_snow": 3,
             "k_slow_1": 0.9,
             "k_slow_2": 0.8,
@@ -234,7 +234,7 @@ def _run_routed(out: Path, routing: str, **params) -> models.Socont:
     parameters = model.generate_parameters()
     parameters.set_values(
         {
-            "A": 2000,
+            "A": 1000,
             "a_snow": 3,
             "k_slow_1": 0.9,
             "k_slow_2": 0.8,
@@ -426,7 +426,7 @@ def test_calibration_with_a_gauge_on_a_subbasin(runs, tmp_path):
     parameters = model.generate_parameters()
     parameters.set_values(
         {
-            "A": 2000,
+            "A": 1000,
             "a_snow": 3,
             "k_slow_1": 0.9,
             "k_slow_2": 0.8,
@@ -489,7 +489,7 @@ def test_reach_values_are_logged_without_record_all(tmp_path):
     parameters = model.generate_parameters()
     parameters.set_values(
         {
-            "A": 2000,
+            "A": 1000,
             "a_snow": 3,
             "k_slow_1": 0.9,
             "k_slow_2": 0.8,
@@ -643,7 +643,7 @@ def _run_scheme(out: Path, hydro_units, scheme: str, **params) -> models.Socont:
     parameters = model.generate_parameters()
     parameters.set_values(
         {
-            "A": 2000,
+            "A": 1000,
             "a_snow": 3,
             "k_slow_1": 0.9,
             "k_slow_2": 0.8,

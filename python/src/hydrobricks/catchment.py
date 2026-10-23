@@ -22,11 +22,7 @@ from hydrobricks._optional import (
 )
 from hydrobricks._utils import compute_area
 from hydrobricks.hydro_units import HydroUnits
-from hydrobricks.soils import (
-    PREVAH_SOIL_AWC_CLASSES,
-    PREVAH_SOIL_CONDUCTIVITY_CLASSES,
-    PREVAH_SOIL_DEPTH_CLASSES,
-)
+from hydrobricks.soils import SoilClassTables, get_soil_class_tables
 
 logger = logging.getLogger(__name__)
 
@@ -677,9 +673,9 @@ class Catchment:
         reclassify
             Mapping of the raster class codes to the values to aggregate, for a map
             given as classes rather than as values (e.g.
-            :data:`~hydrobricks.soils.PREVAH_SOIL_AWC_CLASSES`). Cells whose code is
-            not in the mapping are ignored. The cell values are rounded to the
-            nearest integer before the lookup. Default: None = the raster already
+            :data:`~hydrobricks.soils.SWISS_SOIL_SUITABILITY_AWC_CLASSES`). Cells
+            whose code is not in the mapping are ignored. The cell values are rounded
+            to the nearest integer before the lookup. Default: None = the raster already
             holds the values.
         statistic
             Statistic aggregating the cells of a unit. Only 'mean' is supported.
@@ -743,6 +739,11 @@ class Catchment:
             res.append(float(np.mean(cells)) if cells.size else np.nan)
 
         res_arr = np.array(res)
+        # Extracting a property again replaces it (and its unit).
+        if self.hydro_units.has(name):
+            self.hydro_units.hydro_units = self.hydro_units.hydro_units.drop(
+                columns=name, level=0
+            )
         self.hydro_units.add_property((name, unit), res_arr)
 
         return res_arr
@@ -752,18 +753,20 @@ class Catchment:
         available_water_content: str | Path | None = None,
         soil_depth: str | Path | None = None,
         conductivity: str | Path | None = None,
-        reclassify: bool | dict[str, dict] = False,
+        reclassify: str | SoilClassTables | dict[str, dict] | None = None,
+        conductivity_unit: str | None = None,
     ) -> None:
         """
         Add the soil properties of the hydro units from soil maps.
 
         A convenience over :meth:`extract_unit_property_from_raster` naming the
         properties the models expect: ``awc`` [%], ``soil_depth`` [m] and
-        ``conductivity`` [-]. The first two feed
+        ``conductivity``. The first two feed
         :meth:`~hydrobricks.models.PrevahUniBE.apply_cover_field_capacity` (the
         soil moisture capacity) and the third
         :meth:`~hydrobricks.models.PrevahUniBE.apply_cover_percolation` (PREVAH's
-        KWPER percolation factor).
+        KWPER percolation factor). :mod:`hydrobricks.soils` helps to get these
+        rasters from layered or texture-only soil products.
 
         Parameters
         ----------
@@ -774,17 +777,27 @@ class Catchment:
         conductivity
             Path of the raster of the soil hydraulic conductivity.
         reclassify
-            How to turn class codes into values, for maps given as classes. True
-            applies PREVAH's tables for the Swiss soil suitability map
-            (:mod:`hydrobricks.soils`). A dict gives a mapping per property, keyed by
-            'available_water_content', 'soil_depth' and 'conductivity'; a property
-            left out is read as values. Default: False = the rasters hold values.
+            How to turn class codes into values, for maps given as classes: the
+            name of a supported soil map (a key of
+            :data:`~hydrobricks.soils.SOIL_CLASS_TABLES`, e.g.
+            'swiss_soil_suitability'), its
+            :class:`~hydrobricks.soils.SoilClassTables`, or a dict giving a mapping
+            per property, keyed by 'available_water_content', 'soil_depth' and
+            'conductivity'. A property without a table is read as values. Default:
+            None = the rasters hold values.
+        conductivity_unit
+            Unit of the conductivity. Default: the unit of the class tables, and
+            'mm/h' for a raster of values.
         """
-        if reclassify is True:
+        if isinstance(reclassify, str):
+            reclassify = get_soil_class_tables(reclassify)
+        if isinstance(reclassify, SoilClassTables):
+            if conductivity_unit is None:
+                conductivity_unit = reclassify.conductivity_unit
             tables = {
-                "available_water_content": PREVAH_SOIL_AWC_CLASSES,
-                "soil_depth": PREVAH_SOIL_DEPTH_CLASSES,
-                "conductivity": PREVAH_SOIL_CONDUCTIVITY_CLASSES,
+                "available_water_content": reclassify.available_water_content,
+                "soil_depth": reclassify.soil_depth,
+                "conductivity": reclassify.conductivity,
             }
         else:
             tables = reclassify or {}
@@ -792,7 +805,7 @@ class Catchment:
         properties = [
             ("available_water_content", available_water_content, "awc", "%"),
             ("soil_depth", soil_depth, "soil_depth", "m"),
-            ("conductivity", conductivity, "conductivity", "-"),
+            ("conductivity", conductivity, "conductivity", conductivity_unit or "mm/h"),
         ]
         for key, path, name, unit in properties:
             if path is None:

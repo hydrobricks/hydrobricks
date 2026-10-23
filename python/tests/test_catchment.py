@@ -819,7 +819,7 @@ def test_extract_unit_property_reclassify():
         _write_raster(path, classes, SITTER_DEM)
 
         values = catchment.extract_unit_property_from_raster(
-            path, "awc", "%", reclassify=hb.soils.PREVAH_SOIL_AWC_CLASSES
+            path, "awc", "%", reclassify=hb.soils.SWISS_SOIL_SUITABILITY_AWC_CLASSES
         )
 
         # Only the two mapped values appear, and the property is in the table.
@@ -847,7 +847,7 @@ def test_extract_unit_property_ignores_unmapped_classes():
         _write_raster(path, classes, SITTER_DEM)
 
         values = catchment.extract_unit_property_from_raster(
-            path, "awc", "%", reclassify=hb.soils.PREVAH_SOIL_AWC_CLASSES
+            path, "awc", "%", reclassify=hb.soils.SWISS_SOIL_SUITABILITY_AWC_CLASSES
         )
         finite = values[~np.isnan(values)]
         assert np.all(finite == pytest.approx(16.0))
@@ -875,7 +875,7 @@ def test_extract_soil_properties():
             available_water_content=paths["awc_classes"],
             soil_depth=paths["depth_classes"],
             conductivity=paths["k_classes"],
-            reclassify=True,
+            reclassify="swiss_soil_suitability",
         )
 
         units = catchment.hydro_units.hydro_units
@@ -900,7 +900,7 @@ def test_extract_soil_properties_feeds_the_prevah_tables():
             available_water_content=paths["awc"],
             soil_depth=Path(tmp_dir) / "depth.tif",
             conductivity=Path(tmp_dir) / "k.tif",
-            reclassify=True,
+            reclassify="swiss_soil_suitability",
         )
 
         hydro_units = catchment.hydro_units

@@ -59,19 +59,32 @@ void SolverExponentialEuler::ComputeBrickRates(Brick* brick, double content, dou
         return container->AllowsNegativeContent() ? end : std::max(end, 0.0);
     };
     double endContent = endContentFor(slope);
+    double lastUpdate = 0;
     for (int iter = 0; iter < 20; ++iter) {
         double change = endContent - content;
         if (std::abs(change) <= 1e-9) {
             break;
         }
         double secant = (TotalRateAt(brick, contentDelta, startOffset + change) - startTotal) / change;
-        if (secant <= 1e-10 || std::abs(secant - slope) <= 1e-9 * slope) {
+        if (secant <= 1e-10) {
             break;
         }
-        // Halfway between the previous slope and the new secant, which keeps the
-        // iteration from oscillating around a strongly curved outflow.
-        slope = (slope + secant) / 2;
-        endContent = endContentFor(slope);
+        double newEndContent = endContentFor(secant);
+        double update = newEndContent - endContent;
+        if (update * lastUpdate < 0) {
+            // The end content swings back: halfway between the previous slope and the
+            // new secant, which keeps the iteration from oscillating around a strongly
+            // curved outflow.
+            secant = (slope + secant) / 2;
+            newEndContent = endContentFor(secant);
+            update = newEndContent - endContent;
+        }
+        slope = secant;
+        endContent = newEndContent;
+        lastUpdate = update;
+        if (std::abs(update) <= 1e-6) {
+            break;
+        }
     }
 
     // Total average outflow rate over the step by mass balance.

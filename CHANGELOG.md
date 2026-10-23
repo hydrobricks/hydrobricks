@@ -39,6 +39,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Water passed from a land cover or snowpack to a storage was delayed by one time step, whatever the solver.
 - `implicit_euler` (and partly `crank_nicolson`) could keep water in a store indefinitely when a process switches off as the store empties.
 - Sub-daily runs were rejected when the last forcing date differed from the end of the period by a rounding error.
+- `CustomModel` with `with_snow: false` generated the snow parameters, which the model then rejected.
 
 
 ## 0.9.2 - 2026-10-20

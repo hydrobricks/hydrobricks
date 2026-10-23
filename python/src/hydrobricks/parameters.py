@@ -1136,6 +1136,21 @@ BRICK_PARAM_SPECS: dict[str, ParamSpec] = {
 # -----------------------------------------------------------------------------
 # Validation & helper utilities for parameter specs
 # -----------------------------------------------------------------------------
+def _has_snow(options: dict) -> bool:
+    """Whether the model options configure a snow routine.
+
+    An explicit ``with_snow: False`` wins over the presence of a snow melt
+    process, as in the structure generation (Model._set_structure_basics):
+    the precipitation then all goes to the rain splitter, with no snowpack.
+    """
+    if options.get("with_snow") is False:
+        return False
+    return (
+        options.get("snow_rain_process") is not None
+        or options.get("snow_melt_process") is not None
+    )
+
+
 def validate_process_param_specs(specs: dict[str, list[ParamSpec]] | None = None):
     """Validate static process parameter specs.
 
@@ -2622,14 +2637,10 @@ class ParameterSet:
         Parameters
         ----------
         options
-            Model options dictionary (uses 'snow_melt_process'/'snow_rain_process'
-            to decide whether snow is configured).
+            Model options dictionary (uses 'with_snow', 'snow_melt_process' and
+            'snow_rain_process' to decide whether snow is configured).
         """
-        srp = options.get("snow_rain_process")
-        smp = options.get("snow_melt_process")
-        with_snow = srp is not None or smp is not None
-
-        if with_snow:
+        if _has_snow(options):
             for spec in PROCESS_PARAM_SPECS["correction:snow_rain"]:
                 self._register(component="snow_rain_transition", spec=spec)
             # Snow undercatch is usually at least as large as rain undercatch, so the
@@ -2661,11 +2672,11 @@ class ParameterSet:
             List of land cover names corresponding to types.
         """
         if "snow_melt_process" in options or "with_snow" in options:
+            if not _has_snow(options):
+                return  # no snow configured at all
             # Snow/rain transition specs (pseudo-process)
             srp = options.get("snow_rain_process")
             smp = options.get("snow_melt_process")
-            if srp is None and smp is None:
-                return  # no snow configured at all
             if srp == "snow_rain:threshold":
                 transition_key = "transition:snow_rain:threshold"
             elif srp == "snow_rain:cemaneige" or smp == "melt:cemaneige":

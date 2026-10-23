@@ -136,6 +136,24 @@ def test_custom_model_direct_use():
     assert parameters.is_valid()
 
 
+def test_custom_model_without_snow(tmp_path):
+    """with_snow: false generates no snow parameters, and the model runs."""
+    structure = copy.deepcopy(SOCONT_LIKE)
+    structure["options"] = {"with_snow": False}
+    model = models.CustomModel(copy.deepcopy(structure))
+    parameters = model.generate_parameters()
+    assert not parameters.has("a_snow")
+    assert not parameters.has("snow_correction_factor")
+    assert parameters.has("rain_correction_factor")
+
+    values = {key: val for key, val in PARAMETERS.items() if key != "a_snow"}
+    config = project_config(tmp_path, {"structure": structure})
+    config["parameters"] = values
+    sim = hb.load_project(config, base_dir=SITTER_DIR).run()
+    assert np.all(np.isfinite(sim.to_numpy()))
+    assert sim.to_numpy().sum() > 0
+
+
 def test_custom_model_structure_graph():
     """The structure graph works on custom models (bricks are all there)."""
     model = models.CustomModel(copy.deepcopy(SOCONT_LIKE))

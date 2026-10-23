@@ -50,9 +50,12 @@ void SolverExponentialEuler::ComputeBrickRates(Brick* brick, double content, dou
     // the step. An affine store settles at once; a strongly non-linear one (a runoff
     // growing with the square of the content, filling from empty under a large inflow)
     // would otherwise end the step far from the content its outflow actually reaches.
-    double netInflow = inflow - startTotal;
+    // The line passes through the rates read just above an empty store, so its outflow
+    // at the actual start content is Q(S0 + offset) - k offset: zero for a linear store,
+    // the full rate for a constant percolation (whose slope is nil).
     auto endContentFor = [&](double k) {
-        double end = content + netInflow / k * (1.0 - std::exp(-k * h));
+        double startOutflow = std::max(startTotal - k * startOffset, 0.0);
+        double end = content + (inflow - startOutflow) / k * (1.0 - std::exp(-k * h));
         return container->AllowsNegativeContent() ? end : std::max(end, 0.0);
     };
     double endContent = endContentFor(slope);

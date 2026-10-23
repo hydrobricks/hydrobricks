@@ -29,6 +29,7 @@ class SolverExponentialEuler : public SolverSequential {
   private:
     vecDouble _startRates;  // scratch: per-connection rates at the start-of-step content
     vecDouble _endRates;    // scratch: per-connection rates at the end-of-step content
+    vector<bool> _capped;   // scratch: per-connection flag, rate held at its cap
 };
 
 #endif  // HYDROBRICKS_SOLVER_EXPONENTIAL_EULER_H

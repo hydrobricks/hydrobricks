@@ -5,6 +5,34 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## 0.9.4 - 2026-10-26
+
+### Added
+
+- Each model writes its own log file (`hydrobricks_<timestamp>.log` in its output folder), with `ModelHydro.open_log()` and `close_log()`. The messages logged while a model is set up, run or updated go to its own file, so several models in one process no longer write into or close each other's logs.
+- `model_runs` in the result of `Project.calibrate()`, in the study job records and in `scores.csv`: the parameter sets actually simulated. The `repetitions` budget is counted differently by each SPOTPY algorithm (SCE-UA counts its trial points and its saved points; rejected sets use budget without running the model), so this is what compares their cost.
+
+### Changed
+
+- HBV-96: the field capacity `fc` is capped at 1000 mm by default (it had the generic 3000 mm of the storage capacity). Evapotranspiration is limited by `SM / (LP * FC)`, so an over-large FC switches it off, which calibrations exploit. Widen it with `parameter_ranges` if needed.
+- HBV-96: the range of the upper-zone non-linearity `alpha` is now [0, 2] (was [0, 3]). Beyond 2, the upper zone is so stiff that a daily time step overshoots it.
+- PET from Tmin and Tmax (e.g. Hargreaves): where the two cross after their spatialization (each with its own gradient), they are swapped instead of giving a NaN PET. A PET still containing NaN now raises an error naming the hydro units affected.
+- A change rate that is not a number now raises an error, instead of silently disabling the storage constraints of its brick.
+- `calibration.link`: the range of the driving parameter must lie within that of the linked one; an incompatible pair is refused when the project is loaded, instead of failing on the first out-of-range value during the calibration. Links are applied after the range overrides of the `parameters` section.
+- NumPy is no longer capped (NumPy 2.4 supported).
+
+### Fixed
+
+- `exponential_euler`: the iteration on the end-of-step content always halved its step, which could keep it from settling on strongly non-linear stores. It is now damped only when it swings back, and runs until the end content settles.
+- Capped stores with an overflow: the excess replaced the overflow's rate instead of being added to it. With the explicit solvers, the constraint passes then never settled ("The storage constraints did not stabilize" warnings) and the store could end a time step above its capacity. Results of all solvers can differ slightly.
+- Rates within 1e-8 mm/d of zero, which are not transferred, still counted as inflow in the receiving store, which could then end slightly negative (errors of about -1e-8 mm, e.g. on the HBV routing store).
+- A NaN PET (from crossed Tmin and Tmax) disabled the storage constraints of the bricks evaporating from it, letting other outflows empty them below zero (e.g. a constant percolation, down to -10 mm).
+- Deleting a model closed the log file of the model set up after it, whose messages were then lost.
+- The ROPE and DREAM calibration algorithms failed as soon as a parameter set was rejected by a constraint (ROPE on tied scores, DREAM on the missing simulation).
+- Hydrological networks and connectivity with NumPy 2.4: pysheds still calls the removed `numpy.in1d`, now restored as an alias of `numpy.isin` when missing.
+- `CustomModel` with `with_snow: false` generated the snow parameters, which the model then rejected.
+
+
 ## 0.9.3 - 2026-10-23
 
 ### Added
@@ -39,7 +67,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Water passed from a land cover or snowpack to a storage was delayed by one time step, whatever the solver.
 - `implicit_euler` (and partly `crank_nicolson`) could keep water in a store indefinitely when a process switches off as the store empties.
 - Sub-daily runs were rejected when the last forcing date differed from the end of the period by a rounding error.
-- `CustomModel` with `with_snow: false` generated the snow parameters, which the model then rejected.
 
 
 ## 0.9.2 - 2026-10-20

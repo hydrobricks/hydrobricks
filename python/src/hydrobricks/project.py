@@ -432,7 +432,9 @@ class Project:
         dict
             The :func:`~hydrobricks.trainer.get_best` record (``score``,
             ``parameters``, ``index``) extended with ``sampler``,
-            ``algorithm`` and ``repetitions``.
+            ``algorithm``, ``repetitions`` and ``model_runs`` (the parameter
+            sets actually simulated, rejected ones excluded; ``None`` for a
+            parallel calibration, whose workers count separately).
         """
         import hydrobricks.trainer as trainer
 
@@ -545,6 +547,8 @@ class Project:
             "sampler": sampler,
             "algorithm": algorithm,
             "repetitions": repetitions,
+            # Counted in this process only: parallel workers count in their own copy.
+            "model_runs": spot_setup.model_runs if parallel == "seq" else None,
         }
 
 

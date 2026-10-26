@@ -937,6 +937,10 @@ class SpotpySetup:
         # False (maximize/grid), so a setup used outside calibrate() returns the
         # skill unchanged.
         self._minimize = False
+        # Parameter sets actually simulated (rejected sets excluded). The budget an
+        # algorithm is given counts differently from one algorithm to the next (SCE-UA
+        # counts its trial points and its saved points), so this is what compares them.
+        self.model_runs = 0
 
     def _setup_forcing_and_models(self) -> None:
         """
@@ -1076,6 +1080,7 @@ class SpotpySetup:
             return None
 
         logger.debug(f"Running {len(self.model)} model(s)")
+        self.model_runs += 1
         all_sim = []
         for model_idx, (model, forcing) in enumerate(zip(self.model, self.forcing)):
             logger.debug(f"  Model {model_idx}: running simulation")

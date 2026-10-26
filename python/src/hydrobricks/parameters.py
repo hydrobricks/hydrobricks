@@ -713,7 +713,7 @@ PROCESS_PARAM_SPECS: dict[str, list[ParamSpec]] = {
             unit="-",
             aliases=["alpha", "alfa"],
             min=0,
-            max=1,
+            max=2,  # beyond 2: so stiff that daily steps overshoot it
             default=1.0,
             mandatory=True,
         ),

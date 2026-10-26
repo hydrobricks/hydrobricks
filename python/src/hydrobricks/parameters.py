@@ -1297,6 +1297,31 @@ class ParameterSet:
                 item_name=driver,
                 reason="Chained link",
             )
+        # Every value the driver can take must suit the dependent too: otherwise
+        # setting the driver fails part-way through a calibration, on the first
+        # value the dependent cannot take.
+        driver_row = self.parameters.loc[driver_index]
+        dependent_row = self.parameters.loc[dependent_index]
+        bounds = [
+            driver_row["min"],
+            driver_row["max"],
+            dependent_row["min"],
+            dependent_row["max"],
+        ]
+        if all(b is not None and not pd.isna(b) for b in bounds) and (
+            driver_row["min"] < dependent_row["min"]
+            or driver_row["max"] > dependent_row["max"]
+        ):
+            raise ConfigurationError(
+                f"'{dependent}' cannot follow '{driver}': the range of '{driver}' "
+                f"[{driver_row['min']:g}, {driver_row['max']:g}] is not within that "
+                f"of '{dependent}' [{dependent_row['min']:g}, "
+                f"{dependent_row['max']:g}]. Narrow the range of '{driver}' (e.g. "
+                "in the 'parameters' section of the project file) to the values "
+                "both can take.",
+                item_name=dependent,
+                reason="Incompatible ranges",
+            )
         self._links[dependent] = driver
         self._apply_links()
 

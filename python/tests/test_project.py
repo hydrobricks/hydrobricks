@@ -1557,3 +1557,22 @@ def test_calibration_link_shares_one_value(tmp_path):
     snow = project.parameters.get("snow_corr_factor")
     assert rain == pytest.approx(snow)
     assert 0.8 <= snow <= 1.3
+
+
+@pytest.mark.parametrize("algorithm", ["rope", "dream"])
+def test_calibration_algorithms_with_rejected_runs(tmp_path, algorithm):
+    """ROPE and DREAM run through parameter sets rejected by a constraint.
+
+    k_slow_2 < k_slow_1 rejects about half of the random sets: SPOTPY's ROPE then
+    fails on tied scores and DREAM on the missing simulation, unless patched.
+    """
+    config = calibration_config(tmp_path)
+    config["calibration"]["algorithm"] = algorithm
+    config["calibration"]["repetitions"] = 100
+    config["calibration"]["seed"] = 1
+    config["calibration"]["parameters"] = ["a_snow", "A", "k_slow_1", "k_slow_2"]
+    project = hb.load_project(config, base_dir=SITTER_DIR)
+    result = project.calibrate()
+
+    assert np.isfinite(result["score"])
+    assert 0 < result["model_runs"] <= 100

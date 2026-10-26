@@ -1,5 +1,10 @@
 #include <gtest/gtest.h>
 
+#include <filesystem>
+#include <fstream>
+#include <iterator>
+
+#include "Log.h"
 #include "Utils.h"
 
 TEST(Utils, ZeroIsNotNaN) {
@@ -860,4 +865,47 @@ TEST(Utils, FindTToleranceIntegerJustOutside) {
     int result = Find(&array[0], &array[4], 16, 5);
 
     EXPECT_TRUE(result == 1 || result == 2);
+}
+
+namespace {
+std::string ReadAll(const std::filesystem::path& path) {
+    std::ifstream file(path);
+    return {std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>()};
+}
+}  // namespace
+
+TEST(Log, ScopedFilesKeepTheirOwnMessages) {
+    auto dir = std::filesystem::temp_directory_path() / "hydrobricks_log_scope_test";
+    std::filesystem::create_directories(dir);
+    LogFile first, second;
+    first.Open((dir / "first.log").string());
+    second.Open((dir / "second.log").string());
+
+    {
+        LogScope scopeFirst(&first);
+        LogError("to first");
+        {
+            LogScope scopeSecond(&second);
+            LogError("to second");
+        }
+        LogError("first again");
+    }
+    // Closing one model's log must not affect the other's.
+    first.Close();
+    {
+        LogScope scopeSecond(&second);
+        LogError("second after first closed");
+    }
+    second.Close();
+
+    std::string firstText = ReadAll(dir / "first.log");
+    std::string secondText = ReadAll(dir / "second.log");
+    EXPECT_NE(firstText.find("to first"), std::string::npos);
+    EXPECT_NE(firstText.find("first again"), std::string::npos);
+    EXPECT_EQ(firstText.find("second"), std::string::npos);
+    EXPECT_NE(secondText.find("to second"), std::string::npos);
+    EXPECT_NE(secondText.find("second after first closed"), std::string::npos);
+    EXPECT_EQ(secondText.find("first"), secondText.find("first closed"));
+
+    std::filesystem::remove_all(dir);
 }

@@ -340,6 +340,8 @@ def test_project_calibrate_smoke(tmp_path):
 
     assert {"score", "parameters", "index", "sampler", "algorithm"} <= set(result)
     assert result["algorithm"] == "mc"
+    # No constraint between a_snow and A: every repetition is simulated.
+    assert result["model_runs"] == 3
     assert np.isfinite(result["score"])
     assert set(result["parameters"]) == {"a_snow", "A"}
 
@@ -1530,3 +1532,47 @@ def test_project_calibrate_with_gauges_smoke(tmp_path):
     project = hb.load_project(config, base_dir=tmp_path)
     result = project.calibrate()
     assert np.isfinite(result["score"])
+
+
+def test_calibration_link_needs_compatible_ranges(tmp_path):
+    """A link is refused when the driver can take values the dependent cannot."""
+    config = calibration_config(tmp_path)
+    # Rain 0.7-1.3, snow 0.8-1.6: a shared value above 1.3 would not suit the rain.
+    config["calibration"]["parameters"] = ["a_snow", "snow_corr_factor"]
+    config["calibration"]["link"] = {"rain_corr_factor": "snow_corr_factor"}
+    with pytest.raises(hb.ConfigurationError, match="not within"):
+        hb.load_project(config, base_dir=SITTER_DIR)
+
+
+def test_calibration_link_shares_one_value(tmp_path):
+    """With compatible ranges, the dependent follows the calibrated driver."""
+    config = calibration_config(tmp_path)
+    config["calibration"]["parameters"] = ["a_snow", "snow_corr_factor"]
+    config["calibration"]["link"] = {"rain_corr_factor": "snow_corr_factor"}
+    config["parameters"]["snow_corr_factor"] = {"value": 1.0, "min": 0.8, "max": 1.3}
+    project = hb.load_project(config, base_dir=SITTER_DIR)
+    project.calibrate()
+
+    rain = project.parameters.get("rain_corr_factor")
+    snow = project.parameters.get("snow_corr_factor")
+    assert rain == pytest.approx(snow)
+    assert 0.8 <= snow <= 1.3
+
+
+@pytest.mark.parametrize("algorithm", ["rope", "dream"])
+def test_calibration_algorithms_with_rejected_runs(tmp_path, algorithm):
+    """ROPE and DREAM run through parameter sets rejected by a constraint.
+
+    k_slow_2 < k_slow_1 rejects about half of the random sets: SPOTPY's ROPE then
+    fails on tied scores and DREAM on the missing simulation, unless patched.
+    """
+    config = calibration_config(tmp_path)
+    config["calibration"]["algorithm"] = algorithm
+    config["calibration"]["repetitions"] = 100
+    config["calibration"]["seed"] = 1
+    config["calibration"]["parameters"] = ["a_snow", "A", "k_slow_1", "k_slow_2"]
+    project = hb.load_project(config, base_dir=SITTER_DIR)
+    result = project.calibrate()
+
+    assert np.isfinite(result["score"])
+    assert 0 < result["model_runs"] <= 100

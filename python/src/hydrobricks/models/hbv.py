@@ -125,6 +125,16 @@ class HBV(Model):
             self._define_parameter_constraints()
             self._define_parameter_transforms()
 
+            # Evapotranspiration is PET * min(1, SM / (LP * FC)), so an over-large
+            # field capacity keeps the soil relative moisture low and switches ET
+            # off - a calibration free to do that will, because the water then
+            # leaves as discharge and the hydrograph still fits. The generic brick
+            # spec allows up to 3000 mm for models where that is meaningful (GR4J's
+            # X1); HBV's FC is a soil store, usually 50-600 mm, so it is capped
+            # here as Socont's soil store is. Widen it with 'parameter_ranges' in
+            # a project file.
+            self.parameter_ranges.setdefault("soil_moisture:capacity", (10.0, 1000.0))
+
         except RuntimeError as err:
             raise ModelError(
                 f"{type(self).__name__} model initialization raised "

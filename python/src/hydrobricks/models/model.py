@@ -15,7 +15,7 @@ from hydrobricks._area_basis import (
     land_cover_of_label,
 )
 from hydrobricks._exceptions import ConfigurationError, ModelError
-from hydrobricks._hydrobricks import ModelHydro, close_log, init_log
+from hydrobricks._hydrobricks import ModelHydro
 from hydrobricks._utils import Timer, date_as_mjd, dump_config_file, validate_kwargs
 from hydrobricks.actions.action import Action
 from hydrobricks.forcing import Forcing
@@ -250,8 +250,9 @@ class Model(ABC):
             self.end_date = end_date
             self.output_path = str(output_path)
 
-            # Initialize log
-            init_log(str(output_path))
+            # The model's own log file: several models can then live (and run) side by
+            # side without closing or writing into each other's logs.
+            self.model.open_log(str(output_path))
 
             # Modelling period
             self.time_step = int(time_step)
@@ -381,9 +382,10 @@ class Model(ABC):
             logger.error(f"Model run failed: {e}", exc_info=True)
             raise ModelError(f"Model run failed: {e}") from e
 
-    @staticmethod
-    def _cleanup() -> None:
-        close_log()
+    def _cleanup(self) -> None:
+        model = getattr(self, "model", None)
+        if model is not None:
+            model.close_log()
 
     def initialize_state_variables(
         self, parameters: ParameterSet, forcing: Forcing | None = None

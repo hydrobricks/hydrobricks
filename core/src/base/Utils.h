@@ -44,6 +44,18 @@ void DisplayProcessingTime(std::chrono::steady_clock::time_point startTime);
 void InitLog(const string& path);
 
 /**
+ * Path of a new log file in the given directory (hydrobricks_<timestamp>.log).
+ *
+ * @param directory Directory of the log file.
+ */
+string LogFilePath(const string& directory);
+
+/**
+ * Log the hydrobricks version (debug level).
+ */
+void LogVersion();
+
+/**
  * Close the log file.
  */
 void CloseLog();

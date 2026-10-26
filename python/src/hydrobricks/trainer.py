@@ -937,6 +937,10 @@ class SpotpySetup:
         # False (maximize/grid), so a setup used outside calibrate() returns the
         # skill unchanged.
         self._minimize = False
+        # Parameter sets actually simulated (rejected sets excluded). The budget an
+        # algorithm is given counts differently from one algorithm to the next (SCE-UA
+        # counts its trial points and its saved points), so this is what compares them.
+        self.model_runs = 0
 
     def _setup_forcing_and_models(self) -> None:
         """
@@ -1076,6 +1080,7 @@ class SpotpySetup:
             return None
 
         logger.debug(f"Running {len(self.model)} model(s)")
+        self.model_runs += 1
         all_sim = []
         for model_idx, (model, forcing) in enumerate(zip(self.model, self.forcing)):
             logger.debug(f"  Model {model_idx}: running simulation")
@@ -1473,7 +1478,7 @@ def calibrate(
                 parallel,
             )
 
-    algorithm_cls = getattr(spotpy.algorithms, algorithm)
+    algorithm_cls = _algorithm_class(algorithm)
     sampler = algorithm_cls(
         spot_setup,
         dbname=dbname,
@@ -1618,6 +1623,54 @@ def calibrate_from_factory(
         sample_kwargs=sample_kwargs,
         **algorithm_kwargs,
     )
+
+
+# Two SPOTPY algorithms fail on the rejected parameter sets of hydrobricks (sets
+# breaking a parameter constraint, which return no simulation and all get the same
+# penalty score). They are replaced by subclasses fixing the one method concerned.
+_PATCHED_ALGORITHMS: dict[str, type] = {}
+if spotpy is not None:
+
+    class _Rope(spotpy.algorithms.rope):
+        """ROPE sorting its runs by score only.
+
+        SPOTPY sorts ``zip(likes, pars)``: two runs with the same score make Python
+        compare their parameter arrays, which raises.
+        """
+
+        def get_best_runs(self, likes, pars, runs, percentage):
+            ranked = sorted(zip(likes, pars), key=lambda pair: pair[0])
+            return [p for _, p in ranked[int(len(likes) * (1 - percentage)) :]]
+
+    class _Dream(spotpy.algorithms.dream):
+        """DREAM accepting runs without a simulation.
+
+        SPOTPY keeps ``list(sim)`` of each chain's current run, which fails on the
+        ``None`` of a rejected run. Kept as ``None`` instead: SPOTPY does not save a
+        run without a simulation, as for rejected runs in any other algorithm.
+        """
+
+        def update_mcmc_status(self, par, like, sim, cur_chain):
+            self.bestpar[cur_chain][self.nChainruns[cur_chain]] = list(par)
+            self.bestlike[cur_chain] = like
+            self.bestsim[cur_chain] = None if sim is None else list(sim)
+
+        def sample(self, *args, **kwargs):
+            # Two harmless numpy warnings are silenced. A chain standing on a
+            # rejected run carries its penalty score, so the acceptance ratio
+            # exp(-0.5 (best - like)) of the next run overflows to infinity - which
+            # accepts it, as it should. And when the crossover selects no parameter
+            # to move, the jump rate 2.38 / sqrt(2 n d*) divides by d* = 0, but it
+            # then multiplies no parameter.
+            with np.errstate(over="ignore", divide="ignore"):
+                return super().sample(*args, **kwargs)
+
+    _PATCHED_ALGORITHMS = {"rope": _Rope, "dream": _Dream}
+
+
+def _algorithm_class(name: str) -> type:
+    """The SPOTPY algorithm class to use for a name (patched where needed)."""
+    return _PATCHED_ALGORITHMS.get(name) or getattr(spotpy.algorithms, name)
 
 
 def _optimizer_minimizes(sampler: Any) -> bool:

@@ -120,8 +120,33 @@ HAS_PYPROJ = is_module_available("pyproj")
 if HAS_PYPROJ:
     pyproj = LazyImport("pyproj")
 
+
+def _restore_numpy_in1d() -> None:
+    """Give numpy back the ``in1d`` that pysheds still calls.
+
+    ``numpy.in1d`` was deprecated in numpy 2.0 and removed in 2.4; pysheds (0.5,
+    the latest release) still uses it on flattened arrays, for which it is exactly
+    ``numpy.isin``. Only added when missing. To drop once pysheds no longer needs it.
+    """
+    import numpy as np
+
+    if not hasattr(np, "in1d"):
+
+        def in1d(ar1, ar2, assume_unique=False, invert=False, *, kind=None):
+            return np.isin(
+                np.asarray(ar1).ravel(),
+                ar2,
+                assume_unique=assume_unique,
+                invert=invert,
+                kind=kind,
+            )
+
+        np.in1d = in1d
+
+
 HAS_PYSHEDS = is_module_available("pysheds")
 if HAS_PYSHEDS:
+    _restore_numpy_in1d()
     pysheds = LazyImport("pysheds")
     from pysheds.grid import Grid as pyshedsGrid
 

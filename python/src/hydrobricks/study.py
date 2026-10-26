@@ -98,6 +98,7 @@ _RESERVED_DIMENSIONS = {
     "score",
     "calibration_score",
     "calibration_seconds",
+    "model_runs",
 }
 _SHORTHANDS = {
     "objective": "calibration.objective",
@@ -282,6 +283,9 @@ class Study:
             # Wall-clock time of the calibration only (model build and
             # assessment excluded), to compare the cost of the algorithms.
             "calibration_seconds": round(calibration_seconds, 3),
+            # Parameter sets actually simulated: the budget ('repetitions') is
+            # counted differently by each algorithm.
+            "model_runs": best.get("model_runs"),
             "calibration_score": float(best["score"]),
             "best_parameters": {
                 name: float(value) for name, value in best["parameters"].items()
@@ -438,8 +442,9 @@ class Study:
 
         Returns a long-format DataFrame with one column per matrix dimension
         plus ``job_id``, ``period``, ``transform``, ``metric``, ``score``,
-        ``calibration_score`` and ``calibration_seconds`` (the wall-clock time
-        of the calibration), and writes it to ``results/scores.csv``.
+        ``calibration_score``, ``calibration_seconds`` (the wall-clock time
+        of the calibration) and ``model_runs`` (the parameter sets actually
+        simulated), and writes it to ``results/scores.csv``.
         """
         records = []
         for file in sorted(self.results_dir.glob("*.json")):
@@ -466,6 +471,7 @@ class Study:
                         "score": score["score"],
                         "calibration_score": record["calibration_score"],
                         "calibration_seconds": record.get("calibration_seconds"),
+                        "model_runs": record.get("model_runs"),
                     }
                 )
         table = pd.DataFrame(rows)

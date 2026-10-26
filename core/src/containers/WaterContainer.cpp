@@ -1,5 +1,7 @@
 #include "WaterContainer.h"
 
+#include <cmath>
+
 #include "Brick.h"
 #include "FluxToBrickInstantaneous.h"
 
@@ -104,6 +106,12 @@ void WaterContainer::ApplyConstraints(double timeStep) {
             // For example when the originating brick has an area = 0.
             continue;
         }
+        if (std::isnan(*changeRate)) {
+            // A NaN would make every comparison below false and silently switch the
+            // constraints of this container off (e.g. a NaN PET in the ET process lets
+            // the other outflows empty the store into negative content).
+            throw RuntimeError(std::format("Change rate in process {} is not a number.", link.process->GetName()));
+        }
         assert(*changeRate < 10000);
         if (*changeRate < 0) {
             *changeRate = 0;
@@ -145,7 +153,12 @@ void WaterContainer::ApplyConstraints(double timeStep) {
             *changeRate = 0;
         }
         assert(GreaterThanOrEqual(*changeRate, 0, EPSILON_D));
-        inputs += *changeRate;
+        // Process::ApplyChange does not transfer rates within PRECISION of zero, so they
+        // must not count as available water here either: the outgoing rates would
+        // otherwise draw on water that never arrives (negative content at Finalize).
+        if (GreaterThan(*changeRate, 0, PRECISION)) {
+            inputs += *changeRate;
+        }
     }
 
     double change = inputs - outputs;
@@ -188,10 +201,13 @@ void WaterContainer::ApplyConstraints(double timeStep) {
         double capacity = GetMaximumCapacity();
         if (content + inputsStatic + change * timeStep > capacity) {
             double diff = (content + inputsStatic + change * timeStep - capacity) / timeStep;
-            // If it has an overflow, use it
+            // If it has an overflow, use it. The excess is computed with the overflow's
+            // current rate already counted among the outputs, so it is added to that rate:
+            // assigning it would drop the current rate, and the repeated constraint sweeps
+            // would then flip the overflow between the excess and zero.
             if (HasOverflow()) {
                 if (_overflow->GetOutputFlux(0)->GetChangeRatePointer() != nullptr) {
-                    *(_overflow->GetOutputFlux(0)->GetChangeRatePointer()) = diff;
+                    *(_overflow->GetOutputFlux(0)->GetChangeRatePointer()) += diff;
                     return;
                 }
                 throw ShouldNotHappen(

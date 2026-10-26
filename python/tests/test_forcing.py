@@ -856,3 +856,60 @@ def test_spatialized_climatology_needs_dates_first(tmp_path, banded_units):
         forcing.load_spatialized_data_from_csv(
             path, variable="solar_radiation", column_day_of_year="day_of_year"
         )
+
+
+def _forcing_with_tmin_tmax(forcing: hb.Forcing, cross: bool):
+    """Temperature from the station, plus Tmin/Tmax around it (crossed if asked)."""
+    forcing.spatialize_from_station_data(
+        variable="temperature",
+        method="additive_elevation_gradient",
+        ref_elevation=1250,
+        gradient=-0.6,
+    )
+    forcing.apply_operations()
+    t = forcing.data2D.data[forcing.data2D.data_name.index(forcing.Variable.T)]
+    low, high = t - 4.0, t + 4.0
+    if cross:
+        # Every other day, the two are swapped (as independently lapsed series can be).
+        low[::2], high[::2] = high[::2].copy(), low[::2].copy()
+    forcing.data2D.data += [low, high]
+    forcing.data2D.data_name += [forcing.Variable.T_MIN, forcing.Variable.T_MAX]
+    return forcing
+
+
+def test_apply_pet_hargreaves_with_crossed_tmin_tmax(
+    forcing: hb.Forcing, hydro_units: hb.HydroUnits
+):
+    # Tmin above Tmax would give sqrt(tmax - tmin) = NaN: the two are swapped instead.
+    if not hb.HAS_PYET:
+        return
+    use = ["t", "tmin", "tmax", "lat"]
+    crossed = _forcing_with_tmin_tmax(forcing, cross=True)
+    crossed._apply_pet_computation("Hargreaves", use, lat=47.3)
+    pet_crossed = crossed.data2D.data[crossed.data2D.data_name.index("pet")]
+
+    ordered = hb.Forcing(hydro_units)
+    ordered.load_station_data_from_csv(
+        CATCHMENT_DIR / "meteo.csv",
+        column_time="date",
+        time_format="%d/%m/%Y",
+        content={"temperature": "temp(C)"},
+    )
+    ordered = _forcing_with_tmin_tmax(ordered, cross=False)
+    ordered._apply_pet_computation("Hargreaves", use, lat=47.3)
+    pet_ordered = ordered.data2D.data[ordered.data2D.data_name.index("pet")]
+
+    assert not np.isnan(pet_crossed).any()
+    np.testing.assert_allclose(pet_crossed, pet_ordered)
+
+
+def test_apply_pet_nan_raises(forcing: hb.Forcing):
+    # A NaN PET would disable the storage constraints in the model: it is refused.
+    if not hb.HAS_PYET:
+        return
+    forcing = _forcing_with_tmin_tmax(forcing, cross=False)
+    forcing.data2D.data[-1][3, 0] = np.nan
+    with pytest.raises(hb.ForcingError, match="NaN"):
+        forcing._apply_pet_computation(
+            "Hargreaves", ["t", "tmin", "tmax", "lat"], lat=47.3
+        )

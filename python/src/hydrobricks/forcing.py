@@ -1560,6 +1560,19 @@ class Forcing:
             pyet_args = self._set_pyet_variables_data(pyet_args, use, i_unit)
             pet[:, i_unit] = self._compute_pet(method, pyet_args)
 
+        # The model cannot use a NaN PET: it would disable the storage constraints of
+        # the bricks evaporating from it. Missing inputs must be filled beforehand.
+        n_nan = int(np.isnan(pet).sum())
+        if n_nan:
+            units = np.flatnonzero(np.isnan(pet).any(axis=0))
+            raise ForcingError(
+                f"The {method} PET is NaN for {n_nan} value(s), in {len(units)} "
+                f"hydro unit(s) (positions {units[:10].tolist()}). Check the inputs "
+                f"({', '.join(use)}) for missing or inconsistent values.",
+                variable="PET",
+                method=method,
+            )
+
         # The pyet methods are daily formulations: each timestamp gets the evaporative
         # demand of a whole day. The model reads the PET as the amount demanded during
         # one time step, so a sub-daily series is shared between the steps of its day.
@@ -1670,6 +1683,15 @@ class Forcing:
             pyet_args[pyet_var_name.get(v)] = pd.Series(
                 self.data2D.data[idx][:, i_unit], index=self.data2D.time
             )
+
+        # Tmin and Tmax are spatialized independently (each with its own gradient), so
+        # on days with a small diurnal range they can cross. Methods using the range
+        # (Hargreaves: sqrt(tmax - tmin)) would then return NaN: take the lower of the
+        # two as the minimum and the higher as the maximum.
+        if "tmin" in pyet_args and "tmax" in pyet_args:
+            tmin, tmax = pyet_args["tmin"], pyet_args["tmax"]
+            pyet_args["tmin"] = np.minimum(tmin, tmax)
+            pyet_args["tmax"] = np.maximum(tmin, tmax)
 
         return pyet_args
 

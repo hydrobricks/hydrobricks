@@ -432,7 +432,9 @@ class Project:
         dict
             The :func:`~hydrobricks.trainer.get_best` record (``score``,
             ``parameters``, ``index``) extended with ``sampler``,
-            ``algorithm`` and ``repetitions``.
+            ``algorithm``, ``repetitions`` and ``model_runs`` (the parameter
+            sets actually simulated, rejected ones excluded; ``None`` for a
+            parallel calibration, whose workers count separately).
         """
         import hydrobricks.trainer as trainer
 
@@ -545,6 +547,8 @@ class Project:
             "sampler": sampler,
             "algorithm": algorithm,
             "repetitions": repetitions,
+            # Counted in this process only: parallel workers count in their own copy.
+            "model_runs": spot_setup.model_runs if parallel == "seq" else None,
         }
 
 
@@ -2684,14 +2688,10 @@ def _build_project(
         )
     _check_parameter_names(parameter_set, cfg["parameters"], errors)
     calibration = cfg["calibration"]
-    if calibration is not None and calibration.get("link"):
-        # Applied on the parameter set itself, so the fresh build that
-        # Project.calibrate() makes from the same config inherits it too.
-        names = [n for pair in calibration["link"].items() for n in pair]
+    link = calibration.get("link") if calibration is not None else None
+    if link:
+        names = [n for pair in link.items() for n in pair]
         _check_parameter_names(parameter_set, names, errors, section="calibration.link")
-        if not errors:
-            for dependent, driver in calibration["link"].items():
-                parameter_set.link_parameter(dependent, driver)
     if calibration is not None and calibration["parameters"]:
         _check_parameter_names(
             parameter_set,
@@ -2706,6 +2706,12 @@ def _build_project(
         for name, (minimum, maximum) in cfg["parameter_ranges"].items():
             parameter_set.change_range(name, minimum, maximum)
         parameter_set.set_values(cfg["parameters"])
+    if link:
+        # Applied on the parameter set itself, so the fresh build that
+        # Project.calibrate() makes from the same config inherits it too; and after
+        # the range overrides, which the link checks the two ranges against.
+        for dependent, driver in link.items():
+            parameter_set.link_parameter(dependent, driver)
 
     if setup:
         model.setup(

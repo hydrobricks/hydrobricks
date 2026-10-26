@@ -19,7 +19,7 @@ classifiers = [
 ]
 dependencies = [
     "cftime",
-    "numpy<2.4",
+    "numpy<2.5",
     "HydroErr",
     "pandas",
     "pyyaml"

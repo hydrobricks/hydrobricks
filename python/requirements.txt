@@ -1,5 +1,5 @@
 cftime
 HydroErr
-numpy<=2.3.5
+numpy<=2.4.6
 pandas
 pyyaml

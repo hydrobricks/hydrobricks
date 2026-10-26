@@ -159,6 +159,6 @@ jobs:
       - name: List files to upload
         run: ls -l dist/
 
-      - uses: pypa/gh-action-pypi-publish@v1.14.2
+      - uses: pypa/gh-action-pypi-publish@v1.14.3
         with:
           password: ${{ secrets.PYPI_API_TOKEN }}

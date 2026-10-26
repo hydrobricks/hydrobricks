@@ -75,7 +75,7 @@ jobs:
             vcpkg-wheels-${{ runner.os }}-${{ runner.arch }}-
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v4.3.1
+        uses: pypa/cibuildwheel@v4.3.4
         env:
           CIBW_ARCHS: auto64
 

@@ -60,7 +60,8 @@ class ProcessOutflowLinearThreshold : public ProcessOutflow {
      */
     [[nodiscard]] double GetLinearResponseOffset() const override {
         assert(_responseFactor && _threshold);
-        return (*_responseFactor) * (*_threshold);
+        // Both parameters are floats: widen before multiplying, not after.
+        return static_cast<double>(*_responseFactor) * (*_threshold);
     }
 
   protected:

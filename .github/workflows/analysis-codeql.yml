@@ -31,7 +31,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        language: [ 'cpp', 'python' ]
+        include:
+          - language: cpp
+            build-mode: manual
+          - language: python
+            build-mode: none
 
     steps:
     - name: Checkout repository
@@ -40,31 +44,42 @@ jobs:
     - name: Install libraries
       run: sudo apt-get install tree python3
 
+    # For C++, CodeQL analyses everything compiled after its initialization, and
+    # 'paths-ignore' does not exclude any of it. The dependencies (vcpkg) are therefore
+    # built before CodeQL starts, so that only the hydrobricks sources are analysed.
+    - name: Setup vcpkg
+      if: matrix.language == 'cpp'
+      uses: lukka/run-vcpkg@v11
+
+    - name: Create Build Environment
+      if: matrix.language == 'cpp'
+      run: cmake -E make_directory ${{github.workspace}}/bin
+
+    - name: Get dependencies
+      if: matrix.language == 'cpp'
+      working-directory: ${{github.workspace}}/bin
+      run: vcpkg install
+
+    - name: Configure CMake
+      if: matrix.language == 'cpp'
+      working-directory: ${{github.workspace}}/bin
+      run: cmake .. -DCMAKE_BUILD_TYPE=RelWithDebugInfo
+
     - name: Initialize CodeQL
       uses: github/codeql-action/init@v4
       with:
         languages: ${{ matrix.language }}
+        build-mode: ${{ matrix.build-mode }}
+        # Effective for Python (not built); for C++ the build order above does it.
         config: |
           paths-ignore:
             - vcpkg/**
             - vcpkg_installed/**
             - '**/vcpkg_installed/**'
-
-    - name: Setup vcpkg
-      uses: lukka/run-vcpkg@v11
-
-    - name: Create Build Environment
-      run: cmake -E make_directory ${{github.workspace}}/bin
-
-    - name: Get dependencies
-      working-directory: ${{github.workspace}}/bin
-      run: vcpkg install
-
-    - name: Configure CMake
-      working-directory: ${{github.workspace}}/bin
-      run: cmake .. -DCMAKE_BUILD_TYPE=RelWithDebugInfo
+            - bin/**
 
     - name: Build
+      if: matrix.language == 'cpp'
       working-directory: ${{github.workspace}}/bin
       run: cmake --build . --config RelWithDebugInfo
 

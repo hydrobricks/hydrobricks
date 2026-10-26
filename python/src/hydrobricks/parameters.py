@@ -713,7 +713,7 @@ PROCESS_PARAM_SPECS: dict[str, list[ParamSpec]] = {
             unit="-",
             aliases=["alpha", "alfa"],
             min=0,
-            max=3,
+            max=1,
             default=1.0,
             mandatory=True,
         ),

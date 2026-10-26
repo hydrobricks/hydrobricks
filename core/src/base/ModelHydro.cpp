@@ -17,6 +17,7 @@ ModelHydro::ModelHydro(Subbasin* subbasin)
 ModelHydro::~ModelHydro() = default;
 
 ModelResult ModelHydro::InitializeWithBasin(SettingsModel& modelSettings, SettingsBasin& basinSettings) {
+    LogScope logScope(&_log);
     _network = std::make_unique<RiverNetwork>();
     if (auto r = _network->Initialize(basinSettings); !r) {
         return r;
@@ -41,6 +42,7 @@ std::vector<Subbasin*> ModelHydro::CollectSubbasins() const {
 }
 
 ModelResult ModelHydro::Initialize(SettingsModel& modelSettings, SettingsBasin& basinSettings, bool checkProcesses) {
+    LogScope logScope(&_log);
     try {
         if (!modelSettings.IsValid()) {
             return std::unexpected("Model settings are not valid.");
@@ -110,6 +112,7 @@ ModelResult ModelHydro::Initialize(SettingsModel& modelSettings, SettingsBasin& 
 }
 
 void ModelHydro::UpdateParameters(SettingsModel& modelSettings) {
+    LogScope logScope(&_log);
     // Subbasin parameters come from each subbasin's structure variant; hydro-unit
     // parameters are updated per unit against each unit's variant.
     for (Subbasin* subbasin : _subbasins) {
@@ -225,6 +228,7 @@ bool ModelHydro::ForcingLoaded() const {
 }
 
 ModelResult ModelHydro::Run() {
+    LogScope logScope(&_log);
     if (auto r = InitializeTimeSeries(); !r) {
         return r;
     }
@@ -314,7 +318,18 @@ ModelResult ModelHydro::RewindAfterSpinup() {
     return {};
 }
 
+void ModelHydro::OpenLog(const string& directory) {
+    _log.Open(LogFilePath(directory));
+    LogScope logScope(&_log);
+    LogVersion();
+}
+
+void ModelHydro::CloseLog() {
+    _log.Close();
+}
+
 void ModelHydro::Reset() {
+    LogScope logScope(&_log);
     _timer.Reset();
     _logger.Reset();
     // Roll back action bookkeeping (cursors, lookup-table row, ...); the land-cover
@@ -332,6 +347,7 @@ void ModelHydro::Reset() {
 }
 
 void ModelHydro::SaveAsInitialState() {
+    LogScope logScope(&_log);
     for (Subbasin* subbasin : CollectSubbasins()) {
         subbasin->SaveAsInitialState();
     }
@@ -341,6 +357,7 @@ void ModelHydro::SaveAsInitialState() {
 }
 
 bool ModelHydro::DumpOutputs(const string& path) {
+    LogScope logScope(&_log);
     return _logger.DumpOutputs(path);
 }
 
@@ -520,6 +537,7 @@ axd ModelHydro::GetHydroUnitSubbasinFractions() const {
 }
 
 bool ModelHydro::AddTimeSeries(std::unique_ptr<TimeSeries> timeSeries) {
+    LogScope logScope(&_log);
     // Validate time series before adding
     if (!timeSeries->IsValid()) {
         LogError("Time series is not valid and cannot be added to the model.");
@@ -564,6 +582,7 @@ bool ModelHydro::AddTimeSeries(std::unique_ptr<TimeSeries> timeSeries) {
 }
 
 bool ModelHydro::AddAction(Action* action) {
+    LogScope logScope(&_log);
     return _actionsManager.AddAction(action);
 }
 
@@ -576,6 +595,7 @@ int ModelHydro::GetSporadicActionItemCount() const {
 }
 
 bool ModelHydro::CreateTimeSeries(const string& varName, const axd& time, const axi& ids, const axxd& data) {
+    LogScope logScope(&_log);
     try {
         auto timeSeriesPtr = TimeSeries::Create(varName, time, ids, data);
         if (!AddTimeSeries(std::move(timeSeriesPtr))) {
@@ -594,6 +614,7 @@ void ModelHydro::ClearTimeSeries() {
 }
 
 bool ModelHydro::AttachTimeSeriesToHydroUnits() {
+    LogScope logScope(&_log);
     assert(_subbasin);
 
     std::vector<HydroUnit*> units = GetHydroUnits();

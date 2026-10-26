@@ -75,6 +75,20 @@ class ModelHydro {
     [[nodiscard]] ModelResult Run();
 
     /**
+     * Open the model's own log file (hydrobricks_<timestamp>.log) in the given directory.
+     * The messages logged while this model initializes, runs or updates go there instead
+     * of the global log file, so that several models can log independently.
+     *
+     * @param directory directory of the log file.
+     */
+    void OpenLog(const string& directory);
+
+    /**
+     * Flush and close the model's own log file.
+     */
+    void CloseLog();
+
+    /**
      * Reset the model.
      */
     void Reset();
@@ -400,6 +414,7 @@ class ModelHydro {
     ParametersUpdater _parametersUpdater;
     std::vector<std::unique_ptr<TimeSeries>> _timeSeries;  // owning
     int _spinupSteps = 0;                                  // time steps replayed as spin-up at the start of each run
+    LogFile _log;                                          // this model's own log file (see OpenLog)
 
   private:
     /**

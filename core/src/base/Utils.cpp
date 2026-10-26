@@ -36,7 +36,7 @@ bool InitHydrobricksForPython() {
     return InitHydrobricks();
 }
 
-void InitLog(const string& path) {
+string LogFilePath(const string& directory) {
     auto now = std::chrono::system_clock::now();
     auto nowTime = std::chrono::system_clock::to_time_t(now);
     std::tm* tm = std::localtime(&nowTime);
@@ -44,12 +44,18 @@ void InitLog(const string& path) {
     std::strftime(timeBuf, sizeof(timeBuf), "%Y-%m-%d_%H%M%S", tm);
 
     string logFileName = std::format("hydrobricks_{}.log", timeBuf);
-    string fullPath = (std::filesystem::path(path) / logFileName).string();
-    LogSetFile(fullPath);
+    return (std::filesystem::path(directory) / logFileName).string();
+}
 
+void LogVersion() {
     string version = std::format("{}.{}.{}", HYDROBRICKS_MAJOR_VERSION, HYDROBRICKS_MINOR_VERSION,
                                  HYDROBRICKS_PATCH_VERSION);
     LogDebug(std::format("hydrobricks version {}, {}", version, __DATE__));
+}
+
+void InitLog(const string& path) {
+    LogSetFile(LogFilePath(path));
+    LogVersion();
 }
 
 void CloseLog() {

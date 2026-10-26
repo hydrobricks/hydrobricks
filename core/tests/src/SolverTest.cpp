@@ -1098,3 +1098,77 @@ TEST_F(SolverLinearStorageWithET, UsingRungeKutta) {
     EXPECT_NEAR(storageContent, 0.605521, 0.000001);
     EXPECT_NEAR(30.0 - basinOutputs[0].sum() - unitContent[2].sum() - storageContent, 0, 0.00000000000001);
 }
+
+/**
+ * Model: a fast linear storage feeding a capped storage with an overflow, under heavy rain.
+ * The capacity constraint must route the excess through the overflow on top of the rate the
+ * overflow already carries, and settle: replacing that rate by the remaining excess dropped it
+ * (and made the repeated constraint sweeps of the explicit solvers flip it between the excess
+ * and zero), so the capped store ended steps above its capacity.
+ */
+class SolverOverflowUnderInflow : public ::testing::TestWithParam<std::string> {
+  protected:
+    SettingsModel _model;
+    std::unique_ptr<TimeSeriesUniform> _tsPrecip;
+    static constexpr double capacity = 15.0;
+
+    void SetUp() override {
+        _model.SetTimer("2020-01-01", "2020-01-20", 1, "day");
+
+        _model.AddHydroUnitBrick("storage_1", "storage");
+        _model.AddBrickForcing("precipitation");
+        _model.AddBrickLogging("water_content");
+        _model.AddBrickProcess("outflow", "outflow:linear");
+        _model.SetProcessParameterValue("response_factor", 0.9f);
+        _model.AddProcessOutput("storage_2");
+
+        _model.AddHydroUnitBrick("storage_2", "storage");
+        _model.AddBrickLogging("water_content");
+        _model.AddBrickParameter("capacity", capacity);
+        _model.AddBrickProcess("outflow", "outflow:linear");
+        _model.SetProcessParameterValue("response_factor", 0.1f);
+        _model.AddProcessOutput("outlet");
+        _model.AddBrickProcess("overflow", "overflow");
+        _model.AddProcessOutput("outlet");
+
+        _model.AddLoggingToItem("outlet");
+
+        auto data = std::make_unique<TimeSeriesDataRegular>(GetMJD(2020, 1, 1), GetMJD(2020, 1, 20), 1, TimeUnit::Day);
+        data->SetValues({0.0,  60.0, 60.0, 60.0, 5.0, 40.0, 0.0, 80.0, 0.0, 0.0,
+                         20.0, 20.0, 20.0, 0.0,  0.0, 0.0,  0.0, 0.0,  0.0, 0.0});
+        _tsPrecip = std::make_unique<TimeSeriesUniform>(VariableType::Precipitation);
+        _tsPrecip->SetData(std::move(data));
+    }
+};
+
+TEST_P(SolverOverflowUnderInflow, KeepsCappedStoreWithinCapacityAndClosesBalance) {
+    SettingsBasin basinSettings;
+    basinSettings.AddHydroUnit(1, 100);
+
+    Subbasin subbasin;
+    EXPECT_TRUE(subbasin.Initialize(basinSettings));
+
+    _model.SetSolver(GetParam());
+
+    ModelHydro model(&subbasin);
+    ASSERT_TRUE(model.Initialize(_model, basinSettings));
+    ASSERT_TRUE(model.AddTimeSeries(std::unique_ptr<TimeSeries>(std::move(_tsPrecip))));
+    ASSERT_TRUE(model.AttachTimeSeriesToHydroUnits());
+    EXPECT_TRUE(model.Run());
+
+    vecAxd basinOutputs = model.GetLogger()->GetSubbasinValues();
+    vecAxxd unitContent = model.GetLogger()->GetHydroUnitValues();
+
+    // The capped store never ends a step above its capacity.
+    for (int t = 0; t < unitContent[1].rows(); ++t) {
+        EXPECT_LE(unitContent[1](t, 0), capacity + PRECISION) << "time step " << t;
+    }
+
+    // And the overflow keeps the water: the balance closes.
+    double rain = 365.0;
+    EXPECT_NEAR(rain - basinOutputs[0].sum() - unitContent[0](19, 0) - unitContent[1](19, 0), 0, 1e-8);
+}
+
+INSTANTIATE_TEST_SUITE_P(AllSolvers, SolverOverflowUnderInflow,
+                         ::testing::Values("euler_explicit", "heun_explicit", "rk4", "analytic_linear",
+                                           "implicit_euler", "crank_nicolson", "exponential_euler"));

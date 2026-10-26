@@ -2,6 +2,7 @@
 #define HYDROBRICKS_LOG_H
 
 #include <format>
+#include <memory>
 #include <string>
 
 enum class LogLevel {
@@ -9,6 +10,55 @@ enum class LogLevel {
     Warning,
     Message,
     Debug
+};
+
+/**
+ * A log file owned by one object (e.g. one model instance), so that several models living
+ * in the same process each keep their own log, whatever the order in which they are
+ * created, run and destroyed. Messages reach it through a LogScope.
+ */
+class LogFile {
+  public:
+    LogFile();
+    ~LogFile();
+    LogFile(const LogFile&) = delete;
+    LogFile& operator=(const LogFile&) = delete;
+
+    /**
+     * Open (and truncate) the file at the given path, closing any previous one.
+     */
+    void Open(const std::string& path);
+
+    /**
+     * Flush and close the file.
+     */
+    void Close();
+
+    [[nodiscard]] bool IsOpen();
+
+    void Write(const std::string& line);
+
+  private:
+    // The stream and its mutex live in the implementation: this header is part of the
+    // core's common includes, which must not pull in <fstream> and <mutex>.
+    struct Impl;
+    std::unique_ptr<Impl> _impl;
+};
+
+/**
+ * Route the messages logged on the current thread to a log file while the scope is alive
+ * (RAII), instead of the global log file. Scopes nest: the previous target is restored on
+ * exit. A null or closed file leaves the messages on the global log file.
+ */
+class LogScope {
+  public:
+    explicit LogScope(LogFile* file);
+    ~LogScope();
+    LogScope(const LogScope&) = delete;
+    LogScope& operator=(const LogScope&) = delete;
+
+  private:
+    LogFile* _previous;
 };
 
 /**

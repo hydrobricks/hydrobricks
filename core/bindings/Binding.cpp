@@ -389,6 +389,9 @@ PYBIND11_MODULE(_hydrobricks, m) {
                 if (!r) throw py::value_error(r.error());
             },
             "Initialize the model and create the subbasin.", "model_settings"_a, "basin_settings"_a)
+        .def("open_log", &ModelHydro::OpenLog,
+             "Open the model's own log file (hydrobricks_<timestamp>.log) in the given directory.", "directory"_a)
+        .def("close_log", &ModelHydro::CloseLog, "Flush and close the model's own log file.")
         .def("add_action", &ModelHydro::AddAction, "Adding a action to the model.", "action"_a)
         .def("get_action_count", &ModelHydro::GetActionCount, "Get the number of actions.")
         .def("get_sporadic_action_item_count", &ModelHydro::GetSporadicActionItemCount,

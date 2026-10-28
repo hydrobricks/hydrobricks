@@ -5,6 +5,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## Unreleased
+
+### Changed
+
+- The default range of the snow correction factor `snow_correction_factor` is now [0.5, 1.5] (was [0.8, 1.6]): ±50 % for snow, as the rain factor allows ±30 % ([0.7, 1.3], unchanged).
+- The constraint `rain_correction_factor <= snow_correction_factor` is removed: the two factors are independent. With the new ranges it made snow factors below 0.7 unreachable and rejected about half of the random parameter sets.
+
+### Fixed
+
+- SPOTPY's ABC and FSCABC did not maximise the objective: their loop minimises what it is given, so with a KGE they drove it down, and a rejected parameter set stopped them after the first loop. Their trial points also moved the food source they came from even when rejected, the scout runs were saved with the wrong parameters, and the seed was ignored. hydrobricks now runs its own loop for both, which spends the whole budget (`peps` is ignored).
+
 ## 0.9.4 - 2026-10-26
 
 ### Added

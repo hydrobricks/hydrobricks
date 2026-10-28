@@ -365,9 +365,10 @@ PROCESS_PARAM_SPECS: dict[str, list[ParamSpec]] = {
         # These correct gauge undercatch, which raises the measured amount and
         # is worse for snow: a few per cent for rain in summer, occasionally
         # over 40 % for snowfall at altitude (Sevruk 1985, and the MeteoSwiss
-        # RhiresD product documentation). The bounds follow that asymmetry, but
-        # stay open below 1 because a calibrated factor also absorbs the bias of
-        # the interpolation onto the catchment (PREVAH Ticino calibrates 0.78).
+        # RhiresD product documentation). Hence +-30 % for rain and +-50 % for
+        # snow. Both stay open below 1 because a calibrated factor also absorbs
+        # the bias of the interpolation onto the catchment (PREVAH Ticino
+        # calibrates 0.78).
         ParamSpec(
             name="rain_correction_factor",
             unit="-",
@@ -381,8 +382,8 @@ PROCESS_PARAM_SPECS: dict[str, list[ParamSpec]] = {
             name="snow_correction_factor",
             unit="-",
             aliases=["snow_correction_factor", "snow_corr_factor", "sfcf", "scf"],
-            min=0.8,
-            max=1.6,
+            min=0.5,
+            max=1.5,
             default=1.0,
             mandatory=False,
         ),
@@ -2666,14 +2667,12 @@ class ParameterSet:
             'snow_rain_process' to decide whether snow is configured).
         """
         if _has_snow(options):
+            # The two factors are independent: a factor also absorbs the bias of
+            # the interpolation onto the catchment, which need not follow the
+            # undercatch (larger for snow), so the snow factor may fall below
+            # the rain factor.
             for spec in PROCESS_PARAM_SPECS["correction:snow_rain"]:
                 self._register(component="snow_rain_transition", spec=spec)
-            # Snow undercatch is usually at least as large as rain undercatch, so the
-            # snow factor should not fall below the rain factor. Applies to every
-            # snow-bearing model (only the snow/rain splitter carries both factors).
-            self.define_constraint(
-                "rain_correction_factor", "<=", "snow_correction_factor"
-            )
         else:
             for spec in PROCESS_PARAM_SPECS["correction:rain"]:
                 self._register(component="rain", spec=spec)

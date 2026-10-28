@@ -1537,7 +1537,8 @@ def test_project_calibrate_with_gauges_smoke(tmp_path):
 def test_calibration_link_needs_compatible_ranges(tmp_path):
     """A link is refused when the driver can take values the dependent cannot."""
     config = calibration_config(tmp_path)
-    # Rain 0.7-1.3, snow 0.8-1.6: a shared value above 1.3 would not suit the rain.
+    # Rain 0.7-1.3, snow 0.5-1.5: a shared value outside 0.7-1.3 would not suit
+    # the rain.
     config["calibration"]["parameters"] = ["a_snow", "snow_corr_factor"]
     config["calibration"]["link"] = {"rain_corr_factor": "snow_corr_factor"}
     with pytest.raises(hb.ConfigurationError, match="not within"):

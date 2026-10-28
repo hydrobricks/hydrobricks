@@ -98,7 +98,7 @@ A model is a graph of **Bricks** connected by **Fluxes**. Each Brick represents 
 - **C++**: clang-format Google style, 120-column limit (see `.clang-format`)
 - **CMake**: cmake-format, tab size 4, line width 120 (see `.cmake-format.yaml`)
 
-Dependencies managed via vcpkg (`vcpkg.json`); fetched at CMake configure time via `FetchContent`: yaml-cpp, pybind11. NetCDF, Eigen3, GTest fetched via vcpkg.
+Dependencies managed via vcpkg (`vcpkg.json`): yaml-cpp, NetCDF (with HDF5), Eigen3, GTest. Only pybind11 is fetched at CMake configure time via `FetchContent`.
 
 ### Logging
 

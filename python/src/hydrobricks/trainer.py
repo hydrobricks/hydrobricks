@@ -1628,6 +1628,7 @@ def calibrate_from_factory(
 # Two SPOTPY algorithms fail on the rejected parameter sets of hydrobricks (sets
 # breaking a parameter constraint, which return no simulation and all get the same
 # penalty score). They are replaced by subclasses fixing the one method concerned.
+# ABC and FSCABC do not maximise a skill at all: their loop is rewritten.
 _PATCHED_ALGORITHMS: dict[str, type] = {}
 if spotpy is not None:
 
@@ -1665,7 +1666,149 @@ if spotpy is not None:
             with np.errstate(over="ignore", divide="ignore"):
                 return super().sample(*args, **kwargs)
 
-    _PATCHED_ALGORITHMS = {"rope": _Rope, "dream": _Dream}
+    class _BeeColony:
+        """The bee colony loop of ABC and FSCABC, rewritten.
+
+        SPOTPY's loop (1.6) does not optimise a skill:
+
+        - it negates the objective and keeps the larger value, so it minimises what
+          it is given (an error such as the RMSE) while declaring 'maximize': handed
+          a KGE, it drives the KGE down;
+        - its convergence test (``-best < peps``) and ABC's roulette (``1 / like``)
+          assume that negated error, always below 0;
+        - a trial point is the same array as the food source it comes from, so a
+          rejected trial still moves the source, which keeps its old score;
+        - the scout runs are saved with the parameters of another run;
+        - it reseeds ``random`` from the clock, ignoring the sampler's seed.
+
+        This loop maximises the skill, keeps trial points apart from their source,
+        draws from the seeded numpy generator and runs until the budget is spent:
+        a skill has no target value to stop at, so ``peps`` is ignored.
+        """
+
+        def _bee_sample(self, repetitions: int, eb: int, a: float, limit: int):
+            self.set_repetiton(repetitions)
+            lb = np.asarray(self.parameter()["minbound"], dtype=float)
+            ub = np.asarray(self.parameter()["maxbound"], dtype=float)
+            calls = 0
+
+            def evaluate(points: list[np.ndarray], chain: int) -> list[float]:
+                nonlocal calls
+                points = points[: max(repetitions - calls, 0)]
+                start = calls
+                calls += len(points)
+                scores = [0.0] * len(points)
+                runs = ((start + n, p) for n, p in enumerate(points))
+                for rep, _params, sim in self.repeat(runs):
+                    scores[rep - start] = self.postprocessing(
+                        rep, points[rep - start], sim, chains=chain
+                    )
+                return scores
+
+            def mutant(base: int, other: int) -> np.ndarray:
+                point = sources[base].copy()
+                j = np.random.randint(point.size)
+                step = np.random.uniform(-a, a)
+                point[j] += step * (sources[base][j] - sources[other][j])
+                return np.clip(point, lb, ub)
+
+            def partner(i: int) -> int:
+                k = np.random.randint(eb - 1)
+                return k + 1 if k >= i else k
+
+            def improve(targets: list[int], points: list[np.ndarray], chain: int):
+                for i, point, score in zip(
+                    targets, points, evaluate(points, chain), strict=False
+                ):
+                    if score > fitness[i]:
+                        sources[i], fitness[i], trials[i] = point, score, 0
+                    else:
+                        trials[i] += 1
+
+            sources = [
+                np.asarray(self.parameter()["random"], dtype=float) for _ in range(eb)
+            ]
+            fitness = evaluate(sources, chain=1)
+            if len(fitness) < eb:
+                self.final_call()
+                return
+            trials = [0] * eb
+
+            while calls < repetitions:
+                # Employed bees: one mutant per food source.
+                improve(list(range(eb)), [mutant(i, partner(i)) for i in range(eb)], 2)
+                # Onlooker bees: mutants of sources drawn by their fitness.
+                weights = self._onlooker_weights(np.asarray(fitness, dtype=float))
+                drawn = list(np.random.choice(eb, size=eb, p=weights))
+                improve(drawn, [mutant(z, partner(z)) for z in drawn], 3)
+                # Scout bees: sources stuck for too long are replaced.
+                stuck = [i for i in range(eb) if trials[i] >= limit]
+                points = [self._scout_point(lb, ub) for _ in stuck]
+                for i, point, score in zip(
+                    stuck, points, evaluate(points, chain=4), strict=False
+                ):
+                    sources[i], fitness[i], trials[i] = point, score, 0
+            self.final_call()
+
+    class _Abc(_BeeColony, spotpy.algorithms.abc):
+        """ABC on a skill (see :class:`_BeeColony`)."""
+
+        def sample(
+            self,
+            repetitions,
+            eb=48,
+            a=(1 / 10),
+            peps=None,
+            ownlimit=False,
+            limit=24,
+        ):
+            self._bee_sample(repetitions, eb, a, limit if ownlimit else eb)
+
+        @staticmethod
+        def _onlooker_weights(fitness: np.ndarray) -> np.ndarray:
+            # Karaboga's fitness of a cost c = -skill: 1 / (1 + c) for c >= 0 and
+            # 1 + |c| below, positive and rising with the skill.
+            cost = -fitness
+            fit = np.where(cost >= 0, 1 / (1 + np.maximum(cost, 0)), 1 - cost)
+            return fit / fit.sum()
+
+        @staticmethod
+        def _scout_point(lb: np.ndarray, ub: np.ndarray) -> np.ndarray:
+            return np.random.uniform(lb, ub)
+
+    class _Fscabc(_BeeColony, spotpy.algorithms.fscabc):
+        """FSCABC on a skill (see :class:`_BeeColony`): onlookers drawn by power
+        scaled rank, scouts placed by a chaotic (logistic) map."""
+
+        def sample(self, repetitions, eb=48, a=(1 / 10), peps=None, kpow=4, limit=None):
+            self._kpow = kpow
+            # The chaotic map must not start on one of its fixed or periodic points.
+            self._chaos = 0.25
+            while self._chaos in (0.0, 0.25, 0.5, 0.75):
+                self._chaos = np.random.random()
+            self._bee_sample(
+                repetitions, eb, a, int(eb / 2) if limit is None else int(limit)
+            )
+
+        def _onlooker_weights(self, fitness: np.ndarray) -> np.ndarray:
+            rank = np.empty(fitness.size)
+            rank[np.argsort(fitness, kind="stable")] = np.arange(fitness.size)
+            weights = rank**self._kpow
+            return weights / weights.sum()
+
+        def _scout_point(self, lb: np.ndarray, ub: np.ndarray) -> np.ndarray:
+            point = np.empty(lb.size)
+            for g in range(lb.size):
+                self._chaos = 4 * self._chaos * (1 - self._chaos)
+                point[g] = lb[g] + self._chaos * (ub[g] - lb[g])
+            return point
+
+    _PATCHED_ALGORITHMS = {
+        "rope": _Rope,
+        "dream": _Dream,
+        "abc": _Abc,
+        "fscabc": _Fscabc,
+    }
 
 
 def _algorithm_class(name: str) -> type:

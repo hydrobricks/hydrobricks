@@ -1576,3 +1576,29 @@ def test_calibration_algorithms_with_rejected_runs(tmp_path, algorithm):
 
     assert np.isfinite(result["score"])
     assert 0 < result["model_runs"] <= 100
+
+
+@pytest.mark.parametrize("algorithm", ["abc", "fscabc"])
+def test_calibration_bee_colonies_maximise_the_skill(tmp_path, algorithm):
+    """ABC and FSCABC raise the KGE, through rejected runs, over the whole budget.
+
+    SPOTPY's loop minimised the skill, and a rejected run (penalty negated to
+    +1e12) met its convergence test after the first loop.
+    """
+    config = calibration_config(tmp_path)
+    config["calibration"]["algorithm"] = algorithm
+    config["calibration"]["repetitions"] = 120
+    config["calibration"]["seed"] = 1
+    config["calibration"]["options"] = {"eb": 10}
+    config["calibration"]["parameters"] = ["a_snow", "A", "k_slow_1", "k_slow_2"]
+    project = hb.load_project(config, base_dir=SITTER_DIR)
+    result = project.calibrate()
+
+    scores = hb.trainer.get_results(result["sampler"])["score"].to_numpy()
+    scores = scores[scores > -1e11]
+    # The colony is seeded with 10 random sets: the search must improve on them.
+    assert result["score"] == pytest.approx(scores.max())
+    assert result["score"] > scores[:10].max()
+    # One loop costs at most 30 runs; the budget is spent to the last run.
+    assert result["model_runs"] > 60
+    assert len(result["sampler"].getdata()) == result["model_runs"]

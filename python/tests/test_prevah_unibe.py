@@ -264,6 +264,7 @@ def test_prevah_generate_parameters_contains_literature_names():
         "ic",  # canopy interception capacity
         "canopy_et_factor",
         "albedo_land",
+        "et_potential_fraction",  # the potential branch of PREVAH's s_eta_soil
     ):
         assert parameters.has(name), f"parameter {name!r} not found"
     # The PREVAH snow evaporation has no parameter.
@@ -326,6 +327,19 @@ def test_prevah_et_prevah_has_albedo_parameter():
     assert parameters.has("albedo_land")
     # The snow albedo is age-derived (no parameter).
     assert not parameters.has("albedo_snow")
+
+
+def test_prevah_et_prevah_is_moisture_limited_by_default():
+    # PREVAH's s_eta_soil takes the potential branch only where it is asked for; the
+    # default keeps the soil-moisture limitation, as its water and rock covers have.
+    parameters = models.PrevahUniBE(soil_et_process="et:prevah").generate_parameters()
+    assert parameters.has("et_potential_fraction")
+    assert parameters.get("et_potential_fraction") == 0.0
+
+
+def test_prevah_et_hbv_has_no_potential_fraction():
+    parameters = models.PrevahUniBE(soil_et_process="et:hbv").generate_parameters()
+    assert not parameters.has("et_potential_fraction")
 
 
 def test_prevah_et_prevah_water_balance_closes(tmp_path):

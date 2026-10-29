@@ -97,7 +97,15 @@ class PrevahUniBE(Model):
         Shape coefficient of the beta-function recharge [-] (PREVAH CBETA).
     lp (cu) : float
         Soil moisture fraction above which ET reaches the potential rate [-]
-        (PREVAH CU).
+        (PREVAH CU). Where it leaves a zero threshold (lp * fc = 0), the soil
+        evaporates nothing, as PREVAH's s_eta_soil does on a cover with no
+        plant-available water.
+    potential_fraction (et_potential_fraction) : float
+        Share of the unit evaporating at the potential rate whatever the soil
+        moisture [-], the other branch of PREVAH's s_eta_soil. Default 0 (all
+        moisture-limited); PREVAH takes the potential branch on its vegetated
+        covers when its et_calc_method is 2 or 3, and never on water, built-up
+        or rock. Usually set per unit.
     k0 : float
         Surface runoff response factor [1/d] (= 24 / K0H).
     sgrluz : float

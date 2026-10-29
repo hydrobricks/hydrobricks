@@ -1345,6 +1345,66 @@ TEST_F(EtPrevahSoil, GatedOnASnowFreeCoverKeepsThePotentialRate) {
     EXPECT_NEAR(et(2), 2.0, 1e-6);
 }
 
+TEST_F(EtPrevahSoil, ZeroMoistureThresholdGivesNoEt) {
+    // PREVAH's s_eta_soil: 'IF (sgrlp .le. 0.0) THEN EA = 0.0'. A cover with no
+    // plant-available water evaporates nothing, rather than at the unlimited rate the
+    // formula tends to.
+    SetUpModel({"ground"});
+    _model.SelectHydroUnitBrick("soil");
+    _model.SelectProcess("et");
+    _model.SetProcessParameterValue("lp", 0.0f);
+    SetForcing(10.0);
+
+    axd et = RunAndGetEt({{"ground", 1.0}});
+
+    EXPECT_NEAR(et(2), 0.0, 1e-8);
+    EXPECT_NEAR(et(3), 0.0, 1e-8);
+    EXPECT_NEAR(et(4), 0.0, 1e-8);
+}
+
+TEST_F(EtPrevahSoil, PotentialFractionEvaporatesWhateverTheMoisture) {
+    // The other branch of s_eta_soil (PREVAH's et_calc_method 2 and 3 on a vegetated
+    // cover): the full potential rate, here with a threshold that would otherwise
+    // give no ET at all.
+    SetUpModel({"ground"});
+    _model.SelectHydroUnitBrick("soil");
+    _model.SelectProcess("et");
+    _model.SetProcessParameterValue("lp", 0.0f);
+    _model.SetProcessParameterValue("potential_fraction", 1.0f);
+    SetForcing(10.0);
+    // No snow at all, so the albedo factor is neutral and the ET is the plain rate.
+    auto temp = std::make_unique<TimeSeriesDataRegular>(GetMJD(2020, 1, 1), GetMJD(2020, 1, 5), 1, TimeUnit::Day);
+    temp->SetValues({10.0, 10.0, 10.0, 10.0, 10.0});
+    _tsTemp = std::make_unique<TimeSeriesUniform>(VariableType::Temperature);
+    _tsTemp->SetData(std::move(temp));
+
+    axd et = RunAndGetEt({{"ground", 1.0}});
+
+    EXPECT_NEAR(et(2), 2.0, 1e-6);
+    EXPECT_NEAR(et(3), 2.0, 1e-6);
+    EXPECT_NEAR(et(4), 2.0, 1e-6);
+}
+
+TEST_F(EtPrevahSoil, PotentialFractionMixesTheTwoBranches) {
+    // A unit split between the branches: half at the potential rate, half with no
+    // plant-available water.
+    SetUpModel({"ground"});
+    _model.SelectHydroUnitBrick("soil");
+    _model.SelectProcess("et");
+    _model.SetProcessParameterValue("lp", 0.0f);
+    _model.SetProcessParameterValue("potential_fraction", 0.5f);
+    SetForcing(10.0);
+    // No snow at all, so the albedo factor is neutral and the ET is the plain rate.
+    auto temp = std::make_unique<TimeSeriesDataRegular>(GetMJD(2020, 1, 1), GetMJD(2020, 1, 5), 1, TimeUnit::Day);
+    temp->SetValues({10.0, 10.0, 10.0, 10.0, 10.0});
+    _tsTemp = std::make_unique<TimeSeriesUniform>(VariableType::Temperature);
+    _tsTemp->SetData(std::move(temp));
+
+    axd et = RunAndGetEt({{"ground", 1.0}});
+
+    EXPECT_NEAR(et(2), 1.0, 1e-6);
+}
+
 TEST_F(MenzelCanopy, CanopyContentFollowsMenzelFilling) {
     SettingsBasin basinSettings;
     basinSettings.AddHydroUnit(1, 100);

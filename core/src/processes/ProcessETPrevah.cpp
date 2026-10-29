@@ -9,11 +9,13 @@
 ProcessETPrevah::ProcessETPrevah(WaterContainer* container)
     : ProcessETHBV(container),
       _albedoLand(nullptr),
+      _potentialFraction(nullptr),
       _cover(nullptr) {}
 
 void ProcessETPrevah::RegisterProcessSettings(SettingsModel* modelSettings) {
     ProcessETHBV::RegisterProcessSettings(modelSettings);
     modelSettings->AddProcessParameter("albedo_land", 0.2f);
+    modelSettings->AddProcessParameter("potential_fraction", 0.0f);
 }
 
 bool ProcessETPrevah::IsValid() const {
@@ -32,6 +34,14 @@ bool ProcessETPrevah::IsValid() const {
         LogError("PREVAH ET process: the 'albedo_land' parameter must be in [0, 1).");
         return false;
     }
+    if (_potentialFraction == nullptr) {
+        LogError("PREVAH ET process: missing the 'potential_fraction' parameter.");
+        return false;
+    }
+    if (*_potentialFraction < 0 || *_potentialFraction > 1) {
+        LogError("PREVAH ET process: the 'potential_fraction' parameter must be in [0, 1].");
+        return false;
+    }
 
     return true;
 }
@@ -39,6 +49,7 @@ bool ProcessETPrevah::IsValid() const {
 void ProcessETPrevah::SetParameters(const ProcessSettings& processSettings) {
     ProcessETHBV::SetParameters(processSettings);
     _albedoLand = GetParameterValuePointer(processSettings, "albedo_land");
+    _potentialFraction = GetParameterValuePointer(processSettings, "potential_fraction");
 }
 
 void ProcessETPrevah::AddGateBrick(Brick* brick) {
@@ -61,12 +72,17 @@ const vecDouble& ProcessETPrevah::GetRates() {
     double albedoFactor = (1.0 - albedo) / 0.8;
 
     double pet = static_cast<double>(*_etCorrectionFactor) * albedoFactor * GetPetRate(_pet);
+
+    // The soil-moisture branch of s_eta_soil. A threshold of zero is not the limit of
+    // the formula here but PREVAH's 'IF (sgrlp .le. 0.0) THEN EA = 0.0': a cover with
+    // no plant-available water evaporates nothing.
     double threshold = static_cast<double>(*_lp) * _container->GetMaximumCapacity();
-    if (threshold <= 0) {
-        return StoreRates({pet});
+    double limited = 0;
+    if (threshold > 0) {
+        limited = pet * std::min(1.0, _container->GetContentWithChanges() / threshold);
     }
 
-    double ratio = std::min(1.0, _container->GetContentWithChanges() / threshold);
+    double potentialShare = static_cast<double>(*_potentialFraction);
 
-    return StoreRates({pet * ratio});
+    return StoreRates({potentialShare * pet + (1.0 - potentialShare) * limited});
 }

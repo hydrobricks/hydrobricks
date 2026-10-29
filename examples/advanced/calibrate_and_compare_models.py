@@ -14,14 +14,14 @@ compares their performance:
 All models share the same elevation-band discretization (with slope) and the
 same forcing, so the comparison is fair. The snow redistribution variant needs
 the slope of each unit and the lateral connectivity between units, both computed
-here once and reused by every model. Each model is calibrated with SCE-UA on the
+here once and reused by every model. Each model is calibrated with DDS on the
 2012 Kling-Gupta Efficiency (KGE); the best run of each is then compared with the
 observations.
 
 Note: this script runs five calibrations and can take a while (~15-30 min with
 the default settings). Reduce ``CALIBRATION_MAX_REP`` for a quick look, or
 increase it (and consider the parallel calibration helpers, see
-``calibrate_sceua_socont_parallel.py``) for a more thorough comparison. More
+``calibrate_dds_socont_parallel.py``) for a more thorough comparison. More
 complex models (GR6J, HBV-96) have more parameters and need more iterations to
 calibrate well, so keep that in mind when interpreting the scores.
 """
@@ -54,7 +54,7 @@ START_DATE = "1981-01-01"
 END_DATE = "2000-12-31"
 REF_ELEVATION = 1253  # Reference altitude of the meteorological station [m]
 WARMUP = 365  # Days skipped at the start of the evaluation
-CALIBRATION_ALGORITHM = "sceua"
+CALIBRATION_ALGORITHM = "dds"
 CALIBRATION_OBJ_FUNC = "kge_2012"
 CALIBRATION_MAX_REP = 1000  # Increase (e.g. 3000-5000) for a thorough comparison
 PLOT_YEAR = 1995  # Year shown in the hydrograph comparison
@@ -265,8 +265,8 @@ for label, factory, allow_changing in model_configs:
     add_data_parameters(parameters)
     parameters.allow_changing = allow_changing
 
-    # Calibrate with SCE-UA on the KGE. The objective is a skill (higher is
-    # better); trainer.calibrate applies the sign SCE-UA needs automatically.
+    # Calibrate with DDS on the KGE. The objective is a skill (higher is
+    # better); trainer.calibrate applies the sign each algorithm needs.
     spot_setup = trainer.SpotpySetup(
         model,
         parameters,

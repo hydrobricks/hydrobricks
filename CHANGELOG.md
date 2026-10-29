@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - The default range of the snow correction factor `snow_correction_factor` is now [0.5, 1.5] (was [0.8, 1.6]): ±50 % for snow, as the rain factor allows ±30 % ([0.7, 1.3], unchanged).
 - The constraint `rain_correction_factor <= snow_correction_factor` is removed: the two factors are independent. With the new ranges it made snow factors below 0.7 unreachable and rejected about half of the random parameter sets.
+- The default calibration algorithm of a project file (`calibration.algorithm`) and of `Project.calibrate()` is now `dds` (was `sceua`).
+- The calibration examples use DDS instead of SCE-UA, which gave the best and most consistent calibrations among the SPOTPY algorithms on Socont and HBV-96. `calibrate_sceua_socont.py` and `calibrate_sceua_socont_parallel.py` are renamed `calibrate_dds_socont.py` and `calibrate_dds_socont_parallel.py`.
 
 ### Fixed
 

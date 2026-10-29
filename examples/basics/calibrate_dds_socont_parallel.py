@@ -42,17 +42,18 @@ def build():
 if __name__ == "__main__":
     # A single call builds the (picklable) setup and runs the sampler. The
     # objective is a skill (higher is better) and calibrate_from_factory applies the
-    # sign SCE-UA needs automatically. parallel='mpc' spreads evaluations across CPU
-    # cores (requires 'pathos'); note that SCE-UA is largely sequential, so the
-    # speedup is modest compared to samplers like 'mc'/'lhs'.
-    max_rep = 4000
+    # sign each algorithm needs automatically. parallel='mpc' spreads evaluations
+    # across CPU cores (requires 'pathos'). DDS improves one best set step by step,
+    # so the workers evaluate perturbations of a best set that is a few steps old:
+    # the speedup is real but smaller than for samplers like 'mc'/'lhs'.
+    max_rep = 5000
     sampler = trainer.calibrate_from_factory(
         build,
-        "sceua",
+        "dds",
         max_rep,
         warmup=365,
         obj_func="kge_2012",
-        dbname="spotpy_socont_sitter_SCEUA",
+        dbname="spotpy_socont_sitter_DDS",
         dbformat="csv",
         parallel="mpc",
     )

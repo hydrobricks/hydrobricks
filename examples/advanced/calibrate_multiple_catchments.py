@@ -85,7 +85,7 @@ parameters.allow_changing = [
 ]
 
 # Set up SPOTPY. The objective is a skill (higher is better); trainer.calibrate
-# applies the sign SCE-UA needs (it minimizes) automatically — no manual inversion.
+# applies the sign each algorithm needs automatically — no manual inversion.
 spot_setup = trainer.SpotpySetup(
     [appenzell.model, stgallen.model],
     parameters,
@@ -96,9 +96,9 @@ spot_setup = trainer.SpotpySetup(
 )
 
 # Run the calibration (orients the objective for the algorithm automatically).
-max_rep = 4000
+max_rep = 5000
 sampler = trainer.calibrate(
-    spot_setup, "sceua", max_rep, dbname="spotpy_socont_sitter_SCEUA", dbformat="csv"
+    spot_setup, "dds", max_rep, dbname="spotpy_socont_sitter_DDS", dbformat="csv"
 )
 
 # Results in metric space (KGE, higher is better) — no confusing negative values.

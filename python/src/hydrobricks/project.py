@@ -44,7 +44,7 @@ Example project file::
       a_snow: 2
 
     calibration:
-      algorithm: sceua
+      algorithm: dds
       repetitions: 300
       objective: kge_2012
       transform: power(0.2)
@@ -53,7 +53,9 @@ Example project file::
 
 The optional ``calibration`` section declares how to optimize the parameters
 (see :meth:`Project.calibrate`); ``observations`` and a calibration period are
-then required. Only the best set is kept by default; ``database`` writes every
+then required. The algorithm defaults to ``dds`` (Dynamically Dimensioned
+Search), the best and most consistent of the SPOTPY algorithms on Socont and
+HBV-96. Only the best set is kept by default; ``database`` writes every
 sampled set and its objective value to ``<output>/calibration.<format>``
 (``csv``, ``sql`` or ``hdf5``), which is what a convergence analysis needs::
 
@@ -67,8 +69,8 @@ sampled set and its objective value to ``<output>/calibration.<format>``
 one column per time step, per repetition — so it is off unless asked for.
 
 ``calibration.options`` carries the algorithm's own settings, forwarded to its
-SPOTPY ``sample()`` — SCE-UA's ``ngs`` (number of complexes), ``kstop``,
-``pcento`` and ``peps``, DDS's ``trials``, and so on::
+SPOTPY ``sample()`` — DDS's ``trials``, SCE-UA's ``ngs`` (number of complexes),
+``kstop``, ``pcento`` and ``peps``, and so on::
 
     calibration:
       algorithm: sceua
@@ -78,7 +80,8 @@ SPOTPY ``sample()`` — SCE-UA's ``ngs`` (number of complexes), ``kstop``,
 They matter more than they look: with the default ``ngs`` of 20 and 11
 parameters, SCE-UA spends 20 x (2 x 11 + 1) = 460 runs on its initial population
 before any evolution, and it stops once the next loop would not fit in the
-budget — so it uses well under the repetitions it is given.
+budget — so it uses well under the repetitions it is given. DDS needs no
+setting: it spends the whole budget.
 
 The forcing can also come from gridded netCDF data — per variable, mixable
 with the station CSV — using a ``gridded`` section (the hydro units then need
@@ -399,8 +402,8 @@ class Project:
         Parameters
         ----------
         algorithm
-            SPOTPY algorithm name (e.g. ``'sceua'``, ``'mc'``).
-            Default: the file value, or ``'sceua'``.
+            SPOTPY algorithm name (e.g. ``'dds'``, ``'sceua'``, ``'mc'``).
+            Default: the file value, or ``'dds'``.
         repetitions
             Number of runs the algorithm may use. Required here or in the file.
         objective
@@ -454,7 +457,7 @@ class Project:
             )
 
         defaults = self.calibration or {}
-        algorithm = algorithm or defaults.get("algorithm") or "sceua"
+        algorithm = algorithm or defaults.get("algorithm") or "dds"
         repetitions = repetitions or defaults.get("repetitions")
         if not repetitions:
             raise ConfigurationError(
@@ -1884,7 +1887,7 @@ def _validate_calibration(config: dict, errors: list[str]) -> dict | None:
     _check_keys(section, valid, "calibration", errors)
 
     out = {
-        "algorithm": section.get("algorithm", "sceua"),
+        "algorithm": section.get("algorithm", "dds"),
         "repetitions": section.get("repetitions"),
         "objective": section.get("objective"),
         "transform": section.get("transform"),
@@ -1899,7 +1902,7 @@ def _validate_calibration(config: dict, errors: list[str]) -> dict | None:
         out["seed"] = None
     if not isinstance(out["algorithm"], str):
         errors.append(
-            f"calibration.algorithm: expected an algorithm name (e.g. 'sceua'), "
+            f"calibration.algorithm: expected an algorithm name (e.g. 'dds'), "
             f"got {out['algorithm']!r}."
         )
     reps = out["repetitions"]

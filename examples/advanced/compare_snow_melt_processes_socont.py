@@ -169,12 +169,15 @@ for method in methods:
         socont, parameters, forcing, obs, warmup=365, obj_func="kge_2012"
     )
 
-    # Run spotpy
-    sampler = spotpy.algorithms.sceua(
-        spot_setup, dbformat="csv", dbname=f"spotpy_{catchment_name}_{method}"
+    # Run the calibration (DDS). trainer.calibrate orients the objective for the
+    # algorithm, so the stored scores are KGE values (higher is better).
+    trainer.calibrate(
+        spot_setup,
+        "dds",
+        max_rep,
+        dbformat="csv",
+        dbname=f"spotpy_{catchment_name}_{method}",
     )
-    sampler.optimization_direction = "maximize"
-    sampler.sample(max_rep)
 
 # Plot the results
 for method in methods:

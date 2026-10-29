@@ -3,7 +3,7 @@
 # forcing corrections are declared as calibratable 'param:' references whose
 # ranges live in the data_parameters section.
 #
-# Used by the calibration examples (calibrate_sceua_socont.py,
+# Used by the calibration examples (calibrate_dds_socont.py,
 # analyse_mc_socont.py and their parallel variants).
 
 model:

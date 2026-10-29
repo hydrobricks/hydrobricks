@@ -222,7 +222,7 @@ spot_setup = trainer.SpotpySetup(
     combine="weighted",
     discharge_weight=1.0,
 )
-sampler = trainer.calibrate(spot_setup, "sceua", CALIBRATION_MAX_REP, dbformat="ram")
+sampler = trainer.calibrate(spot_setup, "dds", CALIBRATION_MAX_REP, dbformat="ram")
 best = trainer.get_best(sampler)
 print(f"Best combined objective (discharge + snow cover): {best['score']:.3f}")
 print_real_parameters(best["parameters"])

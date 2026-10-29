@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - The default range of the snow correction factor `snow_correction_factor` is now [0.5, 1.5] (was [0.8, 1.6]): ±50 % for snow, as the rain factor allows ±30 % ([0.7, 1.3], unchanged).
 - The constraint `rain_correction_factor <= snow_correction_factor` is removed: the two factors are independent. With the new ranges it made snow factors below 0.7 unreachable and rejected about half of the random parameter sets.
+- The ranges of two PREVAH parameters now cover PREVAH's own calibration bounds: `response_factor_threshold` (`k0`, `outflow:linear_threshold`) up to 3 /d instead of 1 /d (PREVAH calibrates K0H in 10..30 h, i.e. 0.8..2.4 /d) and `percolation_rate` (`cperc`, `percolation:prevah`) up to 12 mm/d instead of 10 mm/d (PREVAH calibrates PERC in 0.01..0.5 mm/h). Calibrating PrevahUniBE was silently capped below the reference model's parameter space, and some calibrated PREVAH setups could not be reproduced at all.
 - The default calibration algorithm of a project file (`calibration.algorithm`) and of `Project.calibrate()` is now `dds` (was `sceua`).
 - The calibration examples use DDS instead of SCE-UA, which gave the best and most consistent calibrations among the SPOTPY algorithms on Socont and HBV-96. `calibrate_sceua_socont.py` and `calibrate_sceua_socont_parallel.py` are renamed `calibrate_dds_socont.py` and `calibrate_dds_socont_parallel.py`.
 

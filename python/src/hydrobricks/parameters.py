@@ -157,12 +157,15 @@ PROCESS_PARAM_SPECS: dict[str, list[ParamSpec]] = {
     # Q0 = K0 * (SUZ - SGRLUZ)). The response factor carries a distinct name so the
     # process can share a brick with an 'outflow:linear'.
     "outflow:linear_threshold": [
+        # The upper bound covers PREVAH's own calibration range for K0H (10..30 h
+        # storage time, i.e. 0.8..2.4 /d). Safe with the analytic linear solver,
+        # which integrates the reservoir with exp(-k*dt).
         ParamSpec(
             name="response_factor_threshold",
             unit="1/d",
             aliases=[],
             min=0.0001,
-            max=1,
+            max=3,
             mandatory=True,
         ),
         ParamSpec(
@@ -178,12 +181,14 @@ PROCESS_PARAM_SPECS: dict[str, list[ParamSpec]] = {
     # PREVAH percolation: constant maximum rate gated by the soil moisture state
     # (full rate at saturation, linear ramp between cu*FC and FC, none below cu*FC)
     "percolation:prevah": [
+        # The upper bound covers PREVAH's own calibration range for PERC
+        # (0.01..0.5 mm/h, i.e. up to 12 mm/d).
         ParamSpec(
             name="percolation_rate",
             unit="mm/d",
             aliases=["cperc"],
             min=0,
-            max=10,
+            max=12,
             default=0.1,
             mandatory=True,
         ),

@@ -539,43 +539,44 @@ class ActionLandCoverChange(Action):
             unit_area = np.sum(mask_unit) * px_area
 
             if method == "vector":
-                warnings.filterwarnings(
-                    "ignore",
-                    category=RuntimeWarning,
-                    message="invalid value encountered in intersection",
-                )
+                with warnings.catch_warnings():
+                    warnings.filterwarnings(
+                        "ignore",
+                        category=RuntimeWarning,
+                        message="invalid value encountered in intersection",
+                    )
 
-                # Create an empty list to store the pixel geometries
-                pixels_geoms = []
+                    # Create an empty list to store the pixel geometries
+                    pixels_geoms = []
 
-                # Iterate through the rows and columns of the raster
-                for i in range(catchment.dem.height):
-                    for j in range(catchment.dem.width):
-                        # Check if there is a glacier pixel
-                        if glaciers_mask[i, j] == 0:
-                            continue
+                    # Iterate through the rows and columns of the raster
+                    for i in range(catchment.dem.height):
+                        for j in range(catchment.dem.width):
+                            # Check if there is a glacier pixel
+                            if glaciers_mask[i, j] == 0:
+                                continue
 
-                        # Check if the pixel value matches the target value
-                        if catchment.map_unit_ids[i, j] != unit_id:
-                            continue
+                            # Check if the pixel value matches the target value
+                            if catchment.map_unit_ids[i, j] != unit_id:
+                                continue
 
-                        # Create a polygon for the pixel
-                        pixel_geo = catchment.create_dem_pixel_geometry(i, j)
-                        pixels_geoms.append(pixel_geo)
+                            # Create a polygon for the pixel
+                            pixel_geo = catchment.create_dem_pixel_geometry(i, j)
+                            pixels_geoms.append(pixel_geo)
 
-                unit_geoms = unary_union(pixels_geoms)
+                    unit_geoms = unary_union(pixels_geoms)
 
-                # Iterate through glacier polygons and find intersections
-                inters_glaciers = []
-                if len(pixels_geoms) > 0:
-                    self._get_intersections(unit_geoms, glaciers, inters_glaciers)
+                    # Iterate through glacier polygons and find intersections
+                    inters_glaciers = []
+                    if len(pixels_geoms) > 0:
+                        self._get_intersections(unit_geoms, glaciers, inters_glaciers)
 
-                # Iterate through debris polygons and find intersections
-                inters_debris = []
-                if len(pixels_geoms) > 0 and debris_shapefile is not None:
-                    self._get_intersections(unit_geoms, glaciers_debris, inters_debris)
-
-                warnings.resetwarnings()
+                    # Iterate through debris polygons and find intersections
+                    inters_debris = []
+                    if len(pixels_geoms) > 0 and debris_shapefile is not None:
+                        self._get_intersections(
+                            unit_geoms, glaciers_debris, inters_debris
+                        )
 
                 glacier_area[idx] = self._compute_intersection_area(inters_glaciers)
                 debris_area[idx] = self._compute_intersection_area(inters_debris)

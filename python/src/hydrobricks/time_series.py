@@ -549,7 +549,7 @@ class TimeSeries2D(TimeSeries):
             data_grid = data_var[0].copy()
             dem_reproj = dem.rio.reproject_match(
                 data_grid,
-                Resampling=rasterio.enums.Resampling.average,
+                resampling=rasterio.enums.Resampling.average,
                 nodata=np.nan,
             )
             dem_data = dem_reproj.values
@@ -589,7 +589,7 @@ class TimeSeries2D(TimeSeries):
             warnings.filterwarnings("ignore", category=UserWarning)  # pyproj
             data_idx.rio.write_crs(f"epsg:{data_crs}", inplace=True)
             data_idx_reproj = data_idx.rio.reproject_match(
-                unit_ids, Resampling=rasterio.enums.Resampling.nearest
+                unit_ids, resampling=rasterio.enums.Resampling.nearest
             )
 
         # Create the masks (with the original data shape) for each unit with the

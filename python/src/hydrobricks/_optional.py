@@ -88,10 +88,9 @@ mpl_colors = None
 # Check availability and setup lazy imports
 HAS_NETCDF = is_module_available("netCDF4")
 if HAS_NETCDF:
-    warnings.filterwarnings("ignore", message="numpy.ndarray size changed")
-    from netCDF4 import Dataset
-
-    warnings.resetwarnings()
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", message="numpy.ndarray size changed")
+        from netCDF4 import Dataset
 
 HAS_RASTERIO = is_module_available("rasterio")
 if HAS_RASTERIO:

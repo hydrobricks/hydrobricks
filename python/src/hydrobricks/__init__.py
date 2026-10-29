@@ -1,4 +1,14 @@
+import warnings as _warnings
 from importlib import metadata as _metadata
+
+# affine >= 2.4 deprecates `*` for matrix products; rioxarray still uses it
+# internally, which floods the output on every reprojection.
+_warnings.filterwarnings(
+    "ignore",
+    message="Use `@` matmul instead of",
+    category=PendingDeprecationWarning,
+    module="rioxarray",
+)
 
 from hydrobricks._exceptions import (
     ConfigurationError,

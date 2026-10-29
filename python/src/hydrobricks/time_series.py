@@ -29,6 +29,20 @@ from hydrobricks._utils import date_as_mjd
 logger = logging.getLogger(__name__)
 
 
+def _available_cpus() -> int:
+    """The CPUs this process may run on, not those of the whole machine.
+
+    On a cluster node, os.cpu_count() counts every core of the node, while a job
+    may only use the few the scheduler allocated: as many threads as the node
+    has cores then fight over those few, each holding its own block of data.
+    """
+    if hasattr(os, "process_cpu_count"):  # Python >= 3.13
+        return os.process_cpu_count() or 1
+    if hasattr(os, "sched_getaffinity"):  # Linux
+        return len(os.sched_getaffinity(0)) or 1
+    return os.cpu_count() or 1
+
+
 class TimeSeries:
     """Class for generic time series data"""
 
@@ -516,7 +530,7 @@ class TimeSeries2D(TimeSeries):
         # Time the computation
         start_time = time.time()
 
-        num_threads = os.cpu_count()
+        num_threads = _available_cpus()
         time_len = len(self.time)
         if time_method == "day_of_year":
             time_len = len(day_of_year)

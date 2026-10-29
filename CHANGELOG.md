@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Regridding gridded forcing started one thread per core of the machine, not per core the process may use: on a cluster node it ran dozens of threads inside a one-core job, each holding its own block of the grid, and ran out of memory. It now uses the CPUs available to the process.
 - SPOTPY's ABC and FSCABC did not maximise the objective: their loop minimises what it is given, so with a KGE they drove it down, and a rejected parameter set stopped them after the first loop. Their trial points also moved the food source they came from even when rejected, the scout runs were saved with the wrong parameters, and the seed was ignored. hydrobricks now runs its own loop for both, which spends the whole budget (`peps` is ignored).
 
 ## 0.9.4 - 2026-10-26

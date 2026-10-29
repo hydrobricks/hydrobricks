@@ -319,8 +319,8 @@ def _hamon_pet_total(forcing: hb.Forcing, method: str) -> float:
 def test_apply_pet_computation_hamon_vapor_density(
     forcing: hb.Forcing, hydro_units: hb.HydroUnits
 ):
-    # The vapour-density Hamon (pyet method=2) differs from the default Hamon
-    # (pyet method=0, an exponential variant) and yields a distinct, positive PET.
+    # The vapour-density Hamon differs from the default Hamon (pyet method=0, an
+    # exponential variant) and yields a distinct, positive PET.
     if not hb.HAS_PYET:
         return
     default_total = _hamon_pet_total(forcing, "Hamon")
@@ -334,6 +334,50 @@ def test_apply_pet_computation_hamon_vapor_density(
     vd_total = _hamon_pet_total(forcing_vd, "Hamon_vapor_density")
     assert vd_total > 0
     assert vd_total != pytest.approx(default_total)
+
+
+def test_hamon_vapor_density_follows_the_published_formula():
+    # 0.1651 (S0/12) 216.7 es/(T + 273.3), es in hPa (Magnus-Tetens). pyet's
+    # hamon(method=2) instead puts T + 273.3 in the exponent of es, which damps the
+    # seasonal amplitude; this must not.
+    if not hb.HAS_PYET:
+        return
+    from pyet.meteo_utils import daylight_hours
+
+    index = pd.date_range("2000-01-01", "2000-12-31")
+    tmean = pd.Series(np.linspace(-5.0, 25.0, len(index)), index=index)
+    lat = 47.3 * np.pi / 180
+
+    pet = hb.Forcing._hamon_vapor_density(tmean, lat)
+
+    day_length = daylight_hours(index, lat)
+    vapor_pressure = 6.1078 * np.exp(17.27 * tmean / (tmean + 237.3))
+    expected = 0.1651 * (day_length / 12) * 216.7 * vapor_pressure / (tmean + 273.3)
+    assert pet.to_numpy() == pytest.approx(expected.to_numpy())
+    # The amplitude pyet's variant loses: ~14 % at 18 degrees.
+    warm = tmean.sub(18.0).abs().idxmin()
+    pyet_variant = (
+        218.527
+        * (daylight_hours(index, lat)[index.get_loc(warm)] / 12)
+        / (tmean[warm] + 273.3)
+        * np.exp(17.26939 * tmean[warm] / (tmean[warm] + 273.3))
+    )
+    assert pyet_variant / pet[warm] == pytest.approx(0.86, abs=0.01)
+
+
+def test_hamon_vapor_density_daylight_offset():
+    # PREVAH and WaSiM add 0.277 h of twilight to the day length.
+    if not hb.HAS_PYET:
+        return
+    index = pd.date_range("2000-06-01", "2000-06-30")
+    tmean = pd.Series(18.0, index=index)
+    lat = 47.3 * np.pi / 180
+
+    plain = hb.Forcing._hamon_vapor_density(tmean, lat)
+    shifted = hb.Forcing._hamon_vapor_density(tmean, lat, daylight_offset=0.277)
+
+    assert (shifted > plain).all()
+    assert float(shifted.mean() / plain.mean()) == pytest.approx(1.018, abs=0.002)
 
 
 def test_apply_pet_computation_linacre(forcing: hb.Forcing):

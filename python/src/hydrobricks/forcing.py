@@ -43,9 +43,10 @@ _PET_METHOD_MAP: dict[str, str] = {
     "blaney_criddle": "blaney_criddle",
     "Hamon": "hamon",
     "hamon": "hamon",
-    # Vapour-density Hamon (Schulla & Jasper 2000; used by PREVAH). Routes to pyet's
-    # hamon with method=2 (see _HAMON_VAPOR_DENSITY / _compute_pet). The default
-    # 'Hamon' uses pyet's method=0, a different (exponential) variant.
+    # Vapour-density Hamon (Schulla & Jasper 2000; used by PREVAH). Computed by
+    # hydrobricks itself (see _HAMON_VAPOR_DENSITY / _hamon_vapor_density), not by
+    # pyet, whose hamon(method=2) is a different formula. The default 'Hamon' uses
+    # pyet's method=0, an exponential variant.
     "Hamon_vapor_density": "hamon",
     "hamon_vapor_density": "hamon",
     "Romanenko": "romanenko",
@@ -807,7 +808,10 @@ class Forcing:
             for each hydro unit is used.
         **kwargs
             Additional function-specific options passed through to the pyet function
-            (see the pyet documentation).
+            (see the pyet documentation). ``daylight_offset`` is handled by
+            hydrobricks instead: hours added to the astronomical day length of the
+            vapour-density Hamon, PREVAH and WaSiM adding 0.277 h of twilight to it
+            (2 to 3 % on the PET).
 
         Notes
         -----
@@ -1532,6 +1536,7 @@ class Forcing:
             raise ImportError("pyet is required to do this.")
 
         pyet_args = {}
+        daylight_offset = float(kwargs.pop("daylight_offset", 0.0))
 
         use_unit_elevation = False
         use_unit_latitude = False
@@ -1558,7 +1563,7 @@ class Forcing:
             if use_unit_latitude:
                 pyet_args["lat"] = unit["latitude"].values * TO_RAD
             pyet_args = self._set_pyet_variables_data(pyet_args, use, i_unit)
-            pet[:, i_unit] = self._compute_pet(method, pyet_args)
+            pet[:, i_unit] = self._compute_pet(method, pyet_args, daylight_offset)
 
         # The model cannot use a NaN PET: it would disable the storage constraints of
         # the bricks evaporating from it. Missing inputs must be filled beforehand.
@@ -1605,12 +1610,15 @@ class Forcing:
         return step if step > 0 else 1.0
 
     @staticmethod
-    def _compute_pet(method: str, pyet_args: dict) -> np.ndarray:
+    def _compute_pet(
+        method: str, pyet_args: dict, daylight_offset: float = 0.0
+    ) -> np.ndarray:
         """
         Compute PET using the pyet library.
 
         Routes the computation to the appropriate pyet method based on the
-        specified method name.
+        specified method name. The vapour-density Hamon is computed here instead
+        (see :meth:`_hamon_vapor_density`).
 
         Parameters
         ----------
@@ -1618,6 +1626,8 @@ class Forcing:
             Name of the PET computation method.
         pyet_args
             Dictionary of arguments to pass to the pyet method.
+        daylight_offset
+            Hours added to the day length of the vapour-density Hamon.
 
         Returns
         -------
@@ -1634,11 +1644,62 @@ class Forcing:
             raise ForcingError(
                 f"Unknown PET method: {method}", variable="PET", method=method
             )
-        # pyet's hamon has several variants; select the vapour-density one (method=2)
-        # for those method names (the default 'Hamon' keeps pyet's method=0).
         if method in _HAMON_VAPOR_DENSITY:
-            pyet_args = {**pyet_args, "method": 2}
+            missing = [key for key in ("tmean", "lat") if key not in pyet_args]
+            if missing:
+                raise ForcingError(
+                    f"The vapour-density Hamon PET needs {' and '.join(missing)}: "
+                    "call compute_pet with use=['t', 'lat'].",
+                    variable="PET",
+                    method=method,
+                )
+            return Forcing._hamon_vapor_density(
+                pyet_args["tmean"], pyet_args["lat"], daylight_offset
+            )
         return getattr(pyet, pyet_func_name)(**pyet_args)
+
+    @staticmethod
+    def _hamon_vapor_density(
+        tmean: pd.Series, lat: float, daylight_offset: float = 0.0
+    ) -> pd.Series:
+        """
+        Vapour-density Hamon PET (Schulla & Jasper 2000; used by PREVAH).
+
+        .. math:: PET = 0.1651 \\frac{S_0}{12}
+                        \\frac{216.7 \\, e_s(T)}{T + 273.3}
+
+        with the saturation vapour pressure :math:`e_s` in hPa (Magnus-Tetens) and
+        the day length :math:`S_0` in hours: the second factor is the saturation
+        vapour density in g m\\ :sup:`-3`.
+
+        Computed here rather than through pyet's ``hamon(method=2)``, which puts
+        ``T + 273.3`` in the exponent of the saturation vapour pressure where the
+        Magnus-Tetens expression needs ``T + 237.3``, and so damps the seasonal
+        amplitude (8 % low at 10 °C, 14 % at 18 °C, 18 % at 25 °C, 5 % high at
+        -5 °C).
+
+        Parameters
+        ----------
+        tmean
+            Mean daily air temperature [°C].
+        lat
+            Latitude [rad].
+        daylight_offset
+            Hours added to the astronomical day length. PREVAH and WaSiM add
+            0.277 h of twilight to it, which raises the PET by 2 to 3 %.
+
+        Returns
+        -------
+        The potential evapotranspiration [mm d-1].
+        """
+        from pyet.meteo_utils import daylight_hours
+
+        day_length = daylight_hours(tmean.index, lat) + daylight_offset
+        vapor_pressure = 6.1078 * np.exp(17.27 * tmean / (tmean + 237.3))
+
+        pet = 0.1651 * (day_length / 12.0) * 216.7 * vapor_pressure / (tmean + 273.3)
+
+        return np.maximum(pet, 0.0)
 
     def _set_pyet_variables_data(
         self, pyet_args: dict, use: list[str], i_unit: int

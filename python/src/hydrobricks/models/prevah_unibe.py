@@ -7,6 +7,7 @@ import numpy as np
 
 from hydrobricks._exceptions import ConfigurationError, ModelError
 from hydrobricks.land_covers import (
+    PREVAH_COVER_ALBEDO,
     PREVAH_COVER_FIELD_CAPACITY_FIXED,
     PREVAH_COVER_FIELD_CAPACITY_MIN,
     PREVAH_COVER_FIELD_CAPACITY_MIN_DEF,
@@ -260,7 +261,8 @@ class PrevahUniBE(Model):
     PREVAH's cover tables (``PREVAH_COVER_*`` in :mod:`hydrobricks.land_covers`);
     :meth:`cover_field_capacity` gives the soil moisture capacity PREVAH derives
     from a soil map, and :meth:`apply_cover_field_capacity` sets it per hydro unit
-    and per month in one call.
+    and per month in one call. :meth:`apply_cover_albedo` does the same for the
+    albedo of the soil store, which PREVAH carries into every potential rate.
 
     PREVAH processes by default
     ---------------------------
@@ -273,11 +275,14 @@ class PrevahUniBE(Model):
 
     - a potential clear-sky radiation forcing ('solar_radiation') for the melt;
     - a vapour-density Hamon PET (``forcing.compute_pet(method=
-      "Hamon_vapor_density")``): the snow evaporation has no parameter to absorb a
-      PET of another magnitude (pyet's default Hamon runs ~1.5 times hotter);
+      "Hamon_vapor_density", ..., daylight_offset=0.277)``): the snow evaporation
+      has no parameter to absorb a PET of another magnitude (pyet's default Hamon
+      runs ~1.5 times hotter), and PREVAH adds 0.277 h of twilight to the day
+      length;
     - the monthly vegetation tables of the cover classes
       (``apply_cover_parameters``, applied automatically to the covers named
-      after a PREVAH cover class).
+      after a PREVAH cover class) and the land-use albedo of the soil store
+      (``apply_cover_albedo``), the potential rate carrying (1 - albedo)/0.8.
 
     Any of them can be swapped for a simpler process through the options above
     (e.g. ``snow_melt_process='melt:degree_day_seasonal'`` without a radiation
@@ -969,10 +974,17 @@ class PrevahUniBE(Model):
         Set the monthly vegetation parameters of a land cover from a PREVAH cover class.
 
         Sets the canopy interception capacity (``ic``, to ``si_max * veg_cov``) and,
-        when the canopy exposes it, the canopy evaporation factor
-        (``canopy_et_factor``, to ``veg_cov``) as monthly values. The latter only
-        exists with ``canopy_et_process='et:open_water_prevah'``; it is skipped
-        otherwise.
+        when the canopy exposes them, the canopy evaporation factor
+        (``canopy_et_factor``, to ``veg_cov``) and the canopy albedo
+        (``canopy_albedo_land``) as monthly values. The last two only exist with
+        ``canopy_et_process='et:open_water_prevah'``; they are skipped otherwise.
+        On a wetland cover class it also sets the albedo of the wet-surface
+        evaporation (``wet_albedo_land``) where that process exists.
+
+        The albedo is the one of the surface below the canopy as much as of the
+        canopy itself: PREVAH carries a single monthly land-use albedo into its
+        potential rate, as the factor ``(1 - albedo) / 0.8``. Use
+        :meth:`apply_cover_albedo` for the soil store's own ``albedo_land``.
 
         Parameters
         ----------
@@ -1011,6 +1023,102 @@ class PrevahUniBE(Model):
             parameters.set_monthly_values(
                 f"canopy_et_factor{suffix}", PREVAH_COVER_VEG_COV[cover_class]
             )
+        if parameters.has(f"canopy_albedo_land{suffix}"):
+            parameters.set_monthly_values(
+                f"canopy_albedo_land{suffix}", PREVAH_COVER_ALBEDO[cover_class]
+            )
+        # The wet-surface evaporation is a single process on the groundwater store,
+        # fed by the wet share of the wetland covers, so it carries one albedo for
+        # all of them: with several wetland covers the last one applied wins.
+        if PREVAH_COVER_TYPES[cover_class] == "wetland" and parameters.has(
+            "wet_albedo_land"
+        ):
+            parameters.set_monthly_values(
+                "wet_albedo_land", PREVAH_COVER_ALBEDO[cover_class]
+            )
+
+    def apply_cover_albedo(
+        self,
+        parameters: Any,
+        hydro_units: Any,
+        cover_class: Any,
+        cover_name: str | None = None,
+    ) -> list[str]:
+        """
+        Set the soil store's albedo per month, as PREVAH does.
+
+        PREVAH's potential rate carries ``(1 - albedo) / 0.8`` with the monthly
+        albedo of the land use (:data:`~hydrobricks.land_covers.PREVAH_COVER_ALBEDO`,
+        the class value where the canopy is dense or absent, otherwise the bare-soil
+        value of the month mixed with it through the leaf area index). It is about
+        1.10 for a winter forest and 0.94 for summer pasture, so leaving the neutral
+        default of 0.2 in place costs up to 10 % of the evapotranspiration. The snow
+        albedo replaces it while the ground carries snow, whatever is set here.
+
+        With a soil store per cover the 12 monthly values are set on that cover's
+        ``albedo_land``; with a shared store (one PREVAH hydrotope per hydro unit,
+        each with its own cover class) they are written as 12 hydro-unit properties
+        and bound with ``ParameterSet.set_spatial_monthly``.
+
+        Parameters
+        ----------
+        parameters
+            The :class:`~hydrobricks.parameters.ParameterSet` to fill.
+        hydro_units
+            The :class:`~hydrobricks.hydro_units.HydroUnits` to add the properties
+            to. Only needed when the cover classes are given per hydro unit.
+        cover_class
+            Name of the cover class (e.g. ``'pasture'``); see
+            :data:`~hydrobricks.land_covers.PREVAH_COVER_TYPES`. A sequence of names
+            is accepted too, one per hydro unit.
+        cover_name
+            Name of the land cover whose soil store to parameterize. Defaults to the
+            cover class name, and is meaningless with a shared soil store.
+
+        Returns
+        -------
+        The names of the hydro-unit properties that were added (empty when the
+        albedo could be set as a plain monthly series).
+        """
+        per_unit = not isinstance(cover_class, str)
+        if not per_unit:
+            self._check_cover_class(cover_class)
+            if cover_name is None:
+                cover_name = cover_class
+            suffix = (
+                f"_{cover_name}" if parameters.has(f"albedo_land_{cover_name}") else ""
+            )
+            if not parameters.has(f"albedo_land{suffix}"):
+                raise ConfigurationError(
+                    f'No soil albedo "albedo_land{suffix}" in the parameter set: '
+                    "the soil ET process is not 'et:prevah'.",
+                    item_name=f"albedo_land{suffix}",
+                    item_value=cover_name,
+                    reason="Missing soil parameter",
+                )
+            parameters.set_monthly_values(
+                f"albedo_land{suffix}", PREVAH_COVER_ALBEDO[cover_class]
+            )
+            return []
+
+        cover_classes = [str(name) for name in cover_class]
+        for name in set(cover_classes):
+            self._check_cover_class(name)
+        if not parameters.has("albedo_land"):
+            raise ConfigurationError(
+                "The cover classes are given per hydro unit, which needs the "
+                'shared soil store and its "albedo_land".',
+                item_name="albedo_land",
+                reason="Missing soil parameter",
+            )
+
+        table = np.array([PREVAH_COVER_ALBEDO[name] for name in cover_classes])
+        names = [f"albedo_land_{month:02d}" for month in range(1, 13)]
+        for month, name in enumerate(names):
+            hydro_units.add_property((name, "-"), table[:, month])
+        parameters.set_spatial_monthly("albedo_land", names)
+
+        return names
 
     @staticmethod
     def _check_cover_class(cover_class: str) -> None:
@@ -1047,11 +1155,12 @@ class PrevahUniBE(Model):
 
         Every canopy whose land cover is named after a PREVAH cover class (e.g.
         ``pasture``, ``coniferous_forest``; see
-        :data:`~hydrobricks.land_covers.PREVAH_COVER_TYPES`) gets the
-        monthly interception capacity and canopy evaporation factor of that cover class
-        (see :meth:`apply_cover_parameters`). Covers with a generic name (``open``,
-        ``forest``) keep the constant defaults: call
-        :meth:`apply_cover_parameters` with the cover class they stand for.
+        :data:`~hydrobricks.land_covers.PREVAH_COVER_TYPES`) gets the monthly
+        interception capacity, canopy evaporation factor and canopy albedo of that
+        cover class (see :meth:`apply_cover_parameters`). Covers with a generic name
+        (``open``, ``forest``) keep the constant defaults: call
+        :meth:`apply_cover_parameters` with the cover class they stand for. The soil
+        store's own albedo stays neutral until :meth:`apply_cover_albedo` is called.
 
         Returns
         -------

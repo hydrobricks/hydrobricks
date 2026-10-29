@@ -2321,7 +2321,8 @@ class ParameterSet:
         ``interception_covers`` (cover names) overrides that (PREVAH intercepts on
         every vegetated cover). With the ``et:open_water_prevah`` canopy ET, the
         process' ``et_factor`` (PREVAH's vegetation-cover fraction, monthly-settable)
-        is registered too, alias ``canopy_et_factor[_<cover>]``.
+        is registered too, alias ``canopy_et_factor[_<cover>]``, with the canopy's
+        own ``albedo_land``, alias ``canopy_albedo_land[_<cover>]``.
 
         Parameters
         ----------
@@ -2363,6 +2364,23 @@ class ParameterSet:
                         min=0,
                         max=1.5,
                         default=1.0,
+                        mandatory=False,
+                    ),
+                    alias_suffix=f"_{cover_name}" if multi else "",
+                )
+                # The canopy evaporates at the albedo-reduced potential rate like
+                # the soil below it, with the albedo of its own cover (PREVAH's
+                # monthly land-use albedo). The soil store carries the bare
+                # 'albedo_land' alias, so this one is prefixed.
+                self._register(
+                    component=f"{cover_name}_canopy",
+                    spec=ParamSpec(
+                        name="albedo_land",
+                        unit="-",
+                        aliases=["canopy_albedo_land"],
+                        min=0,
+                        max=0.4,
+                        default=0.2,
                         mandatory=False,
                     ),
                     alias_suffix=f"_{cover_name}" if multi else "",

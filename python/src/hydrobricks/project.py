@@ -1413,6 +1413,7 @@ def _validate_forcing(config: dict, base: Path, errors: list[str]) -> dict:
         "pet_method": "Oudin",
         "pet_use": ["t", "lat"],
         "pet_lat": None,
+        "pet_daylight_offset": None,
         "variables": set(),
     }
     section = _get_mapping(config, "forcing", errors, required=True)
@@ -1452,9 +1453,14 @@ def _validate_forcing(config: dict, base: Path, errors: list[str]) -> dict:
     if not isinstance(pet, dict):
         errors.append("forcing.pet: expected a mapping (method, lat).")
         pet = {}
-    _check_keys(pet, {"method", "lat", "use"}, "forcing.pet", errors)
+    _check_keys(pet, {"method", "lat", "use", "daylight_offset"}, "forcing.pet", errors)
     out["pet_method"] = _get_str(pet, "method", "forcing.pet", errors) or "Oudin"
     out["pet_lat"] = _get_number(pet, "lat", "forcing.pet", errors)
+    # Hours added to the day length of the vapour-density Hamon (PREVAH and WaSiM
+    # add 0.277 h of twilight to it).
+    out["pet_daylight_offset"] = _get_number(
+        pet, "daylight_offset", "forcing.pet", errors
+    )
 
     # Which variables the pyet method is given. Temperature-only formulations
     # (Oudin, Hamon, McGuinness-Bordne) need just 't' and 'lat', but Hargreaves
@@ -2680,8 +2686,14 @@ def _build_project(
             # carry it (delineation, or a CSV holding the column), the catchment
             # mean otherwise. The validation guarantees a catchment here.
             pet_lat = float(catchment.extract_unit_mean_lat_lon(catchment.dem_data)[0])
+        pet_options = {}
+        if fc["pet_daylight_offset"] is not None:
+            pet_options["daylight_offset"] = fc["pet_daylight_offset"]
         forcing.compute_pet(
-            method=fc["pet_method"], use=list(fc["pet_use"]), lat=pet_lat
+            method=fc["pet_method"],
+            use=list(fc["pet_use"]),
+            lat=pet_lat,
+            **pet_options,
         )
 
     parameter_set = model.generate_parameters()

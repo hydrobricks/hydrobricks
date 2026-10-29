@@ -16,7 +16,7 @@ model is set up and run.
 The reference discharge (``discharge_prevah.csv``) is the *Fortran PREVAH* simulated
 total runoff for this case (not a gauge series), so this example is a
 cross-implementation reproduction: hydrobricks PREVAH-UniBE against the original Fortran
-PREVAH (1984-2000). It reaches NSE ~= 0.98 over the validation period.
+PREVAH (1984-2000). It reaches NSE ~= 0.99 over the validation period.
 
 Every parameter of the project file is the original PREVAH one (``cal_2020pest.inp``)
 and every option follows the method switches of that control file; **nothing is
@@ -117,9 +117,15 @@ model.apply_cover_percolation(
 # elsewhere, as PREVAH's wet_surface is.
 
 # The monthly vegetation tables: the canopy interception capacity of each cover
-# (si_max x veg_cov) and its canopy evaporation factor (veg_cov), month by month.
+# (si_max x veg_cov), its canopy evaporation factor (veg_cov) and its albedo,
+# month by month.
 for cover, cover_cover_class in COVER_CLASSES.items():
     model.apply_cover_parameters(parameters, cover_cover_class, cover_name=cover)
+
+# The albedo of the soil store, which the hydrotopes share here: PREVAH's potential
+# rate carries (1 - albedo) / 0.8 with the monthly albedo of the land use, so each
+# hydrotope needs the one of its own cover class.
+model.apply_cover_albedo(parameters, hydro_units, cover_class)
 
 # ---------------------------------------------------------------------------
 # 3. Run

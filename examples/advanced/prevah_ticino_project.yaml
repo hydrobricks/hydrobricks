@@ -66,6 +66,8 @@ forcing:
     # exponential variant that runs markedly hotter.
     method: Hamon_vapor_density
     lat: 46.4
+    # PREVAH adds 0.277 h of twilight to the astronomical day length.
+    daylight_offset: 0.277
 
 observations:
   # The *Fortran PREVAH* simulated total runoff for this case, not a gauge series:

@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Added
+
+- `PrevahUniBE.apply_cover_albedo()`: sets the soil store's monthly albedo from the PREVAH land-use table (`land_covers.PREVAH_COVER_ALBEDO`), per cover or per hydro unit. The canopy carries its own albedo too, registered as `canopy_albedo_land[_<cover>]` and set by `apply_cover_parameters()`. The table was there but nothing applied it, so every PREVAH-UniBE run used the neutral 0.2: PREVAH's potential rate carries `(1 - albedo) / 0.8`, about 1.10 for a winter forest and 0.94 for summer pasture.
+- `daylight_offset` in `Forcing.compute_pet()`: hours added to the astronomical day length of the vapour-density Hamon. PREVAH and WaSiM add 0.277 h of twilight to it, worth 2 to 3 % of the PET.
+
 ### Changed
 
 - The default range of the snow correction factor `snow_correction_factor` is now [0.5, 1.5] (was [0.8, 1.6]): ±50 % for snow, as the rain factor allows ±30 % ([0.7, 1.3], unchanged).
@@ -17,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- `Forcing.compute_pet(method='Hamon_vapor_density')` under-estimated the PET: it delegated to pyet's `hamon(method=2)`, which puts `T + 273.3` in the exponent of the saturation vapour pressure where the Magnus-Tetens expression needs `T + 237.3`. The seasonal amplitude was damped — 8 % low at 10 °C, 14 % at 18 °C, 18 % at 25 °C and 5 % high at -5 °C. hydrobricks now computes the formula itself (Schulla & Jasper 2000). On the PREVAH reference catchment 2305 this alone accounted for 12 % of the soil evapotranspiration and 7 % of the discharge.
 - Regridding gridded forcing started one thread per core of the machine, not per core the process may use: on a cluster node it ran dozens of threads inside a one-core job, each holding its own block of the grid, and ran out of memory. It now uses the CPUs available to the process.
 - SPOTPY's ABC and FSCABC did not maximise the objective: their loop minimises what it is given, so with a KGE they drove it down, and a rejected parameter set stopped them after the first loop. Their trial points also moved the food source they came from even when rejected, the scout runs were saved with the wrong parameters, and the seed was ignored. hydrobricks now runs its own loop for both, which spends the whole budget (`peps` is ignored).
 

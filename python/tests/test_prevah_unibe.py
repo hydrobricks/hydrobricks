@@ -1611,6 +1611,7 @@ def test_apply_cover_parameters_on_a_renamed_cover():
         for component, name, values in parameters.get_monthly_parameters()
     }
     assert sorted(monthly) == [
+        ("open_canopy", "albedo_land"),
         ("open_canopy", "capacity"),
         ("open_canopy", "et_factor"),
     ]
@@ -1657,6 +1658,122 @@ def test_apply_cover_parameters_without_the_prevah_canopy_et():
 
     monthly = parameters.get_monthly_parameters()
     assert sorted(name for _, name, _ in monthly) == ["capacity", "capacity"]
+
+
+def test_apply_cover_parameters_sets_the_canopy_albedo():
+    # PREVAH's potential rate carries (1 - albedo)/0.8 with the monthly land-use
+    # albedo, on the canopy as on the soil below it.
+    model = _model_with_cover_classes(
+        ["pasture"], canopy_et_process="et:open_water_prevah"
+    )
+    parameters = model.generate_parameters()
+    model.apply_cover_parameters(parameters, "pasture")
+
+    monthly = {
+        (component, name): values
+        for component, name, values in parameters.get_monthly_parameters()
+    }
+    assert monthly[("pasture_canopy", "albedo_land")] == pytest.approx(
+        PREVAH_COVER_ALBEDO["pasture"]
+    )
+
+
+def test_apply_cover_parameters_sets_the_wet_surface_albedo():
+    # The wet-surface evaporation draws on the groundwater over the wet share of
+    # the wetland covers, at the albedo-reduced potential rate like the rest.
+    model = models.PrevahUniBE(
+        land_cover_names=["open", "wetland"],
+        land_cover_types=["open", "wetland"],
+        wet_et_from_groundwater=True,
+    )
+    parameters = model.generate_parameters()
+    model.apply_cover_parameters(parameters, "wetland")
+
+    monthly = {
+        (component, name): values
+        for component, name, values in parameters.get_monthly_parameters()
+    }
+    assert monthly[("slz1", "albedo_land")] == pytest.approx(
+        PREVAH_COVER_ALBEDO["wetland"]
+    )
+    # A cover class that is not a wetland leaves it alone.
+    model.apply_cover_parameters(parameters, "pasture", cover_name="open")
+    monthly = {
+        (component, name): values
+        for component, name, values in parameters.get_monthly_parameters()
+    }
+    assert monthly[("slz1", "albedo_land")] == pytest.approx(
+        PREVAH_COVER_ALBEDO["wetland"]
+    )
+
+
+def test_apply_cover_albedo_sets_the_soil_albedo():
+    model = _model_with_cover_classes(["pasture"], soil_et_process="et:prevah")
+    parameters = model.generate_parameters()
+
+    assert model.apply_cover_albedo(parameters, None, "pasture") == []
+
+    monthly = {
+        (component, name): values
+        for component, name, values in parameters.get_monthly_parameters()
+    }
+    assert monthly[("soil_moisture", "albedo_land")] == pytest.approx(
+        PREVAH_COVER_ALBEDO["pasture"]
+    )
+
+
+def test_apply_cover_albedo_per_cover_soil_store():
+    model = models.PrevahUniBE(
+        land_cover_names=["open", "forest"],
+        land_cover_types=["open", "forest"],
+        share_soil=False,
+    )
+    parameters = model.generate_parameters()
+
+    model.apply_cover_albedo(parameters, None, "pasture", cover_name="open")
+    model.apply_cover_albedo(parameters, None, "coniferous_forest", cover_name="forest")
+
+    monthly = {
+        (component, name): values
+        for component, name, values in parameters.get_monthly_parameters()
+    }
+    assert monthly[("open_soil_moisture", "albedo_land")] == pytest.approx(
+        PREVAH_COVER_ALBEDO["pasture"]
+    )
+    assert monthly[("forest_soil_moisture", "albedo_land")] == pytest.approx(
+        PREVAH_COVER_ALBEDO["coniferous_forest"]
+    )
+
+
+def test_apply_cover_albedo_per_unit_cover_class(tmp_path):
+    """One PREVAH hydrotope per unit: each unit gets the albedo of its own class."""
+    model = models.PrevahUniBE(land_cover_names=["open"], land_cover_types=["open"])
+    parameters = model.generate_parameters()
+    hydro_units = _two_unit_hydro_units(tmp_path, "open", "open")
+
+    names = model.apply_cover_albedo(
+        parameters, hydro_units, ["pasture", "coniferous_forest"]
+    )
+
+    assert names == [f"albedo_land_{month:02d}" for month in range(1, 13)]
+    assert ("soil_moisture", "albedo_land", names) in (
+        parameters.get_spatial_monthly_parameters()
+    )
+    january = hydro_units.hydro_units["albedo_land_01"].to_numpy().flatten()
+    assert january == pytest.approx(
+        [PREVAH_COVER_ALBEDO["pasture"][0], PREVAH_COVER_ALBEDO["coniferous_forest"][0]]
+    )
+    july = hydro_units.hydro_units["albedo_land_07"].to_numpy().flatten()
+    assert july == pytest.approx(
+        [PREVAH_COVER_ALBEDO["pasture"][6], PREVAH_COVER_ALBEDO["coniferous_forest"][6]]
+    )
+
+
+def test_apply_cover_albedo_without_the_prevah_soil_et():
+    model = _model_with_cover_classes(["pasture"], soil_et_process="et:hbv")
+    parameters = model.generate_parameters()
+    with pytest.raises(hb.ConfigurationError):
+        model.apply_cover_albedo(parameters, None, "pasture")
 
 
 def _two_unit_hydro_units(tmp_path, cover_class, cover_type):

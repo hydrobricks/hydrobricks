@@ -645,8 +645,10 @@ class TimeSeries2D(TimeSeries):
                     for t_block in range(n_steps)
                 ]
 
-            # Wait for all tasks to complete
-            concurrent.futures.wait(futures)
+            # Wait for all tasks and re-raise the first failure: a block whose
+            # task failed would otherwise keep the zeros it was initialized with.
+            for future in concurrent.futures.as_completed(futures):
+                future.result()
 
         # Before caching: a broken result must not be written to the cache and
         # then silently reused by every later run.

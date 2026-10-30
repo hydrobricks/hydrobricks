@@ -542,6 +542,35 @@ def test_regrid_from_netcdf_trims_a_source_covering_a_longer_period(
     assert np.allclose(forcing.data2D.data[1], forcing.data2D.data[0])
 
 
+def test_regrid_from_netcdf_raises_when_a_block_fails(
+    hydro_units: hb.HydroUnits, tmp_path, monkeypatch
+):
+    if not has_gridded_data_packages():
+        return
+
+    from hydrobricks.time_series import TimeSeries2D
+
+    # A block that fails after writing (e.g. a network read error on the next
+    # file) must stop the regridding, not leave zeros behind it in the cache.
+    extract = TimeSeries2D._extract_time_step_data_weights
+
+    def failing_extract(self, data_var, unit_weights, i_block, block_size):
+        extract(self, data_var, unit_weights, i_block, block_size)
+        if i_block == 0:
+            raise OSError("NetCDF: HDF error")
+
+    monkeypatch.setattr(
+        TimeSeries2D, "_extract_time_step_data_weights", failing_extract
+    )
+
+    forcing = _spatialize_gridded_period(
+        hydro_units, "1962-01-01", "1962-01-03", cache_dir=tmp_path
+    )
+    with pytest.raises(OSError, match="HDF error"):
+        forcing.apply_operations()
+    assert not list(tmp_path.glob("forcing_regrid_*"))
+
+
 def _spatialize_gridded_period(hydro_units, start_date, end_date, cache_dir=None):
     forcing = hb.Forcing(hydro_units, cache_dir=cache_dir)
     forcing.spatialize_from_gridded_data(

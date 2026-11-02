@@ -10,6 +10,9 @@ from hydrobricks.modules.glacier import GlacierModule
 
 logger = logging.getLogger(__name__)
 
+SOIL_ET_PROCESSES = ("et:socont", "et:hbv", "et:power_law", "et:exponential")
+SOIL_INFILTRATION_PROCESSES = ("infiltration:socont", "infiltration:hbv")
+
 
 class Socont(Model):
     """SOCONT glacio-hydrological model (Schaefli et al., 2005).
@@ -65,6 +68,19 @@ class Socont(Model):
     surface_runoff : str
         Quick-flow method: 'socont_runoff' (default, kinematic-wave overland flow)
         or 'linear_storage'.
+    soil_et_process : str
+        Evapotranspiration from the slow reservoir: 'et:socont' (default, the
+        reference PET * (S/A)^0.5), 'et:hbv' (PET above a filling ratio ``lp``,
+        linear below), 'et:power_law' (PET * (S/A)^et_beta) or 'et:exponential'
+        (PET * (1 - exp(-et_alpha * S/A))). The reference formulation reaches PET
+        only with a full store, which the infiltration then keeps from filling;
+        the alternatives free that ceiling, at the cost of leaving the published
+        model.
+    infiltration_process : str
+        Infiltration into the slow reservoir: 'infiltration:socont' (default, the
+        share 1 - (S/A)^2 of the input) or 'infiltration:hbv' (1 - (S/A)^beta_soil,
+        the exponent calibrated; aliased ``beta_soil`` to keep it apart from the
+        quick-flow ``beta``).
     snow_melt_process : str
         Snowmelt method (default: 'melt:degree_day').
     snow_ice_transformation : str or None
@@ -88,6 +104,8 @@ class Socont(Model):
         # Default options
         self.options["soil_storage_nb"] = 1
         self.options["surface_runoff"] = "socont_runoff"
+        self.options["soil_et_process"] = "et:socont"
+        self.options["infiltration_process"] = "infiltration:socont"
         self.options["snow_melt_process"] = "melt:degree_day"
         self.options["snow_rain_process"] = None
         self.options["snow_ice_transformation"] = None
@@ -156,17 +174,39 @@ class Socont(Model):
             ),
             "open",
         )
+        infiltration = self.options["infiltration_process"]
+        if infiltration not in SOIL_INFILTRATION_PROCESSES:
+            raise ConfigurationError(
+                f"Unknown infiltration process: '{infiltration}'. "
+                f"Expected one of {', '.join(SOIL_INFILTRATION_PROCESSES)}.",
+                item_name="infiltration_process",
+                item_value=infiltration,
+                reason="Unknown process type",
+            )
+        soil_et = self.options["soil_et_process"]
+        if soil_et not in SOIL_ET_PROCESSES:
+            raise ConfigurationError(
+                f"Unknown soil ET process: '{soil_et}'. "
+                f"Expected one of {', '.join(SOIL_ET_PROCESSES)}.",
+                item_name="soil_et_process",
+                item_value=soil_et,
+                reason="Unknown process type",
+            )
+
         self.structure[soil_cover_name] = {
             "attach_to": "hydro_unit",
             "kind": "land_cover",
             "processes": {
                 "infiltration": {
-                    "kind": "infiltration:socont",
+                    "kind": infiltration,
                     "target": "slow_reservoir",
                 },
                 "runoff": {"kind": "outflow:rest", "target": "surface_runoff"},
             },
         }
+        if infiltration == "infiltration:hbv":
+            # Its exponent shares the HBV alias 'beta' with the quick flow.
+            self.structure[soil_cover_name]["alias_suffix"] = "_soil"
 
         # Add other bricks
         self.structure["slow_reservoir"] = {
@@ -174,7 +214,7 @@ class Socont(Model):
             "kind": "storage",
             "parameters": {"capacity": 200},
             "processes": {
-                "et": {"kind": "et:socont"},
+                "et": {"kind": soil_et},
                 "outflow": {"kind": "outflow:linear", "target": "outlet"},
                 "overflow": {"kind": "overflow", "target": "outlet"},
             },

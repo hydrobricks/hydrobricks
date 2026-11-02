@@ -239,6 +239,102 @@ def test_socont_creation_with_solver():
     models.Socont(solver="runge_kutta")
 
 
+@pytest.mark.parametrize(
+    "options, alias",
+    [
+        ({"soil_et_process": "et:hbv"}, "lp"),
+        ({"soil_et_process": "et:power_law"}, "et_beta"),
+        ({"soil_et_process": "et:exponential"}, "et_alpha"),
+        ({"infiltration_process": "infiltration:hbv"}, "beta_soil"),
+    ],
+)
+def test_socont_soil_process_options_add_parameters(options, alias):
+    parameters = models.Socont(**options).generate_parameters()
+    assert parameters.has(alias)
+    # The quick-flow beta keeps its alias next to the infiltration exponent.
+    assert parameters.has("beta")
+    assert not models.Socont().generate_parameters().has(alias)
+
+
+@pytest.mark.parametrize("option", ["soil_et_process", "infiltration_process"])
+def test_socont_unknown_soil_process_raises(option):
+    with pytest.raises(hb.ConfigurationError):
+        models.Socont(**{option: "et:unknown"})
+
+
+def _run_socont_sitter(tmp_path, values, **options):
+    socont = models.Socont(
+        soil_storage_nb=1, surface_runoff="linear_storage", record_all=True, **options
+    )
+    parameters = socont.generate_parameters()
+    parameters.set_values(
+        {"a_snow": 3, "k_quick": 0.05, "A": 200, "k_slow": 0.01, **values}
+    )
+    hydro_units = hb.HydroUnits()
+    hydro_units.load_from_csv(
+        SITTER_HUS, column_elevation="elevation", column_area="area"
+    )
+    forcing = hb.Forcing(hydro_units)
+    forcing.load_station_data_from_csv(
+        SITTER_METEO,
+        column_time="date",
+        time_format="%d/%m/%Y",
+        content={
+            "precipitation": "precip(mm/day)",
+            "temperature": "temp(C)",
+            "pet": "pet_sim(mm/day)",
+        },
+    )
+    forcing.spatialize_from_station_data(
+        variable="temperature", ref_elevation=1250, gradient=-0.6
+    )
+    forcing.spatialize_from_station_data(variable="pet")
+    forcing.spatialize_from_station_data(
+        variable="precipitation", ref_elevation=1250, gradient=0.05
+    )
+    socont.setup(
+        spatial_structure=hydro_units,
+        output_path=str(tmp_path),
+        start_date="1981-01-01",
+        end_date="2020-12-31",
+    )
+    socont.run(parameters=parameters, forcing=forcing)
+    balance = (
+        socont.get_total_outlet_discharge()
+        + socont.get_total_et()
+        + socont.get_total_water_storage_changes()
+        + socont.get_total_snow_storage_changes()
+        - forcing.get_total_precipitation()
+    )
+    return np.asarray(socont.get_outlet_discharge()), socont.get_total_et(), balance
+
+
+def test_socont_soil_processes_reproduce_reference(tmp_path):
+    """At the reference exponents, the alternative processes are the Socont ones."""
+    ref, ref_et, _ = _run_socont_sitter(tmp_path / "ref", {})
+    power, power_et, _ = _run_socont_sitter(
+        tmp_path / "power", {"et_beta": 0.5}, soil_et_process="et:power_law"
+    )
+    hbv_inf, hbv_inf_et, _ = _run_socont_sitter(
+        tmp_path / "inf",
+        {"beta_soil": 2},
+        infiltration_process="infiltration:hbv",
+    )
+    np.testing.assert_allclose(power, ref, rtol=1e-10, atol=1e-12)
+    np.testing.assert_allclose(hbv_inf, ref, rtol=1e-10, atol=1e-12)
+    assert power_et == pytest.approx(ref_et)
+    assert hbv_inf_et == pytest.approx(ref_et)
+
+
+def test_socont_et_hbv_raises_et_and_closes_water_balance(tmp_path):
+    _, ref_et, _ = _run_socont_sitter(tmp_path / "ref", {})
+    _, et, balance = _run_socont_sitter(
+        tmp_path / "hbv", {"lp": 0.5}, soil_et_process="et:hbv"
+    )
+    assert et > ref_et
+    assert balance == pytest.approx(0, abs=1e-8)
+
+
 def test_socont_creation_with_surface_runoff():
     models.Socont(surface_runoff="linear_storage")
 

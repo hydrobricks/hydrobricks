@@ -1,10 +1,16 @@
 cff-version: 1.2.0
 message: "If you use hydrobricks, please cite it as below."
 type: software
-title: "Hydrobricks: a modular hydrological modelling framework"
+title: "hydrobricks: a modular framework for building, calibrating and comparing conceptual hydrological models"
 abstract: >-
-  Hydrobricks is a modular hydrological modelling framework written in Python
-  with a core in C++.
+  hydrobricks assembles hydrological models from reusable components: storages,
+  land covers, snowpacks and glaciers (the bricks), the processes acting on
+  them, and the fluxes connecting them. The established models it ships with
+  (Socont, GR4J, GR6J, HBV, PREVAH) are built from the same components, so they
+  share one numerical core and one workflow. Changing a single process or
+  comparing whole model structures then becomes a matter of configuration rather
+  than a new code base. The computation engine is written in C++ and driven from
+  Python.
 authors:
   - family-names: Horton
     given-names: Pascal
@@ -18,9 +24,7 @@ authors:
     given-names: Jan
     orcid: "https://orcid.org/0000-0002-9059-9787"
     affiliation: "University of Bern, Bern, Switzerland"
-version: 0.9.4
-date-released: 2026-10-26
-doi: 10.5281/zenodo.21239598
+doi: 10.5281/zenodo.7139899
 license: MIT
 repository-code: "https://github.com/hydrobricks/hydrobricks"
 keywords:

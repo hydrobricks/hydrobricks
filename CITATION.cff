@@ -1,0 +1,38 @@
+cff-version: 1.2.0
+message: "If you use hydrobricks, please cite it as below."
+type: software
+title: "Hydrobricks: a modular hydrological modelling framework"
+abstract: >-
+  Hydrobricks is a modular hydrological modelling framework written in Python
+  with a core in C++.
+authors:
+  - family-names: Horton
+    given-names: Pascal
+    orcid: "https://orcid.org/0000-0003-0466-0359"
+    affiliation: "University of Bern, Bern, Switzerland"
+  - family-names: Argentin
+    given-names: Anne-Laure
+    orcid: "https://orcid.org/0000-0003-2310-6011"
+    affiliation: "Free University of Bozen-Bolzano, Bolzano, Italy"
+  - family-names: Schwanbeck
+    given-names: Jan
+    orcid: "https://orcid.org/0000-0002-9059-9787"
+    affiliation: "University of Bern, Bern, Switzerland"
+version: 0.9.4
+date-released: 2026-10-26
+doi: 10.5281/zenodo.21239598
+license: MIT
+repository-code: "https://github.com/hydrobricks/hydrobricks"
+keywords:
+  - hydrology
+  - rainfall-runoff
+  - modeling
+  - modular
+  - flexible framework
+  - Python
+  - C++
+  - SOCONT
+  - HBV
+  - PREVAH
+  - GR4J
+  - GR6J

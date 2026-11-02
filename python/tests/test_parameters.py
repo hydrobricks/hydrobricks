@@ -3,6 +3,7 @@ import os.path
 import tempfile
 from pathlib import Path
 
+import numpy as np
 import pytest
 
 import hydrobricks as hb
@@ -174,6 +175,57 @@ def test_set_monthly_values_rejects_a_spatial_monthly_parameter():
     parameter_set.set_spatial_monthly("fc", [f"fc_{m:02d}" for m in range(1, 13)])
     with pytest.raises(hb.ConfigurationError):
         parameter_set.set_monthly_values("fc", [100] * 12)
+
+
+def _hydro_units_with(properties):
+    """Two hydro units carrying the given per-unit properties."""
+    hydro_units = hb.HydroUnits()
+    hydro_units.add_property(("area", "m2"), np.array([1e6, 1e6]), set_first=True)
+    for name, values in properties.items():
+        hydro_units.add_property((name, "mm"), np.array(values, dtype=float))
+    return hydro_units
+
+
+def test_check_spatial_values_accepts_values_in_range():
+    parameter_set = _monthly_and_spatial_parameter_set()
+    parameter_set.set_spatial("fc", "fc")
+
+    parameter_set.check_spatial_values(_hydro_units_with({"fc": [50.0, 2000.0]}))
+
+
+def test_check_spatial_values_rejects_a_value_out_of_range():
+    # The per-unit values are only known once the parameters meet the hydro units,
+    # so this is where the range check of set_values() catches up with them.
+    parameter_set = _monthly_and_spatial_parameter_set()
+    parameter_set.set_spatial("fc", "fc")
+
+    with pytest.raises(hb.ConfigurationError) as error:
+        parameter_set.check_spatial_values(_hydro_units_with({"fc": [50.0, 5000.0]}))
+
+    assert "fc" in str(error.value)
+    assert "set_spatial()" in str(error.value)
+
+
+def test_check_spatial_monthly_values_rejects_a_value_out_of_range():
+    parameter_set = _monthly_and_spatial_parameter_set()
+    names = [f"fc_{month:02d}" for month in range(1, 13)]
+    parameter_set.set_spatial_monthly("fc", names)
+    properties = {name: [100.0, 100.0] for name in names}
+    properties["fc_07"] = [100.0, -1.0]
+
+    with pytest.raises(hb.ConfigurationError) as error:
+        parameter_set.check_spatial_values(_hydro_units_with(properties))
+
+    assert "fc_07" in str(error.value)
+    assert "set_spatial_monthly()" in str(error.value)
+
+
+def test_check_spatial_values_ignores_a_missing_property():
+    # Units lacking the property fall back on the scalar value, already checked.
+    parameter_set = _monthly_and_spatial_parameter_set()
+    parameter_set.set_spatial("fc", "not_there")
+
+    parameter_set.check_spatial_values(_hydro_units_with({"fc": [5000.0, 5000.0]}))
 
 
 def test_monthly_and_spatial_on_different_parameters():

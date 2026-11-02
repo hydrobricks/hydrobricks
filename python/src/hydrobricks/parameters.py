@@ -4,6 +4,7 @@ import random
 from dataclasses import dataclass
 from typing import Callable, Hashable
 
+import numpy as np
 import pandas as pd
 
 from hydrobricks._exceptions import (
@@ -157,12 +158,15 @@ PROCESS_PARAM_SPECS: dict[str, list[ParamSpec]] = {
     # Q0 = K0 * (SUZ - SGRLUZ)). The response factor carries a distinct name so the
     # process can share a brick with an 'outflow:linear'.
     "outflow:linear_threshold": [
+        # The upper bound covers PREVAH's own calibration range for K0H (10..30 h
+        # storage time, i.e. 0.8..2.4 /d). Safe with the analytic linear solver,
+        # which integrates the reservoir with exp(-k*dt).
         ParamSpec(
             name="response_factor_threshold",
             unit="1/d",
             aliases=[],
             min=0.0001,
-            max=1,
+            max=3,
             mandatory=True,
         ),
         ParamSpec(
@@ -178,12 +182,14 @@ PROCESS_PARAM_SPECS: dict[str, list[ParamSpec]] = {
     # PREVAH percolation: constant maximum rate gated by the soil moisture state
     # (full rate at saturation, linear ramp between cu*FC and FC, none below cu*FC)
     "percolation:prevah": [
+        # The upper bound covers PREVAH's own calibration range for PERC
+        # (0.01..0.5 mm/h, i.e. up to 12 mm/d).
         ParamSpec(
             name="percolation_rate",
             unit="mm/d",
             aliases=["cperc"],
             min=0,
-            max=10,
+            max=12,
             default=0.1,
             mandatory=True,
         ),
@@ -365,9 +371,10 @@ PROCESS_PARAM_SPECS: dict[str, list[ParamSpec]] = {
         # These correct gauge undercatch, which raises the measured amount and
         # is worse for snow: a few per cent for rain in summer, occasionally
         # over 40 % for snowfall at altitude (Sevruk 1985, and the MeteoSwiss
-        # RhiresD product documentation). The bounds follow that asymmetry, but
-        # stay open below 1 because a calibrated factor also absorbs the bias of
-        # the interpolation onto the catchment (PREVAH Ticino calibrates 0.78).
+        # RhiresD product documentation). Hence +-30 % for rain and +-50 % for
+        # snow. Both stay open below 1 because a calibrated factor also absorbs
+        # the bias of the interpolation onto the catchment (PREVAH Ticino
+        # calibrates 0.78).
         ParamSpec(
             name="rain_correction_factor",
             unit="-",
@@ -381,8 +388,8 @@ PROCESS_PARAM_SPECS: dict[str, list[ParamSpec]] = {
             name="snow_correction_factor",
             unit="-",
             aliases=["snow_correction_factor", "snow_corr_factor", "sfcf", "scf"],
-            min=0.8,
-            max=1.6,
+            min=0.5,
+            max=1.5,
             default=1.0,
             mandatory=False,
         ),
@@ -644,7 +651,8 @@ PROCESS_PARAM_SPECS: dict[str, list[ParamSpec]] = {
     ],
     # PREVAH actual evapotranspiration: the HBV limitation with the PREVAH snow-albedo
     # reduction of the potential rate ((1 - albedo)/0.8, albedo interpolated between
-    # albedo_land and albedo_snow by the unit's snow-covered fraction).
+    # albedo_land and albedo_snow by the unit's snow-covered fraction), and the choice
+    # between the two branches of PREVAH's s_eta_soil (potential_fraction).
     "et:prevah": [
         ParamSpec(
             name="lp",
@@ -671,6 +679,19 @@ PROCESS_PARAM_SPECS: dict[str, list[ParamSpec]] = {
             min=0,
             max=0.4,
             default=0.2,
+            mandatory=False,
+        ),
+        # Share of the unit evaporating at the potential rate whatever the soil
+        # moisture (usually per unit). PREVAH takes that branch on its vegetated
+        # covers when et_calc_method is 2 or 3; on the default branch, a zero
+        # lp * fc means no ET at all rather than an unlimited rate.
+        ParamSpec(
+            name="potential_fraction",
+            unit="-",
+            aliases=["et_potential_fraction"],
+            min=0,
+            max=1,
+            default=0.0,
             mandatory=False,
         ),
     ],
@@ -1121,14 +1142,16 @@ PROCESS_PARAM_SPECS: dict[str, list[ParamSpec]] = {
 BRICK_PARAM_SPECS: dict[str, ParamSpec] = {
     # Storage capacity of a brick. The lower bound is not cosmetic: where a brick
     # drains by evapotranspiration the rate is scaled by the filling ratio
-    # (ET = PET * (content / capacity) ** exponent), which is undefined at zero.
+    # (ET = PET * (content / capacity) ** exponent), which is undefined at zero. It
+    # stays small because thin soils are real - PREVAH forces 3 mm on its rock
+    # hydrotopes and 0.1 mm on the ice ones - so only zero is excluded.
     # The upper bound stays generous because capacity means different things per
     # model - GR4J's production store X1 is a conceptual reservoir that calibrates
     # well above 1000 mm - so a model whose ET uses that filling ratio tightens it
     # itself through 'parameter_ranges' (see Socont), rather than every brick in
     # every model paying for one model's failure mode.
     "capacity": ParamSpec(
-        name="capacity", unit="mm", aliases=[], min=10, max=3000, mandatory=True
+        name="capacity", unit="mm", aliases=[], min=0.1, max=3000, mandatory=True
     ),
 }
 
@@ -1849,6 +1872,90 @@ class ParameterSet:
         self._spatial.pop(index, None)
         self._spatial_monthly[index] = list(property_names)
 
+    def check_spatial_values(self, hydro_units) -> None:
+        """
+        Check the per-unit values of the spatial parameters against their range.
+
+        ``set_spatial`` and ``set_spatial_monthly`` only record which hydro-unit
+        property a parameter reads; the values themselves live in the ``HydroUnits``
+        and are only known once the two are brought together. This applies to them
+        the range check that ``set_values`` applies to a scalar, so a per-unit value
+        cannot reach the model unchecked. A property that no unit carries is skipped:
+        those units fall back on the scalar value, which was checked when it was set.
+
+        Parameters
+        ----------
+        hydro_units
+            The hydro units holding the properties the parameters are bound to.
+
+        Raises
+        ------
+        ConfigurationError
+            If a per-unit value lies outside the parameter range.
+        """
+        units = getattr(hydro_units, "hydro_units", None)
+        if units is None or units.empty:
+            return
+
+        # The columns are a (property, unit) MultiIndex, but the level names depend
+        # on how the units were built, so the property level is taken by position.
+        available = set(units.columns.get_level_values(0))
+        bindings = [(index, [prop], False) for index, prop in self._spatial.items()]
+        bindings += [
+            (index, props, True) for index, props in self._spatial_monthly.items()
+        ]
+
+        for index, properties, monthly in bindings:
+            row = self.parameters.loc[index]
+            if row["component"] == "data":
+                continue
+            key = row["aliases"][0] if row["aliases"] else row["name"]
+            for prop in properties:
+                if prop not in available:
+                    continue
+                values = np.asarray(units[prop], dtype=float).ravel()
+                values = values[~np.isnan(values)]
+                if values.size == 0:
+                    continue
+                for value in (values.min(), values.max()):
+                    self._check_spatial_value(index, key, prop, monthly, float(value))
+
+    def _check_spatial_value(
+        self, index: int, key: str, prop: str, monthly: bool, value: float
+    ) -> None:
+        """
+        Range-check one per-unit value, naming the property it came from.
+
+        Parameters
+        ----------
+        index
+            Index of the parameter in the DataFrame.
+        key
+            Parameter name or alias (for error messages).
+        prop
+            The hydro-unit property the value was read from.
+        monthly
+            Whether the binding came from ``set_spatial_monthly``.
+        value
+            The value to check.
+
+        Raises
+        ------
+        ConfigurationError
+            If the value lies outside the parameter range.
+        """
+        try:
+            self._check_value_range(index, key, value)
+        except ConfigurationError as error:
+            setter = "set_spatial_monthly" if monthly else "set_spatial"
+            raise ConfigurationError(
+                f"{error.args[0]} The value comes from the hydro-unit property "
+                f"'{prop}', bound to the parameter by {setter}().",
+                item_name=key,
+                item_value=value,
+                reason="Spatial value out of range",
+            ) from None
+
     def get_spatial_parameters(self) -> list[tuple[str, str, str]]:
         """
         Return the spatial (per-unit) model parameters.
@@ -2315,7 +2422,8 @@ class ParameterSet:
         ``interception_covers`` (cover names) overrides that (PREVAH intercepts on
         every vegetated cover). With the ``et:open_water_prevah`` canopy ET, the
         process' ``et_factor`` (PREVAH's vegetation-cover fraction, monthly-settable)
-        is registered too, alias ``canopy_et_factor[_<cover>]``.
+        is registered too, alias ``canopy_et_factor[_<cover>]``, with the canopy's
+        own ``albedo_land``, alias ``canopy_albedo_land[_<cover>]``.
 
         Parameters
         ----------
@@ -2357,6 +2465,23 @@ class ParameterSet:
                         min=0,
                         max=1.5,
                         default=1.0,
+                        mandatory=False,
+                    ),
+                    alias_suffix=f"_{cover_name}" if multi else "",
+                )
+                # The canopy evaporates at the albedo-reduced potential rate like
+                # the soil below it, with the albedo of its own cover (PREVAH's
+                # monthly land-use albedo). The soil store carries the bare
+                # 'albedo_land' alias, so this one is prefixed.
+                self._register(
+                    component=f"{cover_name}_canopy",
+                    spec=ParamSpec(
+                        name="albedo_land",
+                        unit="-",
+                        aliases=["canopy_albedo_land"],
+                        min=0,
+                        max=0.4,
+                        default=0.2,
                         mandatory=False,
                     ),
                     alias_suffix=f"_{cover_name}" if multi else "",
@@ -2666,14 +2791,12 @@ class ParameterSet:
             'snow_rain_process' to decide whether snow is configured).
         """
         if _has_snow(options):
+            # The two factors are independent: a factor also absorbs the bias of
+            # the interpolation onto the catchment, which need not follow the
+            # undercatch (larger for snow), so the snow factor may fall below
+            # the rain factor.
             for spec in PROCESS_PARAM_SPECS["correction:snow_rain"]:
                 self._register(component="snow_rain_transition", spec=spec)
-            # Snow undercatch is usually at least as large as rain undercatch, so the
-            # snow factor should not fall below the rain factor. Applies to every
-            # snow-bearing model (only the snow/rain splitter carries both factors).
-            self.define_constraint(
-                "rain_correction_factor", "<=", "snow_correction_factor"
-            )
         else:
             for spec in PROCESS_PARAM_SPECS["correction:rain"]:
                 self._register(component="rain", spec=spec)

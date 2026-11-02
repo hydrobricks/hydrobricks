@@ -16,7 +16,7 @@ datasets, ...), which makes the formulation generic::
         validation: [2001-01-01, 2020-12-31]
         spinup: 4y
       forcing: { ...shared defaults... }
-      calibration: {algorithm: sceua, repetitions: 300}
+      calibration: {algorithm: dds, repetitions: 300}
 
     variants:                  # named config patches, per dimension
       catchment:
@@ -49,7 +49,7 @@ value ``v``:
 1. If the dimension has ``variants`` — ``v`` names a patch,
    ``variants.d.v``, deep-merged onto the config.
 2. Else if ``d`` contains a dot — it is a config path set to ``v``
-   (e.g. ``calibration.algorithm: [sceua, mc]``).
+   (e.g. ``calibration.algorithm: [dds, mc]``).
 3. Else if ``d`` is a shorthand — ``objective`` (``calibration.objective``)
    or ``transform`` (``calibration.transform``).
 

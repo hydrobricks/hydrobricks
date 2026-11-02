@@ -20,6 +20,18 @@ class LandCover;
  *   albedo   = albedo_land + snowfrac * (albedo_snow - albedo_land)
  *   Ea       = cevpf * PET * (1 - albedo)/0.8 * min(SM / (LP * FC), 1)
  *
+ * PREVAH's s_eta_soil has two branches, and 'potential_fraction' is the share of the
+ * unit taking the first one:
+ *   - the potential branch (fraction 1), which evaporates at the full potential rate
+ *     whatever the soil moisture. PREVAH takes it on the vegetated covers when its
+ *     et_calc_method is 2 or 3;
+ *   - the soil-moisture branch (fraction 0, the default), which applies the LP * FC
+ *     limitation above, and evaporates *nothing* where that threshold is zero
+ *     ('IF (sgrlp .le. 0.0) THEN EA = 0.0'): bare rock on no soil has no water to
+ *     give. PREVAH always takes it on its water, built-up and rock covers.
+ * The two are mixed linearly, so a value in between stands for a unit split between
+ * the branches.
+ *
  * With no snow (and the default albedo_land = 0.2) the factor is exactly 1, so the
  * process then behaves identically to 'et:hbv'. Requires a hydro-unit context (the
  * process must live on a hydro-unit brick, e.g. the soil moisture store).
@@ -60,8 +72,9 @@ class ProcessETPrevah : public ProcessETHBV {
     void AddGateBrick(Brick* brick) override;
 
   protected:
-    const float* _albedoLand;  // snow-free ground albedo [-] (0.2 makes the factor neutral)
-    const LandCover* _cover;   // cover owning the store, if any (nullptr: the whole unit)
+    const float* _albedoLand;         // snow-free ground albedo [-] (0.2 makes the factor neutral)
+    const float* _potentialFraction;  // share evaporating at the potential rate [-]
+    const LandCover* _cover;          // cover owning the store, if any (nullptr: the whole unit)
 
     /**
      * @copydoc Process::GetRates()

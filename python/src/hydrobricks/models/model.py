@@ -1674,6 +1674,10 @@ class Model(ABC):
                 component = ",".join(component)
             if not self.settings.set_parameter_monthly_values(component, name, values):
                 raise ModelError("Failed setting monthly parameter values.")
+        # The per-unit values are only known once the parameters meet the hydro
+        # units, so this is where they get the range check a scalar gets when set.
+        if self.spatial_structure is not None:
+            parameters.check_spatial_values(self.spatial_structure)
         # Push any spatial (per-unit) bindings so each unit reads its own value.
         for component, name, prop in parameters.get_spatial_parameters():
             if isinstance(component, (list, tuple)):

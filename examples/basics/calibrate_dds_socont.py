@@ -31,7 +31,7 @@ project.parameters.allow_changing = [
 ]
 
 # Set up SPOTPY. The objective is a skill (higher is better); trainer.calibrate
-# applies the sign SCE-UA needs (it minimizes) automatically — no manual inversion.
+# applies the sign each algorithm needs automatically — no manual inversion.
 spot_setup = trainer.SpotpySetup(
     project.model,
     project.parameters,
@@ -41,11 +41,13 @@ spot_setup = trainer.SpotpySetup(
     obj_func="kge_2012",
 )
 
-# Run the calibration. trainer.calibrate orients the objective for the chosen
-# algorithm, so the stored/returned scores stay in metric space (no flipped signs).
-max_rep = 4000
+# Run the calibration with DDS (Dynamically Dimensioned Search), which gave the
+# best and most consistent calibrations among the SPOTPY algorithms on Socont and
+# HBV-96. trainer.calibrate orients the objective for the chosen algorithm, so the
+# stored/returned scores stay in metric space (no flipped signs).
+max_rep = 5000
 sampler = trainer.calibrate(
-    spot_setup, "sceua", max_rep, dbname="spotpy_socont_sitter_SCEUA", dbformat="csv"
+    spot_setup, "dds", max_rep, dbname="spotpy_socont_sitter_DDS", dbformat="csv"
 )
 
 # Results in metric space (KGE, higher is better) — no confusing negative values.

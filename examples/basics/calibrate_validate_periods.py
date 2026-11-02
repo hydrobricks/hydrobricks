@@ -64,7 +64,7 @@ spot_setup = trainer.SpotpySetup(
     obj_func="kge_2012",
     periods=periods,
 )
-sampler = trainer.calibrate(spot_setup, "sceua", 2000, dbname=None, dbformat="ram")
+sampler = trainer.calibrate(spot_setup, "dds", 2000, dbname=None, dbformat="ram")
 best = trainer.get_best(sampler)
 print(f"Calibration finished: best KGE = {best['score']:.3f}")
 

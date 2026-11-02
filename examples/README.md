@@ -29,8 +29,8 @@ corrections declared as calibratable `param:` references with their ranges in
 
 | Example | Shows |
 |---|---|
-| `calibrate_sceua_socont.py` | SCE-UA calibration with SPOTPY. |
-| `calibrate_sceua_socont_parallel.py` | The same, parallelized (`parallel='mpc'`, needs `pathos`); the project is loaded inside the picklable factory. |
+| `calibrate_dds_socont.py` | DDS calibration with SPOTPY. |
+| `calibrate_dds_socont_parallel.py` | The same, parallelized (`parallel='mpc'`, needs `pathos`); the project is loaded inside the picklable factory. |
 | `analyse_mc_socont.py` | Monte Carlo sampling, priors, posterior analysis. |
 | `analyse_mc_socont_parallel.py` | The same, parallelized. |
 | `calibrate_validate_periods.py` | Split-sample workflow with `sitter_periods_project.yaml`: `load_project(..., setup=False)` + `project.setup(period='calibration')`, then a full-span rerun scored per period. |

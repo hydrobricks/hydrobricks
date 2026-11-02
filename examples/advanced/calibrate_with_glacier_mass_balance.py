@@ -57,7 +57,7 @@ of the score columns.
 
 Note: this script runs several calibrations of a glacierized model and can take
 a while. ``CALIBRATION_MAX_REP`` is kept small for a quick look; raise it (and
-consider the parallel helpers, see ``calibrate_sceua_socont_parallel.py``) for a
+consider the parallel helpers, see ``calibrate_dds_socont_parallel.py``) for a
 real calibration.
 """
 
@@ -89,8 +89,9 @@ REF_ELEVATION = 2702  # Reference altitude of the meteorological station [m]
 WARMUP = 365
 CALIBRATION_MAX_REP = 5000
 # Score SPOTPY stores for a rejected (non-behavioural / invalid) run: hydrobricks'
-# _WORST_PENALTY. It is a large *finite* value, and real objective scores are O(1),
-# so a stored score below it is a genuine run and one at it is a rejection.
+# _WORST_PENALTY, +1e12 for a minimizing algorithm and -1e12 for a maximizing one
+# (such as DDS). It is a large *finite* value, and real objective scores are O(1),
+# so a stored score below it in magnitude is a genuine run.
 REJECTED_SCORE = 1e12
 
 # Paths
@@ -284,8 +285,8 @@ def evaluate_run(param_values):
 # ---------------------------------------------------------------------------
 # 3. Calibrate, comparing the three glacier mass-balance modes
 # ---------------------------------------------------------------------------
-# Each calibration scores the discharge with the 2012 KGE (inverted for the
-# minimizer). The 'weighted' and 'constraint' modes use SCE-UA (single score); the
+# Each calibration scores the discharge with the 2012 KGE (oriented for each
+# algorithm). The 'weighted' and 'constraint' modes use DDS (single score); the
 # 'pareto' mode uses NSGAII (a [discharge, annual, winter, summer] objective
 # vector). Each mass-balance signal carries its own metric/weight/mode and is scored
 # separately by the setup, whatever the combination: 'objective' signals each
@@ -318,7 +319,7 @@ spot_setup = trainer.SpotpySetup(
     combine="weighted",
     discharge_weight=DISCHARGE_WEIGHT,
 )
-sampler = trainer.calibrate(spot_setup, "sceua", CALIBRATION_MAX_REP, dbformat="ram")
+sampler = trainer.calibrate(spot_setup, "dds", CALIBRATION_MAX_REP, dbformat="ram")
 best = trainer.get_best(sampler)
 # Score in skill space (higher is better): the combined discharge + mass-balance
 # objective, not a sign-flipped value.
@@ -345,9 +346,9 @@ glacier_mb_constraint = hb.GlacierMassBalanceObservations.from_glamos_by_type(
     end_date=END_DATE,
     mode="constraint",
     # Accept runs whose mass balance is within 50% of that type's observed mean. A
-    # tighter value (e.g. 0.3) can reject the entire random burn-in population,
-    # leaving SCE-UA with no fitness gradient to evolve from; loosen it if every run
-    # scores the rejection penalty.
+    # tighter value (e.g. 0.3) can reject every run of the random start, leaving
+    # DDS with no valid set to improve on; loosen it if every run scores the
+    # rejection penalty.
     relative_tolerance=0.5,
 )
 spot_setup_c = trainer.SpotpySetup(
@@ -359,13 +360,11 @@ spot_setup_c = trainer.SpotpySetup(
     obj_func="kge_2012",
     extra_observations=glacier_mb_constraint,
 )
-sampler_c = trainer.calibrate(
-    spot_setup_c, "sceua", CALIBRATION_MAX_REP, dbformat="ram"
-)
+sampler_c = trainer.calibrate(spot_setup_c, "dds", CALIBRATION_MAX_REP, dbformat="ram")
 results_c = sampler_c.getdata()
 # A rejected run is stored with the (finite) rejection penalty, so np.isfinite() would
-# wrongly count it as behavioural; a behavioural run scores below the penalty.
-behavioural = results_c["like1"] < REJECTED_SCORE
+# wrongly count it as behavioural; a behavioural run scores below it in magnitude.
+behavioural = abs(results_c["like1"]) < REJECTED_SCORE
 print(f"Behavioural (within tolerance) runs: {behavioural.sum()} / {len(results_c)}")
 if behavioural.sum() > 0:
     # Objective here is the discharge KGE alone; the mass balance only filters runs.
@@ -393,7 +392,7 @@ spot_setup_p = trainer.SpotpySetup(
     extra_observations=glacier_mb,
     combine="pareto",
 )
-# Unlike SCE-UA, NSGAII's first sample() argument is the number of *generations*,
+# Unlike DDS, NSGAII's first sample() argument is the number of *generations*,
 # not the total number of runs: it performs generations * n_pop model evaluations.
 # Divide by n_pop so the total stays comparable to CALIBRATION_MAX_REP. A larger
 # population keeps the Pareto front more diverse (fewer fronts collapse to a single

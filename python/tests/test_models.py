@@ -1,4 +1,5 @@
 import datetime
+import logging
 import os.path
 import tempfile
 from pathlib import Path
@@ -272,6 +273,27 @@ def test_socont_default_soil_et_is_hbv_with_its_own_lp_range():
 def test_socont_unknown_soil_process_raises(option):
     with pytest.raises(hb.ConfigurationError):
         models.Socont(**{option: "et:unknown"})
+
+
+def test_socont_original_preset_sets_the_published_options():
+    socont = models.Socont(preset="original")
+    assert socont.options["soil_et_process"] == "et:socont"
+    assert socont.options["infiltration_process"] == "infiltration:socont"
+    assert socont.options["soil_storage_nb"] == 1
+    assert not socont.generate_parameters().has("lp")
+
+
+def test_socont_preset_yields_to_explicit_options_with_a_warning(caplog):
+    with caplog.at_level(logging.WARNING):
+        socont = models.Socont(preset="original", soil_storage_nb=2)
+    assert socont.options["soil_storage_nb"] == 2
+    assert socont.options["soil_et_process"] == "et:socont"
+    assert "soil_storage_nb" in caplog.text
+
+
+def test_socont_unknown_preset_raises():
+    with pytest.raises(hb.ConfigurationError):
+        models.Socont(preset="unknown")
 
 
 def _run_socont_sitter(tmp_path, values, **options):

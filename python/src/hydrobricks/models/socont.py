@@ -12,6 +12,23 @@ logger = logging.getLogger(__name__)
 
 SOIL_ET_PROCESSES = ("et:socont", "et:hbv", "et:power_law", "et:exponential")
 SOIL_INFILTRATION_PROCESSES = ("infiltration:socont", "infiltration:hbv")
+#: Options pinned by each preset. 'original' is the published model (Schaefli et
+#: al., 2005), whatever the defaults become; 'hydrobricks' keeps the defaults.
+PRESETS = {
+    "hydrobricks": {},
+    "original": {
+        "soil_storage_nb": 1,
+        "surface_runoff": "socont_runoff",
+        "soil_et_process": "et:socont",
+        "infiltration_process": "infiltration:socont",
+        "snow_melt_process": "melt:degree_day",
+        "snow_ice_transformation": None,
+        "snow_redistribution": None,
+        "snow_sublimation_process": None,
+        "glacier_infinite_storage": True,
+        "glacier_module": "gsm",
+    },
+}
 
 
 class Socont(Model):
@@ -62,6 +79,13 @@ class Socont(Model):
 
     Options
     -------
+    preset : str
+        'hydrobricks' (default) or 'original'. 'original' sets the options below
+        to the published model: one slow reservoir, the kinematic-wave quick flow,
+        the Socont evapotranspiration and infiltration, the degree-day melt and the
+        GSM glacier module, without snow redistribution or sublimation. Options
+        given explicitly still apply, with a warning when they depart from the
+        original. The rain/snow split is not pinned.
     soil_storage_nb : int
         Number of slow soil reservoirs, 1 (default) or 2. With 2, a constant
         percolation feeds a second linear soil layer.
@@ -113,8 +137,10 @@ class Socont(Model):
         self.options["snow_sublimation_process"] = None
         self.options["glacier_infinite_storage"] = True
         self.options["glacier_module"] = "gsm"
+        self.options["preset"] = "hydrobricks"
         self.allowed_land_cover_types = ["open", "glacier"]
 
+        self._apply_preset(kwargs)
         self._set_options(kwargs)
 
         try:
@@ -126,6 +152,29 @@ class Socont(Model):
 
         except RuntimeError as err:
             raise ModelError(f"Socont model initialization raised an exception: {err}")
+
+    def _apply_preset(self, kwargs: dict[str, Any]) -> None:
+        """Set the options of the preset, before the explicit ones override them."""
+        preset = kwargs.get("preset", self.options["preset"])
+        if preset not in PRESETS:
+            raise ConfigurationError(
+                f"Unknown Socont preset: '{preset}'. "
+                f"Expected one of {', '.join(PRESETS)}.",
+                item_name="preset",
+                item_value=preset,
+                reason="Unknown preset",
+            )
+        self.options.update(PRESETS[preset])
+        departures = [
+            key
+            for key, value in PRESETS[preset].items()
+            if key in kwargs and kwargs[key] != value
+        ]
+        if departures:
+            logger.warning(
+                f"Socont preset '{preset}' with {', '.join(departures)} changed: "
+                f"the model departs from the preset."
+            )
 
     def _define_structure(self) -> None:
         """

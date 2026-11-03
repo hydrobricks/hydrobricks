@@ -29,7 +29,8 @@ PARAMETERS = {
 }
 
 # A structure definition replicating Socont(soil_storage_nb=2,
-# surface_runoff='linear_storage') on a glacier-free catchment.
+# surface_runoff='linear_storage', soil_et_process='et:socont') on a glacier-free
+# catchment.
 SOCONT_LIKE = {
     "name": "socont_like",
     "options": {"snow_melt_process": "melt:degree_day"},
@@ -113,6 +114,7 @@ def test_custom_model_matches_socont(tmp_path):
                 "options": {
                     "soil_storage_nb": 2,
                     "surface_runoff": "linear_storage",
+                    "soil_et_process": "et:socont",
                 },
             },
         ),

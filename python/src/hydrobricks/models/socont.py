@@ -69,13 +69,13 @@ class Socont(Model):
         Quick-flow method: 'socont_runoff' (default, kinematic-wave overland flow)
         or 'linear_storage'.
     soil_et_process : str
-        Evapotranspiration from the slow reservoir: 'et:socont' (default, the
-        reference PET * (S/A)^0.5), 'et:hbv' (PET above a filling ratio ``lp``,
-        linear below), 'et:power_law' (PET * (S/A)^et_beta) or 'et:exponential'
-        (PET * (1 - exp(-et_alpha * S/A))). The reference formulation reaches PET
-        only with a full store, which the infiltration then keeps from filling;
-        the alternatives free that ceiling, at the cost of leaving the published
-        model.
+        Evapotranspiration from the slow reservoir: 'et:hbv' (default, PET above a
+        filling ratio ``lp``, linear below), 'et:socont' (the published
+        PET * (S/A)^0.5), 'et:power_law' (PET * (S/A)^et_beta) or 'et:exponential'
+        (PET * (1 - exp(-et_alpha * S/A))). The published formulation reaches PET
+        only with a full store, which the infiltration then keeps from filling: on
+        lowland catchments the calibration then hides the surplus water in a sink.
+        Use 'et:socont' to reproduce the published model.
     infiltration_process : str
         Infiltration into the slow reservoir: 'infiltration:socont' (default, the
         share 1 - (S/A)^2 of the input) or 'infiltration:hbv' (1 - (S/A)^beta_soil,
@@ -104,7 +104,7 @@ class Socont(Model):
         # Default options
         self.options["soil_storage_nb"] = 1
         self.options["surface_runoff"] = "socont_runoff"
-        self.options["soil_et_process"] = "et:socont"
+        self.options["soil_et_process"] = "et:hbv"
         self.options["infiltration_process"] = "infiltration:socont"
         self.options["snow_melt_process"] = "melt:degree_day"
         self.options["snow_rain_process"] = None
@@ -352,6 +352,10 @@ class Socont(Model):
         """
         self.parameter_ranges = {
             "slow_reservoir:capacity": (10.0, 1000.0),
+            "slow_reservoir:lp": (0.1, 1.0),
+        }
+        self.parameter_defaults = {
+            "slow_reservoir:lp": 0.5,
         }
         self.parameter_transforms = {
             "slow_reservoir:response_factor": (

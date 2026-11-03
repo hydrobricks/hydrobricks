@@ -253,7 +253,19 @@ def test_socont_soil_process_options_add_parameters(options, alias):
     assert parameters.has(alias)
     # The quick-flow beta keeps its alias next to the infiltration exponent.
     assert parameters.has("beta")
-    assert not models.Socont().generate_parameters().has(alias)
+    published = models.Socont(
+        soil_et_process="et:socont", infiltration_process="infiltration:socont"
+    )
+    assert not published.generate_parameters().has(alias)
+
+
+def test_socont_default_soil_et_is_hbv_with_its_own_lp_range():
+    socont = models.Socont()
+    assert socont.options["soil_et_process"] == "et:hbv"
+    parameters = socont.generate_parameters()
+    assert parameters.get("lp") == pytest.approx(0.5)
+    row = parameters.parameters[parameters.parameters["name"] == "lp"].iloc[0]
+    assert (row["min"], row["max"]) == (0.1, 1.0)
 
 
 @pytest.mark.parametrize("option", ["soil_et_process", "infiltration_process"])
@@ -311,13 +323,16 @@ def _run_socont_sitter(tmp_path, values, **options):
 
 def test_socont_soil_processes_reproduce_reference(tmp_path):
     """At the reference exponents, the alternative processes are the Socont ones."""
-    ref, ref_et, _ = _run_socont_sitter(tmp_path / "ref", {})
+    ref, ref_et, _ = _run_socont_sitter(
+        tmp_path / "ref", {}, soil_et_process="et:socont"
+    )
     power, power_et, _ = _run_socont_sitter(
         tmp_path / "power", {"et_beta": 0.5}, soil_et_process="et:power_law"
     )
     hbv_inf, hbv_inf_et, _ = _run_socont_sitter(
         tmp_path / "inf",
         {"beta_soil": 2},
+        soil_et_process="et:socont",
         infiltration_process="infiltration:hbv",
     )
     np.testing.assert_allclose(power, ref, rtol=1e-10, atol=1e-12)
@@ -327,7 +342,7 @@ def test_socont_soil_processes_reproduce_reference(tmp_path):
 
 
 def test_socont_et_hbv_raises_et_and_closes_water_balance(tmp_path):
-    _, ref_et, _ = _run_socont_sitter(tmp_path / "ref", {})
+    _, ref_et, _ = _run_socont_sitter(tmp_path / "ref", {}, soil_et_process="et:socont")
     _, et, balance = _run_socont_sitter(
         tmp_path / "hbv", {"lp": 0.5}, soil_et_process="et:hbv"
     )

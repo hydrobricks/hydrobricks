@@ -459,12 +459,6 @@ class TimeSeries2D(TimeSeries):
                     reason="Mismatched end date",
                 )
 
-        # Extract the unit id masks
-        unit_id_masks = []
-        for unit_id in unit_ids_list:
-            unit_id_mask = xr.where(unit_ids == unit_id, 1, 0)
-            unit_id_masks.append(unit_id_mask)
-
         # Initialize data array. A 'day_of_year' climatology is regridded on its
         # own 366-day axis and expanded to the simulation period further down, so
         # it is that axis the array must hold — the simulation period can be
@@ -592,17 +586,26 @@ class TimeSeries2D(TimeSeries):
                 unit_ids, resampling=rasterio.enums.Resampling.nearest
             )
 
+        # Count the pixels of every (unit, data cell) pair in a single pass over
+        # the unit raster. Holding one full-raster mask per unit instead runs out
+        # of memory on fine discretizations (thousands of units).
+        unit_px, cell_px = xr.broadcast(unit_ids, data_idx_reproj)
+        unit_px = unit_px.to_numpy().ravel()
+        cell_px = cell_px.to_numpy().ravel()
+        valid = np.isfinite(unit_px) & np.isfinite(cell_px) & (cell_px >= 0)
+        pairs, pair_counts = np.unique(
+            np.stack([unit_px[valid], cell_px[valid]]), axis=1, return_counts=True
+        )
+        del unit_px, cell_px, valid
+
         # Create the masks (with the original data shape) for each unit with the
         # weights to apply to the gridded data contributing to the unit
         unit_weights = []
-        for u in range(unit_id_count):
-            # Get the data indices contributing to the unit
-            mask_unit_id = xr.where(unit_id_masks[u], data_idx_reproj, -1)
-            mask_unit_id = mask_unit_id.to_numpy().astype(int)
-            # Get unique values and their counts
-            data_idx_values, counts = np.unique(
-                mask_unit_id[mask_unit_id >= 0], return_counts=True
-            )
+        for unit_id in unit_ids_list:
+            # Get the data indices contributing to the unit and their counts
+            in_unit = pairs[0] == unit_id
+            data_idx_values = pairs[1, in_unit].astype(int)
+            counts = pair_counts[in_unit]
             # Create a mask of the weights
             weights_mask = np.zeros(data_idx.shape)
             data_idx_values = np.unravel_index(data_idx_values, data_idx.shape)

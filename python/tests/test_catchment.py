@@ -751,6 +751,98 @@ def test_split_units_connectivity():
     ]
 
 
+# Unit 3 is a single cell sharing three edges with unit 1 and one with unit 2.
+SMALL_UNIT_MAP = np.array(
+    [
+        [1, 1, 1],
+        [1, 3, 1],
+        [2, 2, 2],
+    ],
+    dtype=float,
+)
+
+
+def test_merge_units_into_the_longest_border():
+    # 200 m2 = 2 cells: unit 3 is too small and goes to unit 1.
+    new_map, origins = _splitter()._merge_small_units(
+        SMALL_UNIT_MAP, 3, 200, [None] * 3, [0, 0, 0]
+    )
+    assert np.array_equal(new_map, [[1, 1, 1], [1, 1, 1], [2, 2, 2]])
+    assert origins == [0, 1]
+
+
+def test_merge_units_prefers_the_closest_level():
+    # Unit 3 is in the elevation band of unit 2: it goes there despite the
+    # shorter border.
+    new_map, origins = _splitter()._merge_small_units(
+        SMALL_UNIT_MAP, 3, 200, [None] * 3, [0, 1, 1]
+    )
+    assert np.array_equal(new_map, [[1, 1, 1], [1, 2, 1], [2, 2, 2]])
+    assert origins == [0, 1]
+
+
+def test_merge_units_stays_within_its_container():
+    splitter = _splitter()
+    # Unit 3 shares its sub-catchment with unit 2 only.
+    new_map, origins = splitter._merge_small_units(
+        SMALL_UNIT_MAP, 3, 200, ["a", "b", "b"], [0, 0, 0]
+    )
+    assert np.array_equal(new_map, [[1, 1, 1], [1, 2, 1], [2, 2, 2]])
+    assert origins == [0, 1]
+
+    # Alone in its sub-catchment, it is kept as it is.
+    new_map, origins = splitter._merge_small_units(
+        SMALL_UNIT_MAP, 3, 200, ["a", "b", "c"], [0, 0, 0]
+    )
+    assert np.array_equal(new_map, SMALL_UNIT_MAP)
+    assert origins == [0, 1, 2]
+
+
+def test_merge_units_repeats_until_the_threshold():
+    # 500 m2 = 5 cells: unit 3 (1 cell) joins unit 1 first, then unit 2 (3 cells)
+    # is still too small and joins it too.
+    new_map, origins = _splitter()._merge_small_units(
+        SMALL_UNIT_MAP, 3, 500, [None] * 3, [0, 0, 0]
+    )
+    assert np.array_equal(new_map, np.where(SMALL_UNIT_MAP > 0, 1, 0))
+    assert origins == [0]
+
+
+def test_min_unit_area_on_a_catchment():
+    if not has_required_packages():
+        return
+    reference = _discretize_sitter()
+    catchment = _discretize_sitter(min_unit_area=200000)
+    ref_units = reference.hydro_units.hydro_units
+    units = catchment.hydro_units.hydro_units
+
+    assert len(units) < len(ref_units)
+    assert units["area"].min().iloc[0] >= 200000
+    # The small units are merged, not dropped: the area is preserved.
+    assert units["area"].sum().iloc[0] == pytest.approx(ref_units["area"].sum().iloc[0])
+    # The ids stay dense and match the table.
+    ids = np.unique(catchment.map_unit_ids)
+    assert np.array_equal(ids[ids > 0], units["id"].values[:, 0])
+
+
+def test_min_unit_area_then_split_discontinuous():
+    if not has_required_packages() or not hb.HAS_SCIPY:
+        return
+    merged = _discretize_sitter(min_unit_area=200000)
+    split = _discretize_sitter(min_unit_area=200000, split_discontinuous=True)
+
+    # The merged units are split into their patches afterwards.
+    assert len(split.hydro_units.hydro_units) > len(merged.hydro_units.hydro_units)
+    assert max(_patches_per_unit(split)) == 1
+
+
+def test_invalid_min_unit_area():
+    if not has_required_packages():
+        return
+    with pytest.raises(ConfigurationError):
+        _discretize_sitter(min_unit_area=0)
+
+
 # ---------------------------------------------------------------------------
 # Soil properties from rasters
 # ---------------------------------------------------------------------------

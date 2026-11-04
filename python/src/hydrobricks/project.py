@@ -921,6 +921,7 @@ def _validate_discretization(section: dict, errors: list[str]) -> dict | None:
         "split_discontinuous",
         "min_patch_area",
         "connectivity",
+        "min_unit_area",
     }
     _check_keys(discretization, valid, where, errors)
 
@@ -942,6 +943,7 @@ def _validate_discretization(section: dict, errors: list[str]) -> dict | None:
         discretization, "split_discontinuous", where, errors
     )
     out["min_patch_area"] = _get_number(discretization, "min_patch_area", where, errors)
+    out["min_unit_area"] = _get_number(discretization, "min_unit_area", where, errors)
     connectivity = _get_number(discretization, "connectivity", where, errors)
     if connectivity is not None and connectivity not in (4, 8):
         errors.append(f"{where}.connectivity: expected 4 or 8, got {connectivity!r}.")
@@ -2497,7 +2499,12 @@ def _build_project(
         for key in ("min_elevation", "max_elevation"):
             if discretization[key] is not None:
                 kwargs[key] = discretization[key]
-        for key in ("split_discontinuous", "min_patch_area", "connectivity"):
+        for key in (
+            "split_discontinuous",
+            "min_patch_area",
+            "connectivity",
+            "min_unit_area",
+        ):
             if discretization[key] is not None:
                 kwargs[key] = discretization[key]
         catchment.create_elevation_bands(**kwargs)

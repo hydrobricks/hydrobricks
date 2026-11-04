@@ -620,6 +620,23 @@ def test_discretization_split_discontinuous(tmp_path):
     assert len(discharge) > 0
 
 
+@needs_catchment_packages
+def test_discretization_min_unit_area(tmp_path):
+    """The merge of the small units is available from the YAML."""
+    config = minimal_config(tmp_path)
+    config["hydro_units"] = {
+        "outline": "outline.shp",
+        "dem": "dem.tif",
+        "discretization": {"method": "equal_intervals", "distance": 50},
+    }
+    reference = hb.load_project(config, base_dir=SITTER_DIR)
+
+    config["hydro_units"]["discretization"]["min_unit_area"] = 2e6
+    project = hb.load_project(config, base_dir=SITTER_DIR)
+
+    assert len(project.forcing.hydro_units) < len(reference.forcing.hydro_units)
+
+
 def test_discretization_invalid_connectivity(tmp_path):
     config = minimal_config(tmp_path)
     config["hydro_units"] = {

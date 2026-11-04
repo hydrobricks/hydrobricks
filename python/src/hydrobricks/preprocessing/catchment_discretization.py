@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import itertools
+import heapq
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -47,6 +47,7 @@ class CatchmentDiscretization:
         split_discontinuous: bool = False,
         min_patch_area: float | None = None,
         connectivity: int = 8,
+        min_unit_area: float | None = None,
     ) -> None:
         """
         Construction of the elevation bands based on the chosen method.
@@ -83,6 +84,10 @@ class CatchmentDiscretization:
             Pixel connectivity defining a patch when 'split_discontinuous' is True:
             8 = diagonal neighbours are connected (default), 4 = only the neighbours
             sharing an edge are connected.
+        min_unit_area
+            Minimum area (m2) of a hydro unit: smaller units are merged into a
+            neighbouring unit (see :meth:`discretize_by`). Default: None = no
+            minimum.
         """
         self.discretize_by(
             "elevation",
@@ -94,6 +99,7 @@ class CatchmentDiscretization:
             split_discontinuous=split_discontinuous,
             min_patch_area=min_patch_area,
             connectivity=connectivity,
+            min_unit_area=min_unit_area,
         )
 
     def discretize_by(
@@ -120,6 +126,7 @@ class CatchmentDiscretization:
         split_discontinuous: bool = False,
         min_patch_area: float | None = None,
         connectivity: int = 8,
+        min_unit_area: float | None = None,
     ) -> None:
         """
         Construction of the elevation bands based on the chosen method.
@@ -227,6 +234,17 @@ class CatchmentDiscretization:
             Pixel connectivity defining a patch when 'split_discontinuous' is True:
             8 = diagonal neighbours are connected (default), 4 = only the neighbours
             sharing an edge are connected.
+        min_unit_area
+            Minimum area (m2) of a hydro unit. A smaller unit is merged into a unit
+            it borders within the same sub-catchment and subbasin, never across:
+            the one in the closest elevation band, and among those the one sharing
+            the longest border. Units are merged smallest first, until each one
+            reaches the threshold or has no neighbour left in its sub-catchment.
+            The receiving unit keeps its criteria values (e.g. its elevation band),
+            while its area, mean elevation, slope and aspect are computed from all
+            its cells. Combined with 'sub_catchments', this gives few hydro units
+            whose parts all lie within one sub-catchment. The merge comes before
+            'split_discontinuous'. Default: None = no minimum.
 
         Notes
         -----
@@ -266,6 +284,14 @@ class CatchmentDiscretization:
                 item_name="min_patch_area",
                 item_value=min_patch_area,
                 reason="Invalid minimum patch area",
+            )
+
+        if min_unit_area is not None and min_unit_area <= 0:
+            raise ConfigurationError(
+                "The minimum unit area must be positive.",
+                item_name="min_unit_area",
+                item_value=min_unit_area,
+                reason="Invalid minimum unit area",
             )
 
         if isinstance(criteria, str):
@@ -419,53 +445,41 @@ class CatchmentDiscretization:
         res_sub_catchment = []
         res_subbasin = []
 
-        combinations = list(itertools.product(*criteria_dict.values()))
         combinations_keys = list(criteria_dict.keys())
         # Position of each criterion within a combination tuple (computed once).
         criterion_positions = {name: pos for pos, name in enumerate(combinations_keys)}
 
+        # The class of every cell for each criterion (-1 = none), and from them the
+        # combination of every cell, numbered in the order of
+        # itertools.product(*criteria_dict.values()): the hydro units are the
+        # non-empty combinations, in that order.
+        class_maps = [
+            self._criterion_class_map(
+                name, values, aspect_masks, sub_catchments_map, subbasin_map
+            )
+            for name, values in criteria_dict.items()
+        ]
+        n_classes = [len(values) for values in criteria_dict.values()]
+        valid = ~np.isnan(self.catchment.dem_data)
+        for class_map in class_maps:
+            valid &= class_map >= 0
+        if class_maps:
+            cell_codes = np.ravel_multi_index(
+                [class_map[valid] for class_map in class_maps], n_classes
+            )
+        else:  # no criterion: a single unit
+            cell_codes = np.zeros(np.count_nonzero(valid), dtype=int)
+        unit_codes, cell_units = np.unique(cell_codes, return_inverse=True)
+        self.map_unit_ids[valid] = cell_units + 1
+        unit_classes = np.unravel_index(unit_codes, n_classes)
+        criteria_values = list(criteria_dict.values())
+
         unit_id = 1
-        for combination in combinations:
-            mask_unit = np.ones(self.catchment.dem_data.shape, dtype=bool)
-            # Mask nan values
-            mask_unit[np.isnan(self.catchment.dem_data)] = False
-
-            for criterion_name, criterion in zip(combinations_keys, combination):
-                if criterion_name == "elevation":
-                    mask_elev = np.logical_and(
-                        self.catchment.dem_data >= criterion[0],
-                        self.catchment.dem_data < criterion[1],
-                    )
-                    mask_unit = np.logical_and(mask_unit, mask_elev)
-                elif criterion_name == "slope":
-                    mask_slope = np.logical_and(
-                        self.catchment.topography.slope >= criterion[0],
-                        self.catchment.topography.slope < criterion[1],
-                    )
-                    mask_unit = np.logical_and(mask_unit, mask_slope)
-                elif criterion_name == "aspect":
-                    mask_unit = np.logical_and(mask_unit, aspect_masks[criterion])
-                elif criterion_name == "radiation":
-                    radiation = self.catchment.solar_radiation.mean_annual_radiation
-                    mask_radiation = np.logical_and(
-                        radiation >= criterion[0], radiation < criterion[1]
-                    )
-                    mask_unit = np.logical_and(mask_unit, mask_radiation)
-                elif criterion_name == "sub_catchments":
-                    mask_sub = sub_catchments_map == criterion
-                    mask_unit = np.logical_and(mask_unit, mask_sub)
-                elif criterion_name == "subbasin":
-                    mask_unit = np.logical_and(mask_unit, subbasin_map == criterion)
-
-            # If the unit is empty, skip it
-            if np.count_nonzero(mask_unit) == 0:
-                continue
-
-            # Check that all cells in unit_ids are 0
-            assert np.count_nonzero(self.map_unit_ids[mask_unit]) == 0
-
-            # Set the unit id
-            self.map_unit_ids[mask_unit] = unit_id
+        for i_unit in range(len(unit_codes)):
+            combination = tuple(
+                values[classes[i_unit]]
+                for values, classes in zip(criteria_values, unit_classes)
+            )
 
             # Set the mean elevation of the unit if elevation is a criterion
             if "elevation" in criteria_dict.keys():
@@ -502,28 +516,54 @@ class CatchmentDiscretization:
 
             unit_id += 1
 
+        res_lists = [
+            res_elevation,
+            res_elevation_min,
+            res_elevation_max,
+            res_slope,
+            res_slope_min,
+            res_slope_max,
+            res_aspect_class,
+            res_radiation,
+            res_radiation_min,
+            res_radiation_max,
+            res_sub_catchment,
+            res_subbasin,
+        ]
+
+        def _reindex(origins: list[int]) -> None:
+            # The criteria values were collected per original unit: take them from
+            # the unit each new one originates from.
+            for values in res_lists:
+                if values:
+                    values[:] = [values[i] for i in origins]
+
+        if min_unit_area is not None:
+            n_units = unit_id - 1
+            # A unit is never merged out of its sub-catchment or subbasin.
+            containers = list(
+                zip(
+                    res_sub_catchment or [None] * n_units,
+                    res_subbasin or [None] * n_units,
+                )
+            )
+            if "elevation" in criteria_dict:
+                levels = unit_classes[criterion_positions["elevation"]].tolist()
+            else:
+                levels = [0] * n_units
+            self.map_unit_ids, origins = self._merge_small_units(
+                self.map_unit_ids, n_units, min_unit_area, containers, levels
+            )
+            _reindex(origins)
+
         if split_discontinuous:
             self.map_unit_ids, origins = self._split_discontinuous_units(
-                self.map_unit_ids, unit_id - 1, connectivity, min_patch_area
+                self.map_unit_ids,
+                int(self.map_unit_ids.max()),
+                connectivity,
+                min_patch_area,
             )
-
-            # The criteria values were collected per original unit: replicate them
-            # for each of the new units issued from a split.
-            def _reindex(values: list) -> list:
-                return [values[i] for i in origins] if values else values
-
-            res_elevation = _reindex(res_elevation)
-            res_elevation_min = _reindex(res_elevation_min)
-            res_elevation_max = _reindex(res_elevation_max)
-            res_slope = _reindex(res_slope)
-            res_slope_min = _reindex(res_slope_min)
-            res_slope_max = _reindex(res_slope_max)
-            res_aspect_class = _reindex(res_aspect_class)
-            res_radiation = _reindex(res_radiation)
-            res_radiation_min = _reindex(res_radiation_min)
-            res_radiation_max = _reindex(res_radiation_max)
-            res_sub_catchment = _reindex(res_sub_catchment)
-            res_subbasin = _reindex(res_subbasin)
+            _reindex(origins)
 
         # The unit ids are stored as uint16 in the raster: fail rather than wrap.
         n_units = int(self.map_unit_ids.max())
@@ -531,8 +571,8 @@ class CatchmentDiscretization:
         if n_units > max_units:
             raise DataError(
                 f"The discretization produced {n_units} hydro units, which exceeds "
-                f"the maximum of {max_units}. Use coarser criteria or a larger "
-                f"'min_patch_area'.",
+                f"the maximum of {max_units}. Use coarser criteria, a larger "
+                f"'min_patch_area' or a 'min_unit_area'.",
                 data_type="hydro units",
                 reason="Too many hydro units",
             )
@@ -590,6 +630,159 @@ class CatchmentDiscretization:
         self.catchment.initialize_land_cover_fractions()
         self.catchment.get_hydro_units_attributes()
         self.catchment.hydro_units.populate_bounded_instance()
+
+    def _criterion_class_map(
+        self,
+        name: str,
+        values: list,
+        aspect_masks: dict[str, np.ndarray],
+        sub_catchments_map: np.ndarray | None,
+        subbasin_map: np.ndarray | None,
+    ) -> np.ndarray:
+        """The class of every DEM cell for one discretization criterion.
+
+        Parameters
+        ----------
+        name
+            The criterion name.
+        values
+            Its classes, as listed in the criteria dict: the ``[min, max)`` bounds
+            of each band for the elevation, slope and radiation, the class names for
+            the aspect, the ids for the sub-catchments and subbasins.
+        aspect_masks
+            The cell mask of every aspect class.
+        sub_catchments_map
+            The per-cell sub-catchment id (1..N), for the 'sub_catchments' criterion.
+        subbasin_map
+            The per-cell subbasin id, for the 'subbasin' criterion.
+
+        Returns
+        -------
+        The index of the class of every cell in ``values``, -1 where none applies.
+        """
+        shape = self.catchment.dem_data.shape
+        if name in ("elevation", "slope", "radiation"):
+            data = {
+                "elevation": self.catchment.dem_data,
+                "slope": self.catchment.topography.slope,
+                "radiation": self.catchment.solar_radiation.mean_annual_radiation,
+            }[name]
+            # The bands are contiguous: band i is [edges[i], edges[i + 1]).
+            edges = np.array([values[0][0]] + [band[1] for band in values])
+            with np.errstate(invalid="ignore"):
+                classes = np.searchsorted(edges, data, side="right") - 1
+                classes[~(data >= edges[0]) | ~(data < edges[-1])] = -1
+            return classes
+        classes = np.full(shape, -1)
+        if name == "aspect":
+            for i, aspect_class in enumerate(values):
+                classes[aspect_masks[aspect_class]] = i
+        elif name == "sub_catchments":
+            inside = sub_catchments_map > 0
+            classes[inside] = sub_catchments_map[inside] - 1
+        elif name == "subbasin":
+            ids = np.asarray(values)
+            inside = np.isin(subbasin_map, ids)
+            classes[inside] = np.searchsorted(ids, subbasin_map[inside])
+        return classes
+
+    def _merge_small_units(
+        self,
+        map_unit_ids: np.ndarray,
+        n_units: int,
+        min_unit_area: float,
+        containers: list,
+        levels: list[int],
+    ) -> tuple[np.ndarray, list[int]]:
+        """Merge the hydro units smaller than a minimum area into a neighbour.
+
+        The smallest unit below the threshold is merged into one of the units it
+        shares a border with (an edge between two cells) within the same container
+        (sub-catchment and subbasin), and so on until every unit reaches the
+        threshold. The receiving unit is the one of the closest level (the
+        elevation band), and among those the one sharing the longest border. It
+        keeps its own attributes. A unit with no neighbour in its container is
+        left as it is.
+
+        Parameters
+        ----------
+        map_unit_ids
+            The per-cell hydro unit id map (0 = outside the catchment).
+        n_units
+            The number of hydro units in ``map_unit_ids`` (ids 1..n_units).
+        min_unit_area
+            Minimum area (m2) of a hydro unit.
+        containers
+            For each unit, the key of the area it may not leave: two units are only
+            merged when their keys are equal.
+        levels
+            For each unit, its level (e.g. the index of its elevation band): a unit
+            is preferably merged into a neighbour of a close level.
+
+        Returns
+        -------
+        A tuple ``(new_map, origins)`` with the relabelled id map (dense ids 1..M,
+        in the order of the original ids) and, for each new unit, the 0-based index
+        of the original unit it originates from.
+        """
+        px_area = self.catchment.get_dem_pixel_area()
+        min_cells = max(1, int(np.ceil(min_unit_area / px_area)))
+
+        ids = map_unit_ids.astype(np.int64)
+        sizes = np.bincount(ids.ravel(), minlength=n_units + 1)
+
+        # The borders between units: the number of cell edges they share.
+        first = np.concatenate([ids[:, :-1].ravel(), ids[:-1, :].ravel()])
+        second = np.concatenate([ids[:, 1:].ravel(), ids[1:, :].ravel()])
+        between = (first != second) & (first > 0) & (second > 0)
+        low = np.minimum(first[between], second[between])
+        high = np.maximum(first[between], second[between])
+        keys, counts = np.unique(low * (n_units + 1) + high, return_counts=True)
+        borders: list[dict[int, int]] = [{} for _ in range(n_units + 1)]
+        for key, count in zip(keys.tolist(), counts.tolist()):
+            u, v = divmod(key, n_units + 1)
+            if containers[u - 1] == containers[v - 1]:
+                borders[u][v] = count
+                borders[v][u] = count
+
+        target = np.arange(n_units + 1)
+        queue = [(int(sizes[u]), u) for u in range(1, n_units + 1)]
+        queue = [item for item in queue if item[0] < min_cells]
+        heapq.heapify(queue)
+        while queue:
+            size, u = heapq.heappop(queue)
+            if target[u] != u or size != sizes[u] or not borders[u]:
+                continue  # merged already, grown since, or alone in its container
+            v = min(
+                borders[u],
+                key=lambda w: (abs(levels[w - 1] - levels[u - 1]), -borders[u][w], w),
+            )
+            # Merge u into v: v takes over the cells and the borders of u.
+            sizes[v] += sizes[u]
+            sizes[u] = 0
+            target[u] = v
+            for w, count in borders[u].items():
+                del borders[w][u]
+                if w != v:
+                    borders[v][w] = borders[v].get(w, 0) + count
+                    borders[w][v] = borders[w].get(v, 0) + count
+            borders[u] = {}
+            if sizes[v] < min_cells:
+                heapq.heappush(queue, (int(sizes[v]), v))
+
+        # Follow the chains of merges to the final unit, then renumber densely.
+        for u in range(1, n_units + 1):
+            root = u
+            while target[root] != root:
+                root = target[root]
+            target[u] = root
+        survivors = [u for u in range(1, n_units + 1) if target[u] == u]
+        new_ids = np.zeros(n_units + 1, dtype=np.int64)
+        new_ids[survivors] = np.arange(1, len(survivors) + 1)
+        new_map = new_ids[target][ids].astype(map_unit_ids.dtype)
+        origins = [u - 1 for u in survivors]
+
+        return new_map, origins
 
     def _split_discontinuous_units(
         self,

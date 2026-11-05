@@ -578,7 +578,8 @@ class HydroUnits:
             (when multiple land cover types exist).
         """
         if len(self.land_cover_names) == 1:
-            self.hydro_units[self.FRACTION_PREFIX + self.land_cover_names[0]] = 1.0
+            key = self._fraction_column_key(self.land_cover_names[0])
+            self.hydro_units[key] = 1.0
             return
 
         for cover_name in self.land_cover_names:
@@ -1222,13 +1223,32 @@ class HydroUnits:
         assert "area" in data.columns
         assert "elevation" in data.columns
 
+        multi = data.columns.nlevels > 1
         if "id" not in data.columns:
-            data["id"] = range(1, 1 + len(data))
+            data[("id", "-") if multi else "id"] = range(1, 1 + len(data))
 
         self.hydro_units = data
-        idx = self.FRACTION_PREFIX + self.get_generic_cover_name()
-        self.hydro_units[idx] = np.ones(len(self.hydro_units["area"]))
+        cover_name = self.get_generic_cover_name()
+        key = (
+            self._fraction_column_key(cover_name)
+            if multi
+            else self.FRACTION_PREFIX + cover_name
+        )
+        self.hydro_units[key] = np.ones(len(self.hydro_units))
         self.populate_bounded_instance()
+
+    def _fraction_column_key(self, cover_name: str) -> tuple[str, str]:
+        """
+        Full (name, unit) key of a land cover fraction column.
+
+        Pandas 3.1 deprecates creating a column of a MultiIndex DataFrame from a
+        partial key: returns the existing column's key, or (name, 'fraction').
+        """
+        name = self.FRACTION_PREFIX + cover_name
+        for col in self.hydro_units.columns:
+            if col[0] == name:
+                return col
+        return name, "fraction"
 
     @staticmethod
     def _check_land_cover_definitions(

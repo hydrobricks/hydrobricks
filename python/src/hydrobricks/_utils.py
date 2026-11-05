@@ -12,6 +12,9 @@ import yaml
 
 from hydrobricks._exceptions import ConfigurationError, ModelError
 
+_MJD_EPOCH = np.datetime64("1858-11-17T00:00:00", "ns")
+_ONE_DAY = np.timedelta64(86400, "s")
+
 
 def validate_kwargs(kwargs: dict[str, Any], allowed_kwargs: Iterable[str]) -> None:
     """
@@ -97,13 +100,13 @@ def date_as_mjd(date: str | pd.Timestamp | pd.DatetimeIndex) -> float | np.ndarr
     -----
     Modified Julian Day (MJD) starts at midnight on November 17, 1858.
     """
-    if isinstance(date, str):
-        return pd.to_datetime(date).to_julian_date() - 2400000.5
-    if isinstance(date, pd.Timestamp):
-        return date.to_julian_date() - 2400000.5
-    mjd = pd.DatetimeIndex(date).to_julian_date() - 2400000.5
-    mjd = mjd.values
-    return mjd
+    # Computed from the MJD epoch rather than pandas' to_julian_date(), which
+    # calls numpy.fix (deprecated in numpy 2.4).
+    if isinstance(date, (str, pd.Timestamp)):
+        stamp = pd.Timestamp(date).to_datetime64().astype("datetime64[ns]")
+        return float((stamp - _MJD_EPOCH) / _ONE_DAY)
+    stamps = pd.DatetimeIndex(date).to_numpy().astype("datetime64[ns]")
+    return ((stamps - _MJD_EPOCH) / _ONE_DAY).astype(float)
 
 
 def jd_to_date(jd: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray]:

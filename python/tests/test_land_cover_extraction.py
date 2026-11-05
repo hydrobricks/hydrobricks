@@ -274,6 +274,41 @@ def test_discretize_by_sub_catchments():
             assert len(covered) == 1
 
 
+def test_min_unit_area_stays_within_the_sub_catchments():
+    if not has_required_packages():
+        return
+
+    catchment = hb.Catchment(SITTER_OUTLINE)
+    catchment.extract_dem(SITTER_DEM)
+
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        shp = Path(tmp_dir) / "sub_catchments.shp"
+        _write_polygon_shapefile(shp, catchment, [1, 2])
+        catchment.discretize_by(
+            ["elevation", "sub_catchments"],
+            elevation_distance=50,
+            sub_catchments=shp,
+        )
+        n_units = catchment.hydro_units.get_hydro_unit_count()
+
+        catchment = hb.Catchment(SITTER_OUTLINE)
+        catchment.extract_dem(SITTER_DEM)
+        catchment.discretize_by(
+            ["elevation", "sub_catchments"],
+            elevation_distance=50,
+            sub_catchments=shp,
+            min_unit_area=1e6,
+        )
+        assert catchment.hydro_units.get_hydro_unit_count() < n_units
+
+        # The merged units still lie within a single sub-catchment.
+        sub_map, _ = catchment.discretization._build_sub_catchments_map(shp)
+        ids = np.unique(catchment.map_unit_ids)
+        for unit_id in ids[ids != 0]:
+            covered = np.unique(sub_map[catchment.map_unit_ids == unit_id])
+            assert len(covered[covered != 0]) == 1
+
+
 def test_discretize_by_sub_catchments_requires_file():
     if not has_required_packages():
         return

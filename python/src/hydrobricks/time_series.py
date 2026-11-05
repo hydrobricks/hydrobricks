@@ -459,12 +459,6 @@ class TimeSeries2D(TimeSeries):
                     reason="Mismatched end date",
                 )
 
-        # Extract the unit id masks
-        unit_id_masks = []
-        for unit_id in unit_ids_list:
-            unit_id_mask = xr.where(unit_ids == unit_id, 1, 0)
-            unit_id_masks.append(unit_id_mask)
-
         # Initialize data array. A 'day_of_year' climatology is regridded on its
         # own 366-day axis and expanded to the simulation period further down, so
         # it is that axis the array must hold — the simulation period can be
@@ -592,26 +586,44 @@ class TimeSeries2D(TimeSeries):
                 unit_ids, resampling=rasterio.enums.Resampling.nearest
             )
 
-        # Create the masks (with the original data shape) for each unit with the
-        # weights to apply to the gridded data contributing to the unit
-        unit_weights = []
-        for u in range(unit_id_count):
-            # Get the data indices contributing to the unit
-            mask_unit_id = xr.where(unit_id_masks[u], data_idx_reproj, -1)
-            mask_unit_id = mask_unit_id.to_numpy().astype(int)
-            # Get unique values and their counts
-            data_idx_values, counts = np.unique(
-                mask_unit_id[mask_unit_id >= 0], return_counts=True
-            )
-            # Create a mask of the weights
-            weights_mask = np.zeros(data_idx.shape)
-            data_idx_values = np.unravel_index(data_idx_values, data_idx.shape)
-            weights_mask[data_idx_values] = counts / np.sum(counts)
+        # Count the pixels of every (unit, data cell) pair in a single pass over
+        # the unit raster. Holding one full-raster mask per unit instead runs out
+        # of memory on fine discretizations (thousands of units).
+        unit_px, cell_px = xr.broadcast(unit_ids, data_idx_reproj)
+        unit_px = unit_px.to_numpy().ravel()
+        cell_px = cell_px.to_numpy().ravel()
+        valid = np.isfinite(unit_px) & np.isfinite(cell_px) & (cell_px >= 0)
+        pairs, pair_counts = np.unique(
+            np.stack([unit_px[valid], cell_px[valid]]), axis=1, return_counts=True
+        )
+        del unit_px, cell_px, valid
 
-            assert np.isclose(np.sum(weights_mask), 1)
+        # The weights of the data cells contributing to each unit, as flat
+        # (unit, cell, weight) triplets ordered by unit, so that the extraction
+        # handles all units at once instead of looping over them.
+        # np.unique sorts the pairs by unit id: the pairs of a unit are contiguous.
+        firsts = np.searchsorted(pairs[0], unit_ids_list, side="left")
+        lasts = np.searchsorted(pairs[0], unit_ids_list, side="right")
+        pair_unit, pair_cell, pair_weight = [], [], []
+        for u, (first, last) in enumerate(zip(firsts, lasts)):
+            # Get the data indices contributing to the unit and their counts
+            counts = pair_counts[first:last]
+            weights = counts / np.sum(counts)
 
-            # Add the mask to the list
-            unit_weights.append(weights_mask)
+            assert np.isclose(np.sum(weights), 1)
+
+            pair_unit.append(np.full(len(counts), u))
+            pair_cell.append(pairs[1, first:last].astype(int))
+            pair_weight.append(weights)
+        pair_unit = np.concatenate(pair_unit)
+        unit_weights = {
+            "unit": pair_unit,
+            "cell": np.concatenate(pair_cell),
+            "weight": np.concatenate(pair_weight),
+            "start": np.flatnonzero(np.r_[True, np.diff(pair_unit) != 0]),
+        }
+        if hu_elevation is not None:
+            hu_elevation = np.atleast_1d(hu_elevation)
 
         n_steps = 1 + np.ceil(time_len / weights_block_size).astype(int)
 
@@ -818,7 +830,7 @@ class TimeSeries2D(TimeSeries):
     def _extract_time_step_data_weights_with_gradient(
         self,
         data_var: xr.DataArray,
-        unit_weights: list,
+        unit_weights: dict,
         i_block: int,
         block_size: int,
         gradient_type: str,
@@ -839,7 +851,8 @@ class TimeSeries2D(TimeSeries):
         data_var
             3D xarray DataArray with dimensions (time, y, x) containing gridded data.
         unit_weights
-            List of 2D weight arrays for each hydro unit, summing to 1.
+            The (unit, cell, weight) pairs of the data cells contributing to each
+            hydro unit, as built by the regridding; the weights of a unit sum to 1.
         i_block
             Block index for this processing step.
         block_size
@@ -858,7 +871,7 @@ class TimeSeries2D(TimeSeries):
         i_start = i_block * block_size
         i_end = min((i_block + 1) * block_size, len(self.time))
         i_end = min(i_end, data_var.shape[0])
-        if i_start >= len(self.time):
+        if i_start >= len(self.time) or i_end <= i_start:
             return
 
         logger.debug(f"Extracting {self.time[i_start]}")
@@ -925,32 +938,31 @@ class TimeSeries2D(TimeSeries):
                 reason="Shape mismatch",
             )
 
-        # Extract data for each unit
-        data_array = data_var[i_start:i_end].to_numpy()
-        for u, unit_weight in enumerate(unit_weights):
-            data = data_array[:, unit_weight > 0]
-            weights = unit_weight[unit_weight > 0]
-            dh = hu_elevation[u] - dem[unit_weight > 0]
-            dh[np.isnan(dh)] = 0
-            grads = dat_dxy[:, unit_weight > 0]
-            if gradient_type == "additive":
-                data = data + grads * dh
-            elif gradient_type == "multiplicative":
-                grads_dh = grads * dh
-                grads_dh[grads_dh < -1] = -1
-                data = data * (1 + grads_dh)
-            else:
-                raise ConfigurationError(
-                    f"Unsupported gradient type: {gradient_type}",
-                    item_name="gradient_type",
-                    item_value=gradient_type,
-                    reason="Invalid gradient type",
-                )
+        # Extract the data of all units at once, one column per (unit, cell) pair
+        n_time = i_end - i_start
+        cells = unit_weights["cell"]
+        data = data_var[i_start:i_end].to_numpy().reshape(n_time, -1)[:, cells]
+        grads = dat_dxy.reshape(n_time, -1)[:, cells]
+        dh = hu_elevation[unit_weights["unit"]] - dem.ravel()[cells]
+        dh[np.isnan(dh)] = 0
+        if gradient_type == "additive":
+            data = data + grads * dh
+        elif gradient_type == "multiplicative":
+            grads_dh = grads * dh
+            grads_dh[grads_dh < -1] = -1
+            data = data * (1 + grads_dh)
+        else:
+            raise ConfigurationError(
+                f"Unsupported gradient type: {gradient_type}",
+                item_name="gradient_type",
+                item_value=gradient_type,
+                reason="Invalid gradient type",
+            )
 
-            self.data[-1][i_start:i_end, u] = np.nansum(data * weights, axis=1)
+        self.data[-1][i_start:i_end, :] = self._sum_per_unit(data, unit_weights)
 
     def _extract_time_step_data_weights(
-        self, data_var: xr.DataArray, unit_weights: list, i_block: int, block_size: int
+        self, data_var: xr.DataArray, unit_weights: dict, i_block: int, block_size: int
     ) -> None:
         """
         Extract time step data and apply spatial weights.
@@ -964,7 +976,8 @@ class TimeSeries2D(TimeSeries):
         data_var
             3D xarray DataArray with dimensions (time, y, x) containing gridded data.
         unit_weights
-            List of 2D weight arrays for each hydro unit, summing to 1.
+            The (unit, cell, weight) pairs of the data cells contributing to each
+            hydro unit, as built by the regridding; the weights of a unit sum to 1.
         i_block
             Block index for this processing step.
         block_size
@@ -973,17 +986,37 @@ class TimeSeries2D(TimeSeries):
         i_start = i_block * block_size
         i_end = min((i_block + 1) * block_size, len(self.time))
         i_end = min(i_end, data_var.shape[0])
-        if i_start >= len(self.time):
+        if i_start >= len(self.time) or i_end <= i_start:
             return
 
         logger.debug(f"Extracting {self.time[i_start]}")
 
-        # Extract data for each unit
-        for u, unit_weight in enumerate(unit_weights):
-            # Mask the meteorological data with the unit weights.
-            self.data[-1][i_start:i_end, u] = np.nansum(
-                data_var[i_start:i_end].to_numpy() * unit_weight, axis=(1, 2)
-            )
+        # Extract the data of all units at once, one column per (unit, cell) pair
+        n_time = i_end - i_start
+        data = data_var[i_start:i_end].to_numpy().reshape(n_time, -1)
+        data = data[:, unit_weights["cell"]]
+        self.data[-1][i_start:i_end, :] = self._sum_per_unit(data, unit_weights)
+
+    @staticmethod
+    def _sum_per_unit(data: np.ndarray, unit_weights: dict) -> np.ndarray:
+        """
+        Weight the data of each (unit, cell) pair and sum it per unit.
+
+        Parameters
+        ----------
+        data
+            2D array (time, pairs) with the data of the cell of each pair.
+        unit_weights
+            The (unit, cell, weight) pairs, ordered by unit, and the index of the
+            first pair of each unit ('start').
+
+        Returns
+        -------
+        2D array (time, units). NaN values are skipped, as with np.nansum.
+        """
+        weighted = data * unit_weights["weight"]
+        weighted[np.isnan(weighted)] = 0
+        return np.add.reduceat(weighted, unit_weights["start"], axis=1)
 
     def _select_relevant_extent(
         self,

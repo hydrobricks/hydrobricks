@@ -5,31 +5,38 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
-## Unreleased
+## 0.9.5 - 2026-11-05
 
 ### Added
 
-- `PrevahUniBE.apply_cover_albedo()`: sets the soil store's monthly albedo from the PREVAH land-use table (`land_covers.PREVAH_COVER_ALBEDO`), per cover or per hydro unit. The canopy carries its own albedo too, registered as `canopy_albedo_land[_<cover>]` and set by `apply_cover_parameters()`. The table was there but nothing applied it, so every PREVAH-UniBE run used the neutral 0.2: PREVAH's potential rate carries `(1 - albedo) / 0.8`, about 1.10 for a winter forest and 0.94 for summer pasture.
-- `potential_fraction` (`et_potential_fraction`) on the PREVAH ET process (`et:prevah`): share of the unit evaporating at the potential rate whatever the soil moisture, the second branch of PREVAH's `s_eta_soil`. Default 0, so existing setups are unchanged. Usually set per unit, PREVAH taking that branch on its vegetated covers when its `et_calc_method` is 2 or 3 and never on its water, built-up and rock covers.
-- `daylight_offset` in `Forcing.compute_pet()`: hours added to the astronomical day length of the vapour-density Hamon. PREVAH and WaSiM add 0.277 h of twilight to it, worth 2 to 3 % of the PET.
+- `PrevahUniBE.apply_cover_albedo()`: sets the soil store's monthly albedo from `land_covers.PREVAH_COVER_ALBEDO`, per cover or per hydro unit; the canopy albedo (`canopy_albedo_land[_<cover>]`) is set by `apply_cover_parameters()`. Previously, every PREVAH-UniBE run used the neutral 0.2.
+- `potential_fraction` (`et_potential_fraction`) on `et:prevah`: share of the unit evaporating at the potential rate regardless of soil moisture (PREVAH's second `s_eta_soil` branch). Default 0.
+- Socont options `soil_et_process` (`et:hbv`, `et:power_law`, `et:exponential` or `et:socont`) and `infiltration_process` (`infiltration:hbv`, exponent `beta_soil`, or `infiltration:socont`). The original `et:socont` stays near 0.7 of PET on lowland catchments, and calibrations compensate with storage sinks.
+- Socont option `preset`: `'original'` pins the published model (Schaefli et al., 2005); `'hydrobricks'` (default) uses the current defaults. Explicit options override the preset, with a warning.
+- `min_unit_area` in `discretize_by()`, `create_elevation_bands()` and the project file (`hydro_units.discretization.min_unit_area`): hydro units smaller than this area (m²) are merged into a neighbour, never across sub-catchments or subbasins. Applied before `split_discontinuous`.
+- `daylight_offset` in `Forcing.compute_pet()`: hours added to the day length of the vapour-density Hamon (PREVAH and WaSiM use 0.277 h, worth 2-3 % of PET).
 
 ### Changed
 
-- The default range of the snow correction factor `snow_correction_factor` is now [0.5, 1.5] (was [0.8, 1.6]): ±50 % for snow, as the rain factor allows ±30 % ([0.7, 1.3], unchanged).
-- The constraint `rain_correction_factor <= snow_correction_factor` is removed: the two factors are independent. With the new ranges it made snow factors below 0.7 unreachable and rejected about half of the random parameter sets.
-- The ranges of two PREVAH parameters now cover PREVAH's own calibration bounds: `response_factor_threshold` (`k0`, `outflow:linear_threshold`) up to 3 /d instead of 1 /d (PREVAH calibrates K0H in 10..30 h, i.e. 0.8..2.4 /d) and `percolation_rate` (`cperc`, `percolation:prevah`) up to 12 mm/d instead of 10 mm/d (PREVAH calibrates PERC in 0.01..0.5 mm/h). Calibrating PrevahUniBE was silently capped below the reference model's parameter space, and some calibrated PREVAH setups could not be reproduced at all.
-- The lower bound of a brick's storage `capacity` is now 0.1 mm instead of 10 mm. Thin soils are real: PREVAH forces 3 mm of plant-available water on its rock hydrotopes and 0.1 mm on the ice ones, and such a setup was refused. The bound only keeps the capacity away from zero, where the ET filling ratio is undefined.
-- `set_spatial()` and `set_spatial_monthly()` values are now range-checked against the parameter definition, like the values given to `set_values()`. The check happens when the parameters meet the hydro units (at `setup()`/`run()`), since that is where the per-unit values become known, and the error names the hydro-unit property the value came from. Per-unit values previously reached the model unchecked, so a mistake in a property surfaced as a strange simulation rather than as an error.
-- The default calibration algorithm of a project file (`calibration.algorithm`) and of `Project.calibrate()` is now `dds` (was `sceua`).
-- The calibration examples use DDS instead of SCE-UA, which gave the best and most consistent calibrations among the SPOTPY algorithms on Socont and HBV-96. `calibrate_sceua_socont.py` and `calibrate_sceua_socont_parallel.py` are renamed `calibrate_dds_socont.py` and `calibrate_dds_socont_parallel.py`.
+- `discretize_by()` assigns cells to hydro units in a single pass instead of masking the DEM per criteria combination. Same units, much faster (e.g. 5,702 units: 36 min → 2 min).
+- Regridding gridded forcing extracts all hydro units at once: its cost no longer grows with the number of units (14,800 units: from > 25 min to 2.6 s). Results and cache unchanged.
+- Socont's slow reservoir now uses `et:hbv` by default (was `et:socont`), adding `lp` (range [0.1, 1], default 0.5) to its parameters. This changes Socont results; use `preset='original'` or `soil_et_process='et:socont'` for the published model.
+- Default range of `snow_correction_factor` is now [0.5, 1.5] (was [0.8, 1.6]).
+- Removed the constraint `rain_correction_factor <= snow_correction_factor`.
+- Wider PREVAH ranges, covering PREVAH's own calibration bounds: `response_factor_threshold` (`k0`) up to 3 /d (was 1) and `percolation_rate` (`cperc`) up to 12 mm/d (was 10).
+- Lower bound of a brick's storage `capacity` is now 0.1 mm (was 10 mm), allowing thin soils.
+- `set_spatial()` and `set_spatial_monthly()` values are now range-checked at `setup()`/`run()`, with the error naming the hydro-unit property.
+- Default calibration algorithm of project files and `Project.calibrate()` is now `dds` (was `sceua`). The calibration examples use DDS and are renamed `calibrate_dds_socont.py` and `calibrate_dds_socont_parallel.py`.
 
 ### Fixed
 
-- The PREVAH ET process (`et:prevah`) evaporated at the full potential rate where the soil-moisture threshold `lp * fc` is zero, taking it as the limit of the HBV formula. PREVAH's `s_eta_soil` does the opposite (`IF (sgrlp .le. 0.0) THEN EA = 0.0`): a cover with no plant-available water, such as bare rock on no soil, evaporates nothing. On the reference catchment 2356 (21 % of its area), the soil evapotranspiration was 31 % above the Fortran reference and the discharge 2.3 % below it; both are now within 0.2 %. Use the new `potential_fraction` to evaporate at the potential rate regardless of the moisture.
-- `Forcing.compute_pet(method='Hamon_vapor_density')` under-estimated the PET: it delegated to pyet's `hamon(method=2)`, which puts `T + 273.3` in the exponent of the saturation vapour pressure where the Magnus-Tetens expression needs `T + 237.3`. The seasonal amplitude was damped — 8 % low at 10 °C, 14 % at 18 °C, 18 % at 25 °C and 5 % high at -5 °C. hydrobricks now computes the formula itself (Schulla & Jasper 2000). On the PREVAH reference catchment 2305 this alone accounted for 12 % of the soil evapotranspiration and 7 % of the discharge.
-- Regridding gridded forcing started one thread per core of the machine, not per core the process may use: on a cluster node it ran dozens of threads inside a one-core job, each holding its own block of the grid, and ran out of memory. It now uses the CPUs available to the process.
-- Regridding gridded forcing ignored errors in its worker threads: a block of time steps whose read failed (e.g. a network share dropping mid-run) kept the zeros it was initialized with, and the result was cached and reused. A temperature regridded from a network share came out at 0 °C for its last 16 years. The first failure is now raised, and nothing is cached.
-- SPOTPY's ABC and FSCABC did not maximise the objective: their loop minimises what it is given, so with a KGE they drove it down, and a rejected parameter set stopped them after the first loop. Their trial points also moved the food source they came from even when rejected, the scout runs were saved with the wrong parameters, and the seed was ignored. hydrobricks now runs its own loop for both, which spends the whole budget (`peps` is ignored).
+- Regridding gridded forcing kept a full-raster mask per hydro unit, running out of memory on fine discretizations. Results unchanged.
+- `et:prevah` evaporated at the potential rate where `lp * fc` is zero; like PREVAH, it now evaporates nothing there (e.g. bare rock).
+- `Forcing.compute_pet(method='Hamon_vapor_density')` used pyet's formula, which has `T + 273.3` instead of `T + 237.3` (up to 18 % low in summer). hydrobricks now computes it itself.
+- Regridding gridded forcing used one thread per machine core instead of per core available to the process, running out of memory on clusters.
+- Regridding gridded forcing ignored errors in its worker threads, silently caching zeros for the failed blocks. The first failure is now raised.
+- SPOTPY's ABC and FSCABC minimised the objective, stopped on a rejected parameter set and ignored the seed. hydrobricks now runs its own loop for both (`peps` is ignored).
+- Compatibility with NumPy ≥ 2.4 (deprecated `numpy.fix`, called by pandas' `to_julian_date()`) and pandas 3.1 (deprecated `inplace=True` and `dayofyear`).
 
 ## 0.9.4 - 2026-10-26
 

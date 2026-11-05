@@ -83,7 +83,7 @@ def extract_glacier_mask_from_shapefile(
     """
     # Clip the glaciers to the catchment extent
     all_glaciers = gpd.read_file(glacier_outline)
-    all_glaciers.to_crs(catchment.crs, inplace=True)
+    all_glaciers = all_glaciers.to_crs(catchment.crs)
     if catchment.outline[0].geom_type == "MultiPolygon":
         glaciers = gpd.clip(all_glaciers, catchment.outline[0])
     elif catchment.outline[0].geom_type == "Polygon":

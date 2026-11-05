@@ -367,8 +367,8 @@ class HydroUnits:
         if get_unit_from_df_column(self.hydro_units["area"]) != Unit.M2:
             new_area = convert_unit_df(self.hydro_units["area"], Unit.M2)
             area_idx = self.hydro_units.columns.get_loc("area")
-            self.hydro_units.drop(
-                self.hydro_units.columns[area_idx], axis=1, inplace=True
+            self.hydro_units = self.hydro_units.drop(
+                columns=self.hydro_units.columns[area_idx]
             )
             self.hydro_units[("area", "m2")] = new_area
 
@@ -753,8 +753,9 @@ class HydroUnits:
             properties.append(prop[0])
 
         # Sort the hydro units by decreasing elevation
-        hydro_units = self.hydro_units.copy()
-        hydro_units.sort_values(by=("elevation", "m"), ascending=False, inplace=True)
+        hydro_units = self.hydro_units.sort_values(
+            by=("elevation", "m"), ascending=False
+        )
 
         has_subbasin = self.has(self.SUBBASIN_COLUMN)
         for _, row in hydro_units.iterrows():

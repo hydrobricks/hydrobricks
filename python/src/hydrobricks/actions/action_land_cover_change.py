@@ -122,14 +122,14 @@ class ActionLandCoverChange(Action):
                     reason="Invalid hydro unit IDs",
                 )
             # Set the first column name to 'hydro_unit'
-            file_content.rename(
-                columns={file_content.columns[0]: "hydro_unit"}, inplace=True
+            file_content = file_content.rename(
+                columns={file_content.columns[0]: "hydro_unit"}
             )
         else:
             file_content.insert(loc=0, column="hydro_unit", value=0)
             self._match_hydro_unit_ids(file_content, hydro_units, match_with)
             # Drop 2nd column (e.g., elevation)
-            file_content.drop(file_content.columns[1], axis=1, inplace=True)
+            file_content = file_content.drop(columns=file_content.columns[1])
 
         self._remove_rows_with_no_changes(file_content)
         self._populate_bounded_instance(land_cover, area_unit, file_content)
@@ -453,7 +453,7 @@ class ActionLandCoverChange(Action):
 
         # Clip the glaciers to the catchment extent
         all_glaciers = gpd.read_file(glaciers_shapefile)
-        all_glaciers.to_crs(catchment.crs, inplace=True)
+        all_glaciers = all_glaciers.to_crs(catchment.crs)
         if catchment.outline[0].geom_type == "MultiPolygon":
             glaciers = gpd.clip(all_glaciers, catchment.outline[0])
         elif catchment.outline[0].geom_type == "Polygon":
@@ -474,7 +474,7 @@ class ActionLandCoverChange(Action):
         glaciers_debris = None
         if debris_shapefile is not None:
             all_debris_glaciers = gpd.read_file(debris_shapefile)
-            all_debris_glaciers.to_crs(catchment.crs, inplace=True)
+            all_debris_glaciers = all_debris_glaciers.to_crs(catchment.crs)
             glaciers_debris = gpd.clip(all_debris_glaciers, glaciers)
             glaciers_debris = self._simplify_df_geometries(glaciers_debris)
 

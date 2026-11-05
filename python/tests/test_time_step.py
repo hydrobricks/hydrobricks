@@ -72,7 +72,7 @@ def _run(tmp_path: Path, step: int, n_days: int = _N_DAYS, unit: str = "hour"):
     stamps = pd.date_range(
         pd.Timestamp(_START), periods=n_steps, freq=f"{minutes_per_step}min"
     )
-    doy = stamps.dayofyear.to_numpy(dtype=float)
+    doy = stamps.day_of_year.to_numpy(dtype=float)
     temp = 5.0 - 12.0 * np.cos(2.0 * np.pi * doy / 365.25)
     share = minutes_per_step / 1440.0
 
@@ -129,7 +129,7 @@ def _run_daily(tmp_path: Path, n_days: int = _N_DAYS):
     units.load_from_csv(hu_csv, column_elevation="elevation", column_area="area")
 
     stamps = pd.date_range(pd.Timestamp(_START), periods=n_days, freq="D")
-    doy = stamps.dayofyear.to_numpy(dtype=float)
+    doy = stamps.day_of_year.to_numpy(dtype=float)
     temp = 5.0 - 12.0 * np.cos(2.0 * np.pi * doy / 365.25)
     lines = ["date,precip,pet,temp"]
     for stamp, t in zip(stamps, temp):

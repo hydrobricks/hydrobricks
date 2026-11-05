@@ -489,7 +489,7 @@ class Forcing:
                     "so load a dated variable before this one.",
                     variable=variable,
                 )
-            days = pd.DatetimeIndex(self.data2D.time).dayofyear.to_numpy()
+            days = pd.DatetimeIndex(self.data2D.time).day_of_year.to_numpy()
             unit_values = data[days - 1, :][:, indices]
         else:
             time = pd.to_datetime(content[time_column], format=time_format)

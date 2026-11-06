@@ -5,6 +5,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## Unreleased
+
+### Added
+
+- `ParameterSet.link_parameter()` takes a `factor`: the dependent follows the driver's value times this factor. New `unlink_parameter()` and `get_link()`. A value given to a linked parameter is now overridden with a warning instead of silently.
+
+### Changed
+
+- PREVAH-UniBE: `k_gw3` is tied to `k_gw1 / 9` (PREVAH's CG3H = 9 × CG1H) and is no longer calibrated; `unlink_parameter('k_gw3')` frees it. The constraint `k_gw3 < k_gw2` is removed: PREVAH calibrations put SLZ3 on either side of SLZ2.
+- PREVAH-UniBE: storage coefficient ranges from the PEST calibrations of the 89 Swiss PREVAH catchments: `k0` [0.4, 3], `k1` [0.08, 0.5], `k_gw1` [0.01, 0.15], `k_gw2` [0.001, 0.03] /d (were [0.0001, 1] or [0.0001, 3]). About 90 % of random parameter sets now satisfy the ordering constraints (was 3 %), so far fewer calibration runs are skipped.
+
+
 ## 0.9.5 - 2026-11-05
 
 ### Added

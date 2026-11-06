@@ -50,7 +50,6 @@ _DEFAULT_PARAMS = {
     "slz1max": 20.0,
     "k_gw1": 0.05,
     "k_gw2": 0.01,
-    "k_gw3": 0.005,
 }
 
 
@@ -2020,3 +2019,36 @@ def test_prevah_constant_percolation_stops_under_snow(tmp_path):
     assert snow.any() and (~snow).any()
     assert perc_const[snow] == pytest.approx(0, abs=1e-9)
     assert perc_const[~snow].sum() > perc_ramp[~snow].sum()
+
+
+def test_prevah_k_gw3_is_tied_to_k_gw1():
+    parameters = models.PrevahUniBE().generate_parameters()
+    assert parameters.get_link("k_gw3") == ("k_gw1", pytest.approx(1 / 9))
+    parameters.set_values({"k_gw1": 0.045})
+    assert parameters.get("k_gw3") == pytest.approx(0.005)
+    # Tied, so not calibratable unless unlinked.
+    with pytest.raises(hb.ConfigurationError):
+        parameters.allow_changing = ["k_gw1", "k_gw3"]
+    parameters.unlink_parameter("k_gw3")
+    parameters.allow_changing = ["k_gw1", "k_gw3"]
+
+
+def test_prevah_storage_ranges_and_constraints():
+    parameters = models.PrevahUniBE().generate_parameters()
+    expected = {
+        "k0": (0.4, 3.0),
+        "k1": (0.08, 0.5),
+        "k_gw1": (0.01, 0.15),
+        "k_gw2": (0.001, 0.03),
+    }
+    df = parameters.parameters
+    for name, (low, high) in expected.items():
+        row = df.loc[parameters._get_parameter_index(name)]
+        assert (row["min"], row["max"]) == (low, high), name
+    # k_gw3 is not ordered against k_gw2: PREVAH calibrations put it either side.
+    assert ["k_gw3", "<", "k_gw2"] not in parameters.constraints
+    assert ["k_gw2", "<", "k_gw1"] in parameters.constraints
+    # A PREVAH optimum with K2H = 10000 h (k_gw2 below k_gw1 / 9) is accepted.
+    parameters.set_values({"k0": 0.8, "k1": 0.35, "k_gw1": 0.055, "k_gw2": 0.0024})
+    assert parameters.get("k_gw3") > parameters.get("k_gw2")
+    assert parameters.constraints_satisfied()

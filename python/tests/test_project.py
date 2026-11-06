@@ -837,7 +837,6 @@ def test_potential_radiation_from_the_dem_drives_the_prevah_melt(tmp_path):
         "cperc": 2.0,
         "k_gw1": 0.05,
         "k_gw2": 0.01,
-        "k_gw3": 0.005,
     }
     project = hb.load_project(config, base_dir=GLETSCH_DIR)
 
@@ -905,7 +904,6 @@ def test_land_covers_glacier_split_at_ela(tmp_path):
         "k1": 0.2,
         "k_gw1": 0.05,
         "k_gw2": 0.01,
-        "k_gw3": 0.005,
         "lp": 0.9,
         "sgrluz": 10,
         "cperc": 0.1,

@@ -127,6 +127,9 @@ class Model(ABC):
         self.parameter_constraints: list[tuple[str, ...]] = []
         self.parameter_transforms: dict[str, tuple[Any, Any]] = dict()
         self.parameter_ranges: dict[str, tuple[float, float]] = dict()
+        # Parameters tied to another one, as {dependent: (driver, factor)}: the
+        # dependent is not calibrated and always equals driver * factor.
+        self.parameter_links: dict[str, tuple[str, float]] = dict()
         # Initial values that differ from the default of the process kind, for a
         # parameter the model wants to start elsewhere (keyed by name or alias).
         self.parameter_defaults: dict[str, float] = dict()
@@ -975,6 +978,12 @@ class Model(ABC):
 
         for constraint in self.parameter_constraints:
             ps.define_constraint(*constraint)
+
+        # Links last: they check the driver's range against the dependent's, so
+        # they need the final ranges.
+        for dependent, (driver, factor) in self.parameter_links.items():
+            if ps.has(dependent) and ps.has(driver):
+                ps.link_parameter(dependent, driver, factor)
 
         return ps
 

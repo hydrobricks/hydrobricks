@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import random
 from dataclasses import dataclass
 from typing import Callable, Hashable
@@ -13,6 +14,8 @@ from hydrobricks._exceptions import (
 )
 from hydrobricks._optional import HAS_SPOTPY, spotpy
 from hydrobricks._utils import dump_config_file
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -1234,8 +1237,9 @@ class ParameterSet:
         )
         self.constraints: list[list[str]] = []
         self._allow_changing: list[str] = []
-        #: Parameters that mirror another one, as {dependent: driver}.
-        self._links: dict[str, str] = {}
+        #: Parameters that follow another one, as {dependent: (driver, factor)}:
+        #: the dependent always takes the driver's value times the factor.
+        self._links: dict[str, tuple[str, float]] = {}
         # Monthly-varying parameters: DataFrame index -> 12 monthly values (Jan..Dec).
         # The scalar 'value' still holds the annual mean as a baseline.
         self._monthly_values: dict[Hashable, list[float]] = {}
@@ -1289,14 +1293,16 @@ class ParameterSet:
             self._get_parameter_index(dependent) == index for dependent in self._links
         )
 
-    def link_parameter(self, dependent: str, driver: str) -> None:
-        """Make one parameter always take the value of another.
+    def link_parameter(self, dependent: str, driver: str, factor: float = 1.0) -> None:
+        """Make one parameter always take the value of another (times a factor).
 
         Used to collapse two parameters into one degree of freedom - for example
         forcing the rain and snow correction factors to share a single value, so
         the model applies one bulk precipitation correction instead of two
-        independent ones. The dependent is then no longer free: it is excluded
-        from the calibrated vector and updated whenever values are set.
+        independent ones, or tying a storage coefficient to a fixed fraction of
+        another (PREVAH's k_gw3 = k_gw1 / 9). The dependent is then no longer free:
+        it is excluded from the calibrated vector and updated whenever values are
+        set.
 
         Parameters
         ----------
@@ -1304,6 +1310,9 @@ class ParameterSet:
             The parameter that follows (by name or alias).
         driver
             The parameter it follows.
+        factor
+            The dependent takes the driver's value multiplied by this factor
+            (default 1: the same value). Must be strictly positive.
         """
         dependent_index = self._get_parameter_index(dependent)
         driver_index = self._get_parameter_index(driver)
@@ -1320,6 +1329,14 @@ class ParameterSet:
                 item_name=driver,
                 reason="Chained link",
             )
+        if not np.isfinite(factor) or factor <= 0:
+            raise ConfigurationError(
+                f"The factor linking '{dependent}' to '{driver}' must be strictly "
+                f"positive (got {factor}).",
+                item_name=dependent,
+                item_value=factor,
+                reason="Invalid link factor",
+            )
         # Every value the driver can take must suit the dependent too: otherwise
         # setting the driver fails part-way through a calibration, on the first
         # value the dependent cannot take.
@@ -1332,28 +1349,75 @@ class ParameterSet:
             dependent_row["max"],
         ]
         if all(b is not None and not pd.isna(b) for b in bounds) and (
-            driver_row["min"] < dependent_row["min"]
-            or driver_row["max"] > dependent_row["max"]
+            driver_row["min"] * factor < dependent_row["min"]
+            or driver_row["max"] * factor > dependent_row["max"]
         ):
+            scaled = "" if factor == 1 else f" times {factor:g}"
             raise ConfigurationError(
-                f"'{dependent}' cannot follow '{driver}': the range of '{driver}' "
-                f"[{driver_row['min']:g}, {driver_row['max']:g}] is not within that "
-                f"of '{dependent}' [{dependent_row['min']:g}, "
+                f"'{dependent}' cannot follow '{driver}'{scaled}: the range of "
+                f"'{driver}'{scaled} [{driver_row['min'] * factor:g}, "
+                f"{driver_row['max'] * factor:g}] is not within that of "
+                f"'{dependent}' [{dependent_row['min']:g}, "
                 f"{dependent_row['max']:g}]. Narrow the range of '{driver}' (e.g. "
                 "in the 'parameters' section of the project file) to the values "
                 "both can take.",
                 item_name=dependent,
                 reason="Incompatible ranges",
             )
-        self._links[dependent] = driver
+        # Replace any earlier link of the same parameter, whatever alias it used.
+        self._remove_link(dependent_index)
+        self._links[dependent] = (driver, float(factor))
         self._apply_links()
 
+    def unlink_parameter(self, dependent: str) -> None:
+        """Make a parameter that follows another one free again.
+
+        It keeps its current value and can then be set and calibrated on its own.
+        Does nothing if the parameter follows no other one.
+
+        Parameters
+        ----------
+        dependent
+            The parameter that follows another one (by name or alias).
+        """
+        self._remove_link(self._get_parameter_index(dependent))
+
+    def get_link(self, name: str) -> tuple[str, float] | None:
+        """The parameter this one follows, and the factor, or None if it is free.
+
+        Parameters
+        ----------
+        name
+            The parameter name or one of its aliases.
+
+        Returns
+        -------
+        tuple[str, float] | None
+            ``(driver, factor)`` if the parameter follows another one, else None.
+        """
+        index = self._get_parameter_index(name)
+        for dependent, link in self._links.items():
+            if self._get_parameter_index(dependent) == index:
+                return link
+        return None
+
+    def _remove_link(self, dependent_index: Hashable) -> None:
+        """Drop the link of the parameter at this index, under whichever alias."""
+        for key in list(self._links):
+            if self._get_parameter_index(key) == dependent_index:
+                del self._links[key]
+
     def _apply_links(self) -> None:
-        """Copy each driver's value onto the parameter that follows it."""
-        for dependent, driver in self._links.items():
+        """Set each linked parameter to its driver's value times the factor."""
+        for dependent, (driver, factor) in self._links.items():
             value = self.get(driver)
             if value is None:
                 continue
+            if factor != 1:
+                if isinstance(value, list):
+                    value = [v * factor for v in value]
+                else:
+                    value = value * factor
             index = self._get_parameter_index(dependent)
             # The two may not share a range; a driver value the dependent cannot
             # take is a configuration error, not something to silently clip.
@@ -1723,6 +1787,30 @@ class ParameterSet:
         # A linked parameter follows its driver on every assignment, so the
         # constraint and range checks that follow see the value the model runs.
         self._apply_links()
+
+        if self._links:
+            self._warn_overridden_links(values)
+
+    def _warn_overridden_links(self, values: dict) -> None:
+        """Warn when a value given to a linked parameter was replaced by the link."""
+        for key, given in values.items():
+            link = self.get_link(key)
+            if link is None or isinstance(given, list):
+                continue
+            kept = self.get(key)
+            if kept is None or np.isclose(kept, given, rtol=1e-4, atol=0):
+                continue
+            driver, factor = link
+            relation = f"'{driver}'" if factor == 1 else f"'{driver}' x {factor:g}"
+            logger.warning(
+                "The value %g given to '%s' is ignored: it follows %s (now %g). "
+                "Use unlink_parameter('%s') to set it freely.",
+                given,
+                key,
+                relation,
+                kept,
+                key,
+            )
 
     def set_monthly_values(
         self,

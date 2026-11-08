@@ -459,6 +459,13 @@ class Project:
         defaults = self.calibration or {}
         algorithm = algorithm or defaults.get("algorithm") or "dds"
         repetitions = repetitions or defaults.get("repetitions")
+        if repetitions == 0:
+            raise ConfigurationError(
+                "calibration.repetitions is 0: the project declares no calibration "
+                "(run() simulates it with the parameter values of the file).",
+                item_name="calibration.repetitions",
+                reason="No calibration",
+            )
         if not repetitions:
             raise ConfigurationError(
                 "The number of repetitions is required: pass repetitions= or "
@@ -1914,11 +1921,13 @@ def _validate_calibration(config: dict, errors: list[str]) -> dict | None:
             f"got {out['algorithm']!r}."
         )
     reps = out["repetitions"]
+    # 0 is a study job run with the parameter values of the file (no calibration).
     if reps is not None and (
-        isinstance(reps, bool) or not isinstance(reps, int) or reps < 1
+        isinstance(reps, bool) or not isinstance(reps, int) or reps < 0
     ):
         errors.append(
-            f"calibration.repetitions: expected a positive integer, got {reps!r}."
+            f"calibration.repetitions: expected a positive integer (or 0 for no "
+            f"calibration), got {reps!r}."
         )
     if out["objective"] is not None and not isinstance(out["objective"], str):
         errors.append(

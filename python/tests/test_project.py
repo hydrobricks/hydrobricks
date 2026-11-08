@@ -355,6 +355,17 @@ def test_project_calibrate_smoke(tmp_path):
     assert np.isfinite(scores["nse"]).all()
 
 
+def test_project_zero_repetitions_declares_no_calibration(tmp_path):
+    """0 repetitions is valid (a study job run uncalibrated), but calibrate()
+    refuses it instead of reading it as a missing budget."""
+    config = calibration_config(tmp_path)
+    config["calibration"]["repetitions"] = 0
+    project = hb.load_project(config, base_dir=SITTER_DIR)
+    with pytest.raises(hb.ConfigurationError) as excinfo:
+        project.calibrate()
+    assert "no calibration" in str(excinfo.value)
+
+
 def test_project_calibrate_overrides_and_errors(tmp_path):
     config = calibration_config(tmp_path)
     del config["calibration"]

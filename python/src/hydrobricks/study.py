@@ -57,6 +57,12 @@ value ``v``:
 ``include`` entries (which must value every dimension) are appended after the
 exclusions, so they can re-add or extend the grid.
 
+A job whose ``calibration.repetitions`` is 0 is not calibrated: it is run with
+the parameter values of its configuration and assessed like the others (e.g. a
+model with its published default parameters next to its calibrated versions).
+Its record then carries no algorithm, a calibration time of 0, and the values of
+the ``calibration.parameters`` as its ``best_parameters``.
+
 Each job gets its own ``output`` (``<study output>/jobs/<job id>``) and shares
 the study cache (``<study output>/cache``) so identical expensive steps
 (e.g. regridding the same catchment for two models) run once. Results are
@@ -244,12 +250,17 @@ class Study:
             return json.loads(result_file.read_text(encoding="utf-8"))
 
         project = load_project(copy.deepcopy(job.config), base_dir=self.base_dir)
+        calibration = project.calibration or {}
         started = time.perf_counter()
-        best = project.calibrate()
+        if calibration.get("repetitions") == 0:
+            best = None
+        else:
+            best = project.calibrate()
         calibration_seconds = time.perf_counter() - started
         project.run()
+        if best is None:
+            best = _uncalibrated_record(project, calibration)
 
-        calibration = project.calibration or {}
         metrics = self.evaluation.get("metrics") or [
             calibration.get("objective") or "kge_np"
         ]
@@ -515,6 +526,30 @@ _SINGLE_THREADED_ENV = (
     "OPENBLAS_NUM_THREADS",
     "NUMEXPR_NUM_THREADS",
 )
+
+
+def _uncalibrated_record(project: Any, calibration: dict) -> dict:
+    """The record of a job run without calibration, as for a calibrated one: its
+    objective on the calibration period and the values of the parameters it would
+    have calibrated."""
+    from hydrobricks.periods import evaluate_periods
+
+    objective = calibration.get("objective") or "kge_np"
+    table = evaluate_periods(
+        project.model,
+        project.observations,
+        project.periods,
+        metrics=[objective],
+        transform=calibration.get("transform"),
+    )
+    names = calibration.get("parameters") or []
+    return {
+        "algorithm": None,
+        "repetitions": 0,
+        "model_runs": 1,
+        "score": float(table.loc["calibration"].iloc[0]),
+        "parameters": {name: project.parameters.get(name) for name in names},
+    }
 
 
 def _init_worker() -> None:
@@ -911,12 +946,17 @@ def _build_jobs(
             config["cache"] = str(out_dir / "cache")
 
         calibration = config.get("calibration")
-        if not isinstance(calibration, dict) or not (
-            calibration.get("repetitions") and calibration.get("parameters")
+        uncalibrated = isinstance(calibration, dict) and (
+            calibration.get("repetitions") == 0
+        )
+        if not uncalibrated and (
+            not isinstance(calibration, dict)
+            or not (calibration.get("repetitions") and calibration.get("parameters"))
         ):
             errors.append(
                 f"job '{job_id}': a 'calibration' section with 'repetitions' "
-                "and 'parameters' is required (in base or via a variant patch)."
+                "and 'parameters' is required (in base or via a variant patch; "
+                "'repetitions: 0' runs the job uncalibrated)."
             )
 
         jobs.append(StudyJob(id=job_id, values=combo, config=config))

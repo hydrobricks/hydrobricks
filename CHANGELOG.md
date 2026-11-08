@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `ParameterSet.link_parameter()` takes a `factor`: the dependent follows the driver's value times this factor. New `unlink_parameter()` and `get_link()`. A value given to a linked parameter is now overridden with a warning instead of silently.
 - GR4J and GR6J option `lumped_runoff`: the interception, production store and routing run once for the subbasin, on the area-weighted water and PET of the hydro units, which then carry only the snow. With CemaNeige on elevation bands, this is the GR-CemaNeige set-up of airGR (Valéry et al., 2014).
 - Subbasin-level bricks and processes can read forcing: the area-weighted mean of their hydro units' forcing (`AggregatedForcing`). Subbasin bricks can also be computed directly (`computed_directly`), after those of the hydro units.
+- Studies: a job with `calibration.repetitions: 0` is not calibrated; it runs with the parameter values of its configuration and is assessed like the others.
 
 ### Changed
 

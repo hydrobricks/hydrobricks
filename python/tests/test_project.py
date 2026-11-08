@@ -1575,18 +1575,31 @@ def test_calibration_link_shares_one_value(tmp_path):
     assert 0.8 <= snow <= 1.3
 
 
+def _calibrate_with_rejected_runs(config):
+    """Calibrate k_quick from a low range: k_slow < k_quick rejects many sets."""
+    config["parameters"]["k_quick"] = {"value": 0.015, "min": 0.001, "max": 0.02}
+    config["calibration"]["parameters"] = [
+        "a_snow",
+        "A",
+        "k_slow_1",
+        "k_slow_2",
+        "k_quick",
+    ]
+
+
 @pytest.mark.parametrize("algorithm", ["rope", "dream"])
 def test_calibration_algorithms_with_rejected_runs(tmp_path, algorithm):
     """ROPE and DREAM run through parameter sets rejected by a constraint.
 
-    k_slow_2 < k_slow_1 rejects about half of the random sets: SPOTPY's ROPE then
-    fails on tied scores and DREAM on the missing simulation, unless patched.
+    With k_quick drawn from a low range, k_slow_1 < k_quick and k_slow_2 < k_quick
+    reject about half of the random sets: SPOTPY's ROPE then fails on tied scores
+    and DREAM on the missing simulation, unless patched.
     """
     config = calibration_config(tmp_path)
     config["calibration"]["algorithm"] = algorithm
     config["calibration"]["repetitions"] = 100
     config["calibration"]["seed"] = 1
-    config["calibration"]["parameters"] = ["a_snow", "A", "k_slow_1", "k_slow_2"]
+    _calibrate_with_rejected_runs(config)
     project = hb.load_project(config, base_dir=SITTER_DIR)
     result = project.calibrate()
 
@@ -1606,7 +1619,7 @@ def test_calibration_bee_colonies_maximise_the_skill(tmp_path, algorithm):
     config["calibration"]["repetitions"] = 120
     config["calibration"]["seed"] = 1
     config["calibration"]["options"] = {"eb": 10}
-    config["calibration"]["parameters"] = ["a_snow", "A", "k_slow_1", "k_slow_2"]
+    _calibrate_with_rejected_runs(config)
     project = hb.load_project(config, base_dir=SITTER_DIR)
     result = project.calibrate()
 

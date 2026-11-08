@@ -320,7 +320,9 @@ PROCESS_PARAM_SPECS: dict[str, list[ParamSpec]] = {
             unit="m^(4/3)/s",
             aliases=["beta"],
             min=100,
-            max=30000,
+            # The reservoir time constant scales with unit area / (beta sqrt(slope)):
+            # large or flat units need a high beta to drain within the day.
+            max=100000,
             mandatory=True,
         )
     ],
@@ -536,7 +538,10 @@ PROCESS_PARAM_SPECS: dict[str, list[ParamSpec]] = {
             name="melt_factor",
             unit="mm/d/°C",
             aliases=["hock_melt_factor"],
-            min=0,
+            # Strictly positive so that there is always some melt above the melting
+            # temperature: with a zero factor and a small radiation term, the snow
+            # piles up indefinitely (seen in calibrations reaching melt_factor ~ 0).
+            min=0.5,
             max=12,
             mandatory=True,
         ),

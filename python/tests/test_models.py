@@ -269,6 +269,25 @@ def test_socont_default_soil_et_is_hbv_with_its_own_lp_range():
     assert (row["min"], row["max"]) == (0.1, 1.0)
 
 
+def test_socont_soil_layers_are_not_ordered():
+    parameters = models.Socont(soil_storage_nb=2).generate_parameters()
+    assert ["k_slow_2", "<", "k_slow_1"] not in parameters.constraints
+    parameters.set_values({"k_slow_1": 0.01, "k_slow_2": 0.1})
+    assert parameters.constraints_satisfied()
+
+
+def test_socont_beta_is_calibrated_in_log_space():
+    parameters = models.Socont().generate_parameters()
+    row = parameters.parameters.loc[parameters._get_parameter_index("beta")]
+    assert (row["min"], row["max"]) == (100, 100000)
+    parameters.allow_changing = ["beta"]
+    (spotpy_beta,) = parameters.get_for_spotpy()
+    assert spotpy_beta.minbound == pytest.approx(np.log(100), rel=1e-3)
+    assert spotpy_beta.maxbound == pytest.approx(np.log(100000), rel=1e-3)
+    parameters.set_values({"beta": np.log(5000)}, transformed=True)
+    assert parameters.get("beta") == pytest.approx(5000)
+
+
 @pytest.mark.parametrize("option", ["soil_et_process", "infiltration_process"])
 def test_socont_unknown_soil_process_raises(option):
     with pytest.raises(hb.ConfigurationError):

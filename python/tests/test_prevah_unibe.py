@@ -2052,3 +2052,12 @@ def test_prevah_storage_ranges_and_constraints():
     parameters.set_values({"k0": 0.8, "k1": 0.35, "k_gw1": 0.055, "k_gw2": 0.0024})
     assert parameters.get("k_gw3") > parameters.get("k_gw2")
     assert parameters.constraints_satisfied()
+
+
+def test_temperature_index_melt_factor_is_strictly_positive():
+    # Without a positive melt factor, snow can pile up indefinitely.
+    parameters = models.PrevahUniBE().generate_parameters()
+    row = parameters.parameters.loc[parameters._get_parameter_index("melt_factor")]
+    assert row["min"] == 0.5
+    with pytest.raises(hb.ConfigurationError):
+        parameters.set_values({"melt_factor": 0.1})

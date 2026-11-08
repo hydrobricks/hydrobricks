@@ -65,10 +65,10 @@ class Socont(Model):
         Slow reservoir baseflow response factor [1/d].
     k_slow_2 : float
         Second soil-layer response factor [1/d] (only with soil_storage_nb=2;
-        must be < k_slow_1 and < k_quick).
+        must be < k_quick, but is not ordered against k_slow_1).
     beta : float
         Quick-flow (surface runoff) coefficient [m^(4/3)/s] of the kinematic-wave
-        overland flow (surface_runoff='socont_runoff').
+        overland flow (surface_runoff='socont_runoff'). Calibrated in log space.
     k_quick : float
         Surface runoff response factor [1/d] when a linear storage is used instead
         (surface_runoff='linear_storage'); must be > k_slow_1.
@@ -360,18 +360,18 @@ class Socont(Model):
         - a_snow < a_ice: Snow melt degree-day < glacier ice melt degree-day
         - k_slow_1 < k_quick: Slow flow slower than quick flow
         - k_slow_2 < k_quick: Second soil layer slower than quick flow
-        - k_slow_2 < k_slow_1: Second soil layer slower than first layer
 
-        The snow/rain correction factor constraint (rain <= snow) is defined
-        generically for every snow-bearing model in ParameterSet.
-
-        These constraints ensure the model behaves physically.
+        The two soil layers are not ordered (k_slow_2 < k_slow_1 was dropped): the
+        layers are in series with different inputs, so the lower one need not be
+        the slower, and in 713 HydroMIP calibrations the constraint truncated the
+        optima where the second layer was active (12 % sat on k_slow_2 = k_slow_1)
+        and was meaningless where it was not (percol ~ 0 in 41 %). It also
+        rejected half of all random parameter sets.
         """
         self.parameter_constraints = [
             ["a_snow", "<", "a_ice"],
             ["k_slow_1", "<", "k_quick"],
             ["k_slow_2", "<", "k_quick"],
-            ["k_slow_2", "<", "k_slow_1"],
         ]
 
     def _define_parameter_transforms(self) -> None:
@@ -415,6 +415,12 @@ class Socont(Model):
                 lambda rf: math.log(rf / 24.0),
                 lambda lk: 24.0 * math.exp(lk),
             ),
+            # The quickflow reservoir's time constant scales with area / beta, so
+            # beta acts on a log scale: below ~3000 it shapes the hydrograph, above
+            # a threshold that grows with unit area (and flatness) the reservoir
+            # empties within the day and beta no longer matters. Searching it
+            # linearly over [100, 1e5] would spend nearly all draws on that plateau.
+            "surface_runoff:beta": (math.log, math.exp),
         }
 
     def _set_specific_options(self, kwargs: dict[str, Any]) -> None:

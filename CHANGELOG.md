@@ -19,6 +19,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Socont: `beta` range widened to [100, 100000] (was [100, 30000]) and calibrated in log space. The quickflow time constant scales with unit area / `beta`, so large or flat hydro units need a higher `beta`, while above that threshold `beta` no longer changes the discharge.
 - `melt:temperature_index` (Socont with Hock melt, PREVAH-UniBE): `melt_factor` minimum raised to 0.5 mm/d/°C (was 0), so there is always some melt above the melting temperature. Calibrations could otherwise drive both melt terms to zero and let snow pile up.
 
+### Fixed
+
+- The `'quantiles'` method of `create_elevation_bands()` and `discretize_by()` (elevation, slope and radiation) created one class fewer than `number`, and failed with `number=1`. Hydro units built with it now get one class more than before.
+
 
 ## 0.9.5 - 2026-11-05
 

@@ -137,6 +137,18 @@ def test_elevation_bands_quantiles():
     assert 74430000 < area_sum.iloc[0] < 74450000
 
 
+def test_elevation_bands_quantiles_gives_the_number_of_bands():
+    """'number' equal-area bands, of about the same area each."""
+    if not has_required_packages():
+        return
+    catchment = hb.Catchment(SITTER_OUTLINE)
+    catchment.extract_dem(SITTER_DEM)
+    catchment.create_elevation_bands(method="quantiles", number=5)
+    areas = catchment.hydro_units.hydro_units["area"].to_numpy().ravel()
+    assert len(areas) == 5
+    assert areas.max() / areas.min() < 1.05
+
+
 def test_get_mean_elevation():
     if not has_required_packages():
         return

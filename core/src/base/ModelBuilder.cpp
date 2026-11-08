@@ -154,7 +154,17 @@ void ModelBuilder::CreateSubbasinComponents(SettingsModel& modelSettings) {
         Brick* brick = brickPtr.get();
         brick->SetName(brickSettings.name);
         brick->SetParameters(brickSettings);
+        if (brickSettings.computedDirectly) {
+            brick->SetNeedsSolver(false);
+        }
         _subbasin->AddBrick(std::move(brickPtr));
+
+        // The subbasin-level components read the area-weighted mean of the hydro unit forcing.
+        for (auto forcingType : brickSettings.forcing) {
+            auto forcingFlux = std::make_unique<FluxForcing>();
+            forcingFlux->AttachForcing(_subbasin->GetOrCreateForcing(forcingType));
+            brick->AttachFluxIn(std::move(forcingFlux));
+        }
 
         for (int iProcess = 0; iProcess < modelSettings.GetProcessCount(); ++iProcess) {
             modelSettings.SelectProcess(iProcess);
@@ -165,6 +175,9 @@ void ModelBuilder::CreateSubbasinComponents(SettingsModel& modelSettings) {
             process->SetName(processSettings.name);
             process->SetTimeMachine(_timer);
             process->SetParameters(processSettings);
+            for (auto forcingType : processSettings.forcing) {
+                process->AttachForcing(_subbasin->GetOrCreateForcing(forcingType));
+            }
             brick->AddProcess(std::move(processPtr));
 
             if (processSettings.type == "overflow") {

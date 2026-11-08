@@ -53,6 +53,31 @@ void Processor::ValidateFluxTopology() const {
             }
         }
     }
+
+    // The direct subbasin-level bricks are processed after the hydro units: they must not
+    // send water to a direct brick of a hydro unit.
+    for (int iBrick = 0; iBrick < _subbasin->GetBrickCount(); ++iBrick) {
+        Brick* brick = _subbasin->GetBrick(iBrick);
+        if (brick->NeedsSolver()) {
+            continue;
+        }
+        for (int i = 0; i < brick->GetProcessCount(); ++i) {
+            auto process = brick->GetProcess(i);
+            for (int j = 0; j < process->GetOutputFluxCount(); ++j) {
+                auto fluxToBrick = dynamic_cast<FluxToBrick*>(process->GetOutputFlux(j));
+                if (fluxToBrick == nullptr) {
+                    continue;
+                }
+                Brick* target = fluxToBrick->GetTargetBrick();
+                if (target && !target->NeedsSolver() && !_subbasin->HasBrick(target->GetName())) {
+                    throw ModelConfigError(
+                        std::format("The subbasin brick '{}' (computed directly) sends water to the hydro unit "
+                                    "brick '{}' (computed directly), which is processed before it.",
+                                    brick->GetName(), target->GetName()));
+                }
+            }
+        }
+    }
 }
 
 void Processor::MarkDirectToSolverFluxesAsStatic() const {
@@ -61,26 +86,32 @@ void Processor::MarkDirectToSolverFluxesAsStatic() const {
     // would be zero when the solver enforces the constraints of the receiving brick, whose
     // outflows would be limited to its start-of-step content: the water would only leave it
     // at the following time step. As a static flux, its amount is counted as available.
+    vector<Brick*> directBricks;
     int hydroUnitCount = _subbasin->GetHydroUnitCount();
     for (int iUnit = 0; iUnit < hydroUnitCount; ++iUnit) {
         HydroUnit* unit = _subbasin->GetHydroUnit(iUnit);
         for (int iBrick = 0; iBrick < unit->GetBrickCount(); ++iBrick) {
-            Brick* brick = unit->GetBrick(iBrick);
-            if (brick->NeedsSolver()) {
-                continue;
-            }
-            for (int i = 0; i < brick->GetProcessCount(); ++i) {
-                auto process = brick->GetProcess(i);
-                for (int j = 0; j < process->GetOutputFluxCount(); ++j) {
-                    Flux* flux = process->GetOutputFlux(j);
-                    auto fluxToBrick = dynamic_cast<FluxToBrick*>(flux);
-                    if (fluxToBrick == nullptr || flux->IsInstantaneous() || flux->IsStatic()) {
-                        continue;
-                    }
-                    Brick* target = fluxToBrick->GetTargetBrick();
-                    if (target && target->NeedsSolver()) {
-                        flux->SetAsStatic();
-                    }
+            directBricks.push_back(unit->GetBrick(iBrick));
+        }
+    }
+    for (int iBrick = 0; iBrick < _subbasin->GetBrickCount(); ++iBrick) {
+        directBricks.push_back(_subbasin->GetBrick(iBrick));
+    }
+    for (Brick* brick : directBricks) {
+        if (brick->NeedsSolver()) {
+            continue;
+        }
+        for (int i = 0; i < brick->GetProcessCount(); ++i) {
+            auto process = brick->GetProcess(i);
+            for (int j = 0; j < process->GetOutputFluxCount(); ++j) {
+                Flux* flux = process->GetOutputFlux(j);
+                auto fluxToBrick = dynamic_cast<FluxToBrick*>(flux);
+                if (fluxToBrick == nullptr || flux->IsInstantaneous() || flux->IsStatic()) {
+                    continue;
+                }
+                Brick* target = fluxToBrick->GetTargetBrick();
+                if (target && target->NeedsSolver()) {
+                    flux->SetAsStatic();
                 }
             }
         }
@@ -127,11 +158,18 @@ void Processor::ConnectToElementsToSolve() {
         }
     }
 
+    // The subbasin-level bricks come after those of the hydro units, in both phases: a
+    // direct one is processed once every hydro unit has been, so it receives their water
+    // within the same time step.
     int basinBrickCount = basin->GetBrickCount();
     for (int iBrick = 0; iBrick < basinBrickCount; ++iBrick) {
         Brick* brick = basin->GetBrick(iBrick);
 
-        // Add the bricks need a solver here
+        if (!brick->NeedsSolver()) {
+            _directConnectionCount += brick->GetProcessConnectionCount();
+            continue;
+        }
+
         _iterableBricks.push_back(brick);
 
         // Get state variables from bricks
@@ -212,6 +250,29 @@ void Processor::BuildTraversalTables() {
 
         _directUnits.push_back({splitterStart, static_cast<int>(_directSplitters.size()), brickStart,
                                 static_cast<int>(_directBricks.size())});
+    }
+
+    // The direct subbasin-level bricks, as a last entry processed after the hydro units.
+    int basinBrickStart = static_cast<int>(_directBricks.size());
+    for (int iBrick = 0; iBrick < basin->GetBrickCount(); ++iBrick) {
+        Brick* brick = basin->GetBrick(iBrick);
+        if (brick->NeedsSolver()) {
+            continue;
+        }
+        int processStart = static_cast<int>(_directProcesses.size());
+        for (int i = 0; i < brick->GetProcessCount(); ++i) {
+            Process* process = brick->GetProcess(i);
+            int outputFluxCount = process->GetOutputFluxCount();
+            int connectionCount = process->GetConnectionCount();
+            _directProcesses.push_back(
+                {process, process->GetWaterContainer(), outputFluxCount, connectionCount, directRateOffset});
+            directRateOffset += std::max(outputFluxCount, connectionCount);
+        }
+        _directBricks.push_back({brick, processStart, static_cast<int>(_directProcesses.size())});
+    }
+    if (static_cast<int>(_directBricks.size()) > basinBrickStart) {
+        int splitterEnd = static_cast<int>(_directSplitters.size());
+        _directUnits.push_back({splitterEnd, splitterEnd, basinBrickStart, static_cast<int>(_directBricks.size())});
     }
 
     _directRateCount = directRateOffset;

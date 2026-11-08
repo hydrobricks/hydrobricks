@@ -245,6 +245,43 @@ void Subbasin::ResetForcingUpdates() {
     for (const auto& unit : _hydroUnits) {
         unit->ResetForcingUpdates();
     }
+    for (const auto& forcing : _forcing) {
+        forcing->ResetUpdate();
+    }
+}
+
+bool Subbasin::HasForcing(VariableType type) const {
+    for (const auto& forcing : _forcing) {
+        if (forcing->GetType() == type) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+Forcing* Subbasin::GetOrCreateForcing(VariableType type) {
+    for (const auto& forcing : _forcing) {
+        if (forcing->GetType() == type) {
+            return forcing.get();
+        }
+    }
+
+    if (_hydroUnits.empty() || _area <= 0) {
+        throw ModelConfigError("A subbasin-level forcing needs hydro units to aggregate.");
+    }
+
+    auto aggregated = std::make_unique<AggregatedForcing>(type);
+    for (const auto& unit : _hydroUnits) {
+        if (!unit->HasForcing(type)) {
+            unit->AddForcing(std::make_unique<Forcing>(type));
+        }
+        aggregated->AddSource(unit->GetForcing(type), unit->GetArea() / _area);
+    }
+    Forcing* raw = aggregated.get();
+    _forcing.push_back(std::move(aggregated));
+
+    return raw;
 }
 
 int Subbasin::GetHydroUnitCount() const {

@@ -130,6 +130,12 @@ void HydroUnit::SetProperties(HydroUnitSettings& unitSettings) {
     for (const auto& unitProperty : unitSettings.propertiesString) {
         AddProperty(std::make_unique<HydroUnitProperty>(unitProperty.name, unitProperty.value));
     }
+
+    // The elevation is given apart from the other properties (AddHydroUnit); expose it as one
+    // too, for the processes reading it (e.g. the CemaNeige snow/rain split), unless already set.
+    if (unitSettings.elevation != -9999 && !HasProperty("elevation")) {
+        AddProperty(std::make_unique<HydroUnitProperty>("elevation", unitSettings.elevation, "m"));
+    }
 }
 
 void HydroUnit::AddProperty(std::unique_ptr<HydroUnitProperty> property) {
@@ -297,6 +303,17 @@ void HydroUnit::ResetForcingUpdates() {
     for (const auto& forcing : _forcing) {
         forcing->ResetUpdate();
     }
+}
+
+std::vector<VariableType> HydroUnit::GetForcingTypesWithoutData() const {
+    std::vector<VariableType> types;
+    for (const auto& forcing : _forcing) {
+        if (!forcing->HasData()) {
+            types.push_back(forcing->GetType());
+        }
+    }
+
+    return types;
 }
 
 Forcing* HydroUnit::GetForcing(VariableType type) const {

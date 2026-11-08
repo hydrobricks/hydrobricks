@@ -45,3 +45,35 @@ void Forcing::Validate() const {
         throw ModelConfigError("Forcing validation failed. Time series data not properly configured.");
     }
 }
+
+AggregatedForcing::AggregatedForcing(VariableType type)
+    : Forcing(type) {}
+
+void AggregatedForcing::AddSource(Forcing* source, double weight) {
+    assert(source);
+    assert(source->GetType() == _type);
+    _sources.emplace_back(source, weight);
+}
+
+double AggregatedForcing::GetValue() const {
+    if (_hasUpdatedValue) return _updatedValue;
+    double value = 0;
+    for (const auto& [source, weight] : _sources) {
+        value += weight * source->GetValue();
+    }
+    return value;
+}
+
+bool AggregatedForcing::IsValid() const {
+    if (_sources.empty()) {
+        LogError("Aggregated forcing: no hydro unit forcing to aggregate.");
+        return false;
+    }
+    for (const auto& [source, weight] : _sources) {
+        if (!source->IsValid()) {
+            return false;
+        }
+    }
+
+    return true;
+}

@@ -35,6 +35,14 @@ class GR4J(Model):
         the global default: the sequential solvers route the whole store-routing
         cascade within a single step and would shift the hydrograph too early. Pass
         ``solver=`` explicitly to override.
+    lumped_runoff : bool
+        Run the production store and the routing once for the whole subbasin
+        (default: False, one per hydro unit). The hydro units then only carry the
+        snow: each passes its rain and melt to the subbasin, whose interception,
+        production store and routing work on the area-weighted mean of the unit
+        water and PET. This is the GR-CemaNeige set-up on elevation bands (Valery
+        et al., 2014), the bands being the hydro units. With a single hydro unit it
+        changes nothing.
     snow_melt_process : str or None
         Snowmelt method: None (no snow), 'melt:degree_day',
         'melt:degree_day_aspect', 'melt:temperature_index', or 'melt:cemaneige'.
@@ -52,6 +60,7 @@ class GR4J(Model):
 
         # Default options
         self.options["discrete"] = True
+        self.options["lumped_runoff"] = False
         self.options["snow_melt_process"] = None
         self.options["snow_rain_process"] = None
         self.options["snow_redistribution"] = None
@@ -150,6 +159,46 @@ class GR4J(Model):
             self._define_structure_discrete()
         else:
             self._define_structure_solver()
+
+        if self.options["lumped_runoff"]:
+            self._lump_runoff_routine()
+
+    def _lump_runoff_routine(self) -> None:
+        """Move the interception, production store and routing to the subbasin.
+
+        The land cover of each hydro unit passes its rain and melt on to a subbasin
+        brick holding the interception, which then feeds the production store as the
+        land cover does otherwise. The subbasin-level processes read the area-weighted
+        mean of the hydro unit PET. The bricks keep their names, so the parameters do
+        too.
+        """
+        cover = self._cover_name
+        land_cover = self.structure[cover]
+        unit_level = {
+            cover: {
+                **land_cover,
+                "processes": {
+                    "outflow": {
+                        "kind": "outflow:direct",
+                        "target": "runoff_input",
+                        "instantaneous": True,
+                    },
+                },
+            }
+        }
+        # Computed directly as the land cover it replaces, after the hydro units.
+        subbasin_level = {
+            "runoff_input": {
+                "attach_to": "subbasin",
+                "kind": "storage",
+                "computed_directly": True,
+                "processes": land_cover["processes"],
+            }
+        }
+        for key, brick in self.structure.items():
+            if key != cover:
+                subbasin_level[key] = {**brick, "attach_to": "subbasin"}
+        self.structure = {**unit_level, **subbasin_level}
 
     def _define_structure_discrete(self) -> None:
         """Discrete (exact) GR4J: production store and routing computed directly."""

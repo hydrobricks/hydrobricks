@@ -140,7 +140,17 @@ def _load_forcing(hydro_units, meteo_path: Path) -> hb.Forcing:
 
 
 def _run_model(
-    tmp_path, meteo_path, n_days, *, X1, X2, X3, X4, discrete=True, record_all=False
+    tmp_path,
+    meteo_path,
+    n_days,
+    *,
+    X1,
+    X2,
+    X3,
+    X4,
+    discrete=True,
+    record_all=False,
+    lumped_runoff=False,
 ) -> tuple:
     """Build and run a GR4J model on a given meteo file; return (model, forcing)."""
     hydro_units = hb.HydroUnits()
@@ -149,7 +159,9 @@ def _run_model(
     )
     forcing = _load_forcing(hydro_units, meteo_path)
 
-    model = models.GR4J(discrete=discrete, record_all=record_all)
+    model = models.GR4J(
+        discrete=discrete, record_all=record_all, lumped_runoff=lumped_runoff
+    )
     parameters = model.generate_parameters()
     parameters.set_values({"X1": X1, "X2": X2, "X3": X3, "X4": X4})
 
@@ -189,11 +201,21 @@ def _q(tmp_path, **kwargs) -> np.ndarray:
     return model.get_outlet_discharge()
 
 
-def _q_cpp_forcing(tmp_path, *, X1, X2, X3, X4, discrete=True) -> np.ndarray:
+def _q_cpp_forcing(
+    tmp_path, *, X1, X2, X3, X4, discrete=True, lumped_runoff=False
+) -> np.ndarray:
     """Run GR4J on the shared C++ test forcing; return the daily discharge."""
     meteo = _meteo_csv_series(tmp_path, _CPP_PRECIP, _CPP_PET)
     model, _ = _run_model(
-        tmp_path, meteo, len(_CPP_PRECIP), X1=X1, X2=X2, X3=X3, X4=X4, discrete=discrete
+        tmp_path,
+        meteo,
+        len(_CPP_PRECIP),
+        X1=X1,
+        X2=X2,
+        X3=X3,
+        X4=X4,
+        discrete=discrete,
+        lumped_runoff=lumped_runoff,
     )
     return model.get_outlet_discharge()
 
@@ -385,3 +407,186 @@ def test_gr4j_small_x3_stays_non_negative(tmp_path):
     q = _q(tmp_path, X3=1.0)
     assert np.all(q >= 0.0)
     assert not np.any(np.isnan(q))
+
+
+# ---------------------------------------------------------------------------
+# E — Runoff routine lumped over the subbasin (snow per hydro unit)
+# ---------------------------------------------------------------------------
+
+
+def _two_units_csv(tmp_path: Path) -> Path:
+    """Two hydro units of different elevation and area (1 and 3 km²)."""
+    p = tmp_path / "hydro_units_2.csv"
+    p.write_text("id,elevation,area\n-,m,m^2\n1,500,1000000\n2,1500,3000000\n")
+    return p
+
+
+def _meteo_csv_with_temperature(tmp_path: Path, n_days: int) -> Path:
+    """Precipitation, PET and a seasonal temperature (snow in winter at altitude),
+    with its daily minimum and maximum (CemaNeige splits the precipitation of the
+    hydro units below 1500 m by them)."""
+    lines = ["date,precip(mm/day),pet(mm/day),temp(C),tmin(C),tmax(C)"]
+    for i in range(n_days):
+        d = _START + timedelta(days=i)
+        precip = 8.0 if i % 4 == 0 else 0.0
+        pet = 2.0 + 1.5 * np.sin(2 * np.pi * (i - 100) / 365)
+        temp = 5.0 + 10.0 * np.sin(2 * np.pi * (i - 100) / 365)
+        lines.append(
+            f"{d.strftime('%d/%m/%Y')},{precip:.6f},{pet:.6f},{temp:.6f},"
+            f"{temp - 4:.6f},{temp + 4:.6f}"
+        )
+    path = tmp_path / "meteo_t.csv"
+    path.write_text("\n".join(lines) + "\n")
+    return path
+
+
+def _run_two_units(tmp_path: Path, n_days: int, X2=-1.0, **model_options) -> tuple:
+    """GR4J on two hydro units, the precipitation increasing with elevation."""
+    tmp_path.mkdir(parents=True, exist_ok=True)
+    hydro_units = hb.HydroUnits()
+    hydro_units.load_from_csv(
+        _two_units_csv(tmp_path), column_elevation="elevation", column_area="area"
+    )
+    forcing = hb.Forcing(hydro_units)
+    forcing.load_station_data_from_csv(
+        _meteo_csv_with_temperature(tmp_path, n_days),
+        column_time="date",
+        time_format="%d/%m/%Y",
+        content={
+            "precipitation": "precip(mm/day)",
+            "pet": "pet(mm/day)",
+            "temperature": "temp(C)",
+            "temperature_min": "tmin(C)",
+            "temperature_max": "tmax(C)",
+        },
+    )
+    forcing.spatialize_from_station_data(
+        variable="precipitation", ref_elevation=1000, gradient=0.05
+    )
+    forcing.spatialize_from_station_data(variable="pet")
+    for variable in ("temperature", "temperature_min", "temperature_max"):
+        forcing.spatialize_from_station_data(
+            variable=variable,
+            method="additive_elevation_gradient",
+            ref_elevation=1000,
+            gradient=-0.6,
+        )
+
+    model = models.GR4J(record_all=True, **model_options)
+    parameters = model.generate_parameters()
+    parameters.set_values({"X1": 300, "X2": X2, "X3": 90, "X4": 1.7})
+    if model_options.get("snow_melt_process") == "melt:cemaneige":
+        parameters.set_values({"Kf": 3.5, "Cn": 300})
+    model.setup(
+        spatial_structure=hydro_units,
+        output_path=str(tmp_path),
+        start_date=_START.strftime("%Y-%m-%d"),
+        end_date=(_START + timedelta(days=n_days - 1)).strftime("%Y-%m-%d"),
+    )
+    model.run(parameters=parameters, forcing=forcing)
+    return model, forcing
+
+
+@pytest.mark.parametrize(
+    "X1, X2, X3, X4, expected",
+    [
+        (300, 0.0, 100, 2.0, _CPP_EXPECTED_NO_EXCHANGE),
+        (200, 2.0, 90, 1.7, _CPP_EXPECTED_POS_EXCHANGE),
+        (200, -3.0, 90, 1.7, _CPP_EXPECTED_NEG_EXCHANGE),
+    ],
+)
+def test_gr4j_lumped_runoff_single_unit_matches_reference(
+    tmp_path, X1, X2, X3, X4, expected
+):
+    """On a single hydro unit, lumping the runoff routine changes nothing."""
+    q = _q_cpp_forcing(tmp_path, X1=X1, X2=X2, X3=X3, X4=X4, lumped_runoff=True)
+    np.testing.assert_allclose(q, expected, atol=7e-7)
+
+
+def test_gr4j_lumped_runoff_equals_gr4j_on_mean_forcing(tmp_path):
+    """Without snow, the lumped routine on two units is GR4J on the area-weighted
+    mean precipitation and PET."""
+    n_days = 200
+    model, forcing = _run_two_units(tmp_path / "two", n_days, lumped_runoff=True)
+    q_lumped = model.get_outlet_discharge()
+
+    series = dict(zip(forcing.data2D.data_name, forcing.data2D.data))
+    weights = np.array([0.25, 0.75])
+    precip = np.asarray(series["p"], float) @ weights
+    pet = np.asarray(series["pet"], float) @ weights
+    assert np.ptp(np.asarray(series["p"], float)[0]) > 0
+
+    meteo = _meteo_csv_series(tmp_path, precip, pet)
+    single, _ = _run_model(tmp_path, meteo, n_days, X1=300, X2=-1.0, X3=90, X4=1.7)
+    np.testing.assert_allclose(q_lumped, single.get_outlet_discharge(), atol=1e-6)
+
+
+def test_gr4j_lumped_runoff_differs_from_per_unit_routine(tmp_path):
+    """The per-unit stores are non-linear, so lumping them changes the response."""
+    n_days = 200
+    lumped, _ = _run_two_units(tmp_path / "lumped", n_days, lumped_runoff=True)
+    per_unit, _ = _run_two_units(tmp_path / "per_unit", n_days)
+    q_lumped = lumped.get_outlet_discharge()
+    q_per_unit = per_unit.get_outlet_discharge()
+    assert np.max(np.abs(q_lumped - q_per_unit)) > 1e-3
+
+
+def test_gr4j_lumped_runoff_with_snow_closes_water_balance(tmp_path):
+    """Snow on the hydro units, runoff routine on the subbasin: with no groundwater
+    exchange (X2=0) the water balance closes."""
+    model, forcing = _run_two_units(
+        tmp_path, _N_2Y, X2=0.0, lumped_runoff=True, snow_melt_process="melt:cemaneige"
+    )
+    q = model.get_outlet_discharge()
+    assert np.all(q >= 0.0)
+    assert not np.any(np.isnan(q))
+    assert model.get_total_snow_storage_changes() != 0 or np.any(q > 0)
+    balance = (
+        model.get_total_outlet_discharge()
+        + model.get_total_et()
+        + model.get_total_water_storage_changes()
+        + model.get_total_snow_storage_changes()
+        - forcing.get_total_precipitation()
+    )
+    assert balance == pytest.approx(0, abs=1e-5)
+
+
+def test_gr4j_cemaneige_without_tmin_tmax_raises(tmp_path):
+    """Below 1500 m, CemaNeige needs the daily minimum and maximum temperature: a
+    forcing without them is reported instead of being read as missing data."""
+    hydro_units = hb.HydroUnits()
+    hydro_units.load_from_csv(
+        _two_units_csv(tmp_path), column_elevation="elevation", column_area="area"
+    )
+    forcing = hb.Forcing(hydro_units)
+    forcing.load_station_data_from_csv(
+        _meteo_csv_with_temperature(tmp_path, 50),
+        column_time="date",
+        time_format="%d/%m/%Y",
+        content={
+            "precipitation": "precip(mm/day)",
+            "pet": "pet(mm/day)",
+            "temperature": "temp(C)",
+        },
+    )
+    forcing.spatialize_from_station_data(
+        variable="precipitation", ref_elevation=1000, gradient=0.0
+    )
+    forcing.spatialize_from_station_data(variable="pet")
+    forcing.spatialize_from_station_data(
+        variable="temperature", ref_elevation=1000, gradient=-0.6
+    )
+
+    model = models.GR4J(snow_melt_process="melt:cemaneige")
+    parameters = model.generate_parameters()
+    parameters.set_values(
+        {"X1": 300, "X2": 0, "X3": 90, "X4": 1.7, "Kf": 3.5, "Cn": 300}
+    )
+    model.setup(
+        spatial_structure=hydro_units,
+        output_path=str(tmp_path),
+        start_date="1981-01-01",
+        end_date="1981-02-19",
+    )
+    with pytest.raises(hb.ModelError):
+        model.run(parameters=parameters, forcing=forcing)

@@ -27,6 +27,15 @@ class Forcing {
     }
 
     /**
+     * Check whether time series data was attached to the forcing.
+     *
+     * @return true if data is attached.
+     */
+    [[nodiscard]] bool HasData() const {
+        return _timeSeriesData != nullptr;
+    }
+
+    /**
      * Check whether the forcing accumulates over the time step (a depth of water, given
      * per step: precipitation, PET) rather than being an instantaneous or averaged value
      * that does not depend on the step length (temperature, radiation).
@@ -47,7 +56,7 @@ class Forcing {
      *
      * @return the value of the forcing.
      */
-    double GetValue() const;
+    virtual double GetValue() const;
 
     /**
      * Override the forcing value for the current timestep.
@@ -70,7 +79,7 @@ class Forcing {
      *
      * @return true if the forcing is valid, false otherwise.
      */
-    [[nodiscard]] bool IsValid() const;
+    [[nodiscard]] virtual bool IsValid() const;
 
     /**
      * Validate the forcing.
@@ -85,6 +94,42 @@ class Forcing {
     TimeSeriesData* _timeSeriesData;  // non-owning reference
     double _updatedValue{0.0};
     bool _hasUpdatedValue{false};
+};
+
+/**
+ * A forcing read by the subbasin-level components: the area-weighted mean of the same
+ * forcing in the subbasin's hydro units (e.g. a catchment-mean PET for a production store
+ * lumped over the subbasin while the snow runs per elevation band). A process may still
+ * override the value for the current time step (UpdateValue), as on a hydro unit.
+ */
+class AggregatedForcing : public Forcing {
+  public:
+    explicit AggregatedForcing(VariableType type);
+
+    /**
+     * Add a hydro unit forcing to the mean.
+     *
+     * @param source the forcing of the same type in a hydro unit (non-owning).
+     * @param weight its weight (the area share of the unit in the subbasin).
+     */
+    void AddSource(Forcing* source, double weight);
+
+    /**
+     * Get the area-weighted mean of the hydro unit values, or the override set this time step.
+     *
+     * @return the value of the forcing.
+     */
+    double GetValue() const override;
+
+    /**
+     * Check that the forcing has sources, all of them valid.
+     *
+     * @return true if the forcing is valid, false otherwise.
+     */
+    [[nodiscard]] bool IsValid() const override;
+
+  private:
+    std::vector<std::pair<Forcing*, double>> _sources;  // non-owning: the hydro units own them
 };
 
 #endif  // HYDROBRICKS_FORCING_H

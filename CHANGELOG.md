@@ -29,6 +29,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The `'quantiles'` method of `create_elevation_bands()` and `discretize_by()` (elevation, slope and radiation) created one class fewer than `number`, and failed with `number=1`. Hydro units built with it now get one class more than before.
 - CemaNeige's snow/rain split read an `elevation` hydro unit property that the hydro units never passed, so GR4J/GR6J with CemaNeige failed at setup. The elevation is now exposed as a property.
 - A forcing a model needs but that was given no data (e.g. CemaNeige's daily minimum and maximum temperature below 1500 m) crashed the run; it is now reported.
+- Regridding gridded forcing onto a single hydro unit (a lumped catchment) failed with `len() of unsized object`.
 
 
 ## 0.9.5 - 2026-11-05

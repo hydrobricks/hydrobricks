@@ -372,7 +372,8 @@ class TimeSeries2D(TimeSeries):
                 unit_ids = unit_ids.rio.reproject(f"epsg:{data_crs}")
 
         # Get list of hydro unit ids
-        unit_ids_list = hydro_units["id"].values.squeeze()
+        # atleast_1d: a single hydro unit would squeeze to a scalar.
+        unit_ids_list = np.atleast_1d(hydro_units["id"].values.squeeze())
         unit_id_count = len(unit_ids_list)
         logger.debug(f"Processing {unit_id_count} hydro units")
 
@@ -568,7 +569,7 @@ class TimeSeries2D(TimeSeries):
                 apply_data_gradient = False
 
             # Extract the elevation for each hydro unit
-            hu_elevation = hydro_units["elevation"].to_numpy().squeeze()
+            hu_elevation = np.atleast_1d(hydro_units["elevation"].to_numpy().squeeze())
 
         # Create a xarray variable containing the data cell indices
         data_idx = data_var[0].copy()

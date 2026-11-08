@@ -814,6 +814,12 @@ class PrevahUniBE(Model):
         for month, name in enumerate(names):
             hydro_units.add_property((name, "mm"), table[:, month])
         parameters.set_spatial_monthly(f"fc{suffix}", names)
+        # The scalar value is the fallback of the units lacking the properties, and
+        # must be defined: without one given, the mean of the table.
+        if parameters.get(f"fc{suffix}") is None:
+            parameters.set_values(
+                {f"fc{suffix}": float(np.mean(table))}, check_range=False
+            )
 
         return names
 

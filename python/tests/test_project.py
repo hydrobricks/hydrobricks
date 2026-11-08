@@ -1764,6 +1764,8 @@ def test_project_prevah_section_applies_the_cover_tables(tmp_path):
     )
     for cover in ("open", "forest", "wetland"):
         assert (f"{cover}_soil_moisture", "albedo_land") in monthly
+        # The fallback of the units lacking the properties is defined.
+        assert parameters.get(f"fc_{cover}") > 0
 
 
 def test_project_prevah_section_needs_a_soil_per_cover(tmp_path):

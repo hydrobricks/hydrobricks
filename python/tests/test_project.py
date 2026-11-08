@@ -1420,6 +1420,37 @@ def test_parameter_range_needs_both_bounds(tmp_path):
     assert "both 'min' and 'max'" in str(excinfo.value)
 
 
+def test_parameter_can_follow_a_hydro_unit_property(tmp_path):
+    """{value, property}: each unit takes its value from a hydro units column."""
+    units = pd.read_csv(SITTER_DIR / "hydro_units_elevation.csv", header=[0, 1])
+    units[("capacity", "mm")] = np.linspace(100, 300, len(units))
+    units_file = tmp_path / "hydro_units.csv"
+    units.to_csv(units_file, index=False)
+
+    config = minimal_config(tmp_path)
+    config["hydro_units"] = {
+        "file": str(units_file),
+        "columns": {"elevation": "elevation", "area": "area", "capacity": "capacity"},
+    }
+    config["parameters"]["A"] = {"value": 200, "property": "capacity"}
+    project = hb.load_project(config, base_dir=SITTER_DIR)
+
+    assert ("slow_reservoir", "capacity", "capacity") in [
+        tuple(entry) for entry in project.parameters.get_spatial_parameters()
+    ]
+    assert np.isfinite(project.run()).all()
+
+
+def test_parameter_property_must_be_declared(tmp_path):
+    config = minimal_config(tmp_path)
+    config["parameters"]["A"] = {"value": 200, "property": "capacity"}
+    with pytest.raises(hb.ConfigurationError) as excinfo:
+        hb.load_project(config, base_dir=SITTER_DIR)
+    assert "parameters.A.property: 'capacity' is not a hydro unit property" in str(
+        excinfo.value
+    )
+
+
 # ---- River network: subbasins and gauges ---------------------------------------
 
 

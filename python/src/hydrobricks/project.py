@@ -1676,6 +1676,9 @@ def _validate_parameters(config: dict, errors: list[str]) -> tuple[dict, dict]:
 
     A published parameter set does not always fall inside the default range of the
     model, so a parameter can widen its own with ``{value: -1, min: -3, max: 5}``.
+    A parameter can also follow a hydro unit property, one value per unit, with
+    ``{value: 200, property: mean_annual_snow}`` (the value is the fallback of the
+    units lacking it); see :func:`_validate_parameter_properties`.
 
     Parameters
     ----------
@@ -1711,7 +1714,7 @@ def _validate_parameters(config: dict, errors: list[str]) -> tuple[dict, dict]:
                 f"{spec!r}."
             )
             continue
-        _check_keys(spec, {"value", "min", "max"}, where, errors)
+        _check_keys(spec, {"value", "min", "max", "property"}, where, errors)
         value = _get_number(spec, "value", where, errors)
         if value is None:
             if "value" not in spec:
@@ -1734,6 +1737,33 @@ def _validate_parameters(config: dict, errors: list[str]) -> tuple[dict, dict]:
         values[str(name)] = float(value)
 
     return values, ranges
+
+
+def _validate_parameter_properties(
+    config: dict, cfg: dict, errors: list[str]
+) -> dict[str, str]:
+    """The parameters following a hydro unit property: name -> property.
+
+    The property is a column of the hydro units CSV, declared in
+    ``hydro_units.columns``.
+    """
+    section = config.get("parameters")
+    if not isinstance(section, dict):
+        return {}
+    properties = set((cfg["hydro_units"] or {}).get("other_columns") or {})
+    out = {}
+    for name, spec in section.items():
+        if not isinstance(spec, dict) or "property" not in spec:
+            continue
+        prop = spec["property"]
+        if not isinstance(prop, str) or prop not in properties:
+            errors.append(
+                f"parameters.{name}.property: {prop!r} is not a hydro unit property; "
+                f"declare it in hydro_units.columns."
+            )
+            continue
+        out[str(name)] = prop
+    return out
 
 
 def _validate_data_parameters(config: dict, errors: list[str]) -> dict:
@@ -2238,6 +2268,7 @@ def _validate_config(config: dict, base: Path, errors: list[str]) -> dict:
         "calibration": _validate_calibration(config, errors),
     }
     cfg["parameters"], cfg["parameter_ranges"] = _validate_parameters(config, errors)
+    cfg["parameter_properties"] = _validate_parameter_properties(config, cfg, errors)
     _validate_cross_checks(cfg, errors)
     _validate_network_checks(cfg, errors)
 
@@ -2737,6 +2768,8 @@ def _build_project(
         for name, (minimum, maximum) in cfg["parameter_ranges"].items():
             parameter_set.change_range(name, minimum, maximum)
         parameter_set.set_values(cfg["parameters"])
+    for name, prop in cfg["parameter_properties"].items():
+        parameter_set.set_spatial(name, prop)
     if link:
         # Applied on the parameter set itself, so the fresh build that
         # Project.calibrate() makes from the same config inherits it too; and after

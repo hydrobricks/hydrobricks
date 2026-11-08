@@ -1673,3 +1673,122 @@ def test_calibration_bee_colonies_maximise_the_skill(tmp_path, algorithm):
     # One loop costs at most 30 runs; the budget is spent to the last run.
     assert result["model_runs"] > 60
     assert len(result["sampler"].getdata()) == result["model_runs"]
+
+
+# --------------------------------------------------------------------------- #
+# PREVAH cover tables (the 'prevah' section)
+# --------------------------------------------------------------------------- #
+TICINO_DIR = TEST_FILES_DIR / "ch_ticino_bellinzona"
+
+
+def prevah_config(tmp_path, share_soil=False):
+    """PREVAH-UniBE on 30 hydro units of the Ticino test data, with three covers."""
+    units = tmp_path / "hydro_units_30.csv"
+    lines = (TICINO_DIR / "hydro_units.csv").read_text(encoding="utf-8").splitlines()
+    units.write_text("\n".join(lines[:32]) + "\n", encoding="utf-8")
+    return {
+        "model": {
+            "name": "prevah_unibe",
+            "options": {
+                "land_cover_names": ["open", "forest", "wetland"],
+                "land_cover_types": ["open", "forest", "wetland"],
+                "interception_covers": ["open", "forest", "wetland"],
+                "share_soil": share_soil,
+            },
+        },
+        "hydro_units": {
+            "file": str(units),
+            "columns": {"elevation": "elevation", "awc": "awc", "depth": "soil_depth"},
+            "columns_areas": {
+                "open": "area_open",
+                "forest": "area_forest",
+                "wetland": "area_wetland",
+            },
+        },
+        "forcing": {
+            "spatialized": {
+                "precipitation": {
+                    "file": "precipitation.csv",
+                    "time": {"column": "date", "format": "%Y-%m-%d"},
+                    "columns_are": "mez",
+                },
+                "temperature": {
+                    "file": "temperature.csv",
+                    "time": {"column": "date", "format": "%Y-%m-%d"},
+                    "columns_are": "mez",
+                },
+                "solar_radiation": {
+                    "file": "potential_radiation.csv",
+                    "day_of_year": "day_of_year",
+                },
+            },
+            "pet": {"method": "Hamon_vapor_density", "lat": 46.4},
+        },
+        "periods": ["1985-01-01", "1985-12-31"],
+        "output": str(tmp_path),
+        "prevah": {
+            "cover_classes": {"open": "alpine_meadow", "forest": "coniferous_forest"},
+            "available_water_content": "awc",
+            "soil_depth": "depth",
+        },
+    }
+
+
+def test_project_prevah_section_applies_the_cover_tables(tmp_path):
+    from hydrobricks.land_covers import PREVAH_COVER_VEG_COV
+
+    config = prevah_config(tmp_path)
+    config["hydro_units"]["columns"]["mez"] = "mez"
+    project = hb.load_project(config, base_dir=TICINO_DIR, setup=False)
+    parameters = project.parameters
+
+    # The field capacity of every cover is bound per hydro unit and per month.
+    spatial = {
+        (component, name)
+        for component, name, _ in parameters.get_spatial_monthly_parameters()
+    }
+    assert spatial == {
+        (f"{cover}_soil_moisture", "capacity")
+        for cover in ("open", "forest", "wetland")
+    }
+    # Each cover's canopy and soil take the tables of the class it stands for.
+    monthly = {
+        (component, name): values
+        for component, name, values in parameters.get_monthly_parameters()
+    }
+    assert list(monthly[("forest_canopy", "et_factor")]) == pytest.approx(
+        PREVAH_COVER_VEG_COV["coniferous_forest"]
+    )
+    assert list(monthly[("open_canopy", "et_factor")]) == pytest.approx(
+        PREVAH_COVER_VEG_COV["alpine_meadow"]
+    )
+    for cover in ("open", "forest", "wetland"):
+        assert (f"{cover}_soil_moisture", "albedo_land") in monthly
+
+
+def test_project_prevah_section_needs_a_soil_per_cover(tmp_path):
+    config = prevah_config(tmp_path, share_soil=True)
+    config["hydro_units"]["columns"]["mez"] = "mez"
+    with pytest.raises(hb.ConfigurationError) as excinfo:
+        hb.load_project(config, base_dir=TICINO_DIR, setup=False)
+    assert "share_soil: false" in str(excinfo.value)
+
+
+def test_project_prevah_section_checks_its_inputs(tmp_path):
+    config = prevah_config(tmp_path)
+    config["hydro_units"]["columns"]["mez"] = "mez"
+    config["prevah"]["cover_classes"]["open"] = "alpine_meado"
+    config["prevah"]["soil_depth"] = "not_a_column"
+    with pytest.raises(hb.ConfigurationError) as excinfo:
+        hb.load_project(config, base_dir=TICINO_DIR, setup=False)
+    message = str(excinfo.value)
+    assert "unknown PREVAH cover class 'alpine_meado'" in message
+    assert "prevah.soil_depth: 'not_a_column' is not a hydro unit property" in message
+
+
+def test_project_prevah_section_is_for_prevah_only(tmp_path):
+    config = minimal_config(tmp_path)
+    config["prevah"] = {"cover_classes": {}}
+    with pytest.raises(hb.ConfigurationError) as excinfo:
+        hb.load_project(config, base_dir=SITTER_DIR)
+    assert "'prevah_unibe' model only" in str(excinfo.value)

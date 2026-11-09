@@ -823,7 +823,9 @@ class TimeSeries2D(TimeSeries):
             df = pd.DataFrame(self.data[-1], columns=unit_cols)
             df.insert(0, "time", np.asarray(self.time))
         cache_path.parent.mkdir(parents=True, exist_ok=True)
-        tmp_path = cache_path.with_name(cache_path.name + ".tmp")
+        # A temporary file of its own: concurrent writers of the same entry (jobs
+        # of other studies sharing the cache) would otherwise replace each other's.
+        tmp_path = cache_path.with_name(f"{cache_path.name}.{os.getpid()}.tmp")
         df.to_csv(tmp_path, index=False)
         os.replace(tmp_path, cache_path)
         logger.info(f"Saved regridded forcing cache to {cache_path}")

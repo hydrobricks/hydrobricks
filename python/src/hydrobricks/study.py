@@ -560,6 +560,9 @@ def _init_worker() -> None:
 
 def _error_message(err: BaseException) -> str:
     """The message of an exception (args[0] for the hydrobricks ones)."""
+    if isinstance(err, OSError):
+        # args[0] is the errno; str() carries the message and the file name.
+        return f"{type(err).__name__}: {err}"
     message = err.args[0] if getattr(err, "args", None) else str(err)
     return f"{type(err).__name__}: {message}"
 

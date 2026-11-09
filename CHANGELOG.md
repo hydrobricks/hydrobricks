@@ -30,6 +30,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - CemaNeige's snow/rain split read an `elevation` hydro unit property that the hydro units never passed, so GR4J/GR6J with CemaNeige failed at setup. The elevation is now exposed as a property.
 - A forcing a model needs but that was given no data (e.g. CemaNeige's daily minimum and maximum temperature below 1500 m) crashed the run; it is now reported.
 - Regridding gridded forcing onto a single hydro unit (a lumped catchment) failed with `len() of unsized object`.
+- Processes writing the same regridded forcing cache entry at once (warm-ups of studies sharing a cache) failed with `FileNotFoundError`, and the study reported only the error number, not the file.
 
 
 ## 0.9.5 - 2026-11-05

@@ -316,9 +316,8 @@ def test_socont_unknown_preset_raises():
 
 
 def _run_socont_sitter(tmp_path, values, **options):
-    socont = models.Socont(
-        soil_storage_nb=1, surface_runoff="linear_storage", record_all=True, **options
-    )
+    options = {"soil_storage_nb": 1, **options}
+    socont = models.Socont(surface_runoff="linear_storage", record_all=True, **options)
     parameters = socont.generate_parameters()
     parameters.set_values(
         {"a_snow": 3, "k_quick": 0.05, "A": 200, "k_slow": 0.01, **values}
@@ -389,6 +388,59 @@ def test_socont_et_hbv_raises_et_and_closes_water_balance(tmp_path):
     )
     assert et > ref_et
     assert balance == pytest.approx(0, abs=1e-8)
+
+
+def test_socont_percolation_defaults_to_constant():
+    socont = models.Socont(soil_storage_nb=2)
+    assert socont.options["percolation_process"] == "percolation:constant"
+    parameters = socont.generate_parameters()
+    assert parameters.has("percol")
+    assert not parameters.has("percol_max")
+
+
+def test_socont_power_law_percolation_parameters():
+    parameters = models.Socont(
+        soil_storage_nb=2, percolation_process="percolation:power_law"
+    ).generate_parameters()
+    assert parameters.has("percol_max")
+    assert not parameters.has("percol")
+    assert parameters.get("percol_exp") == pytest.approx(1.0)
+    rows = parameters.parameters.set_index("name")
+    assert (rows.at["exponent", "min"], rows.at["exponent", "max"]) == (0.5, 5)
+    assert not rows.at["exponent", "mandatory"]
+    assert rows.at["percolation_rate", "mandatory"]
+
+
+def test_socont_unknown_percolation_raises():
+    with pytest.raises(hb.ConfigurationError):
+        models.Socont(soil_storage_nb=2, percolation_process="percolation:unknown")
+
+
+def test_socont_power_law_percolation_closes_water_balance(tmp_path):
+    two_layers = {
+        "soil_storage_nb": 2,
+        "percolation_process": "percolation:power_law",
+    }
+    values = {"k_slow_2": 0.005, "percol_max": 2.0}
+    linear, _, balance = _run_socont_sitter(tmp_path / "p1", values, **two_layers)
+    assert balance == pytest.approx(0, abs=1e-8)
+    steep, _, balance = _run_socont_sitter(
+        tmp_path / "p3", {**values, "percol_exp": 3.0}, **two_layers
+    )
+    assert balance == pytest.approx(0, abs=1e-8)
+    # The exponent changes the recharge of the deep store, hence the discharge.
+    assert not np.allclose(linear, steep)
+
+
+def test_socont_power_law_percolation_off_matches_one_layer(tmp_path):
+    one_layer, _, _ = _run_socont_sitter(tmp_path / "one", {"lp": 0.5})
+    no_percolation, _, _ = _run_socont_sitter(
+        tmp_path / "two",
+        {"lp": 0.5, "k_slow_2": 0.005, "percol_max": 0.0},
+        soil_storage_nb=2,
+        percolation_process="percolation:power_law",
+    )
+    np.testing.assert_allclose(no_percolation, one_layer, rtol=1e-10, atol=1e-12)
 
 
 def test_socont_creation_with_surface_runoff():

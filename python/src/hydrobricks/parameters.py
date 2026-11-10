@@ -337,6 +337,26 @@ PROCESS_PARAM_SPECS: dict[str, list[ParamSpec]] = {
             mandatory=True,
         )
     ],
+    # Percolation following the filling of the store: perc_max * (S / S_max)^exp
+    "percolation:power_law": [
+        ParamSpec(
+            name="percolation_rate",
+            unit="mm/d",
+            aliases=["percol_max"],
+            min=0,
+            max=10,
+            mandatory=True,
+        ),
+        ParamSpec(
+            name="exponent",
+            unit="-",
+            aliases=["percol_exp"],
+            min=0.5,
+            max=5,
+            default=1.0,
+            mandatory=False,
+        ),
+    ],
     # Single-threshold snow/rain transition
     "transition:snow_rain:threshold": [
         ParamSpec(

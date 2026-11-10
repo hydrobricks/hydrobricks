@@ -42,6 +42,7 @@
 #include "ProcessOutflowThreshold.h"
 #include "ProcessPercolationConstant.h"
 #include "ProcessPercolationGR4J.h"
+#include "ProcessPercolationPowerLaw.h"
 #include "ProcessPercolationPrevah.h"
 #include "ProcessProductionGR4J.h"
 #include "ProcessRefreezeDegreeDay.h"
@@ -104,6 +105,13 @@ const std::unordered_map<string, ProcessEntry>& GetProcessRegistry() {
                 return std::make_unique<ProcessPercolationConstant>(b->GetWaterContainer());
             },
             &ProcessPercolationConstant::RegisterProcessSettings
+        }},
+
+        {"percolation:power_law", {
+            [](Brick* b) {
+                return std::make_unique<ProcessPercolationPowerLaw>(b->GetWaterContainer());
+            },
+            &ProcessPercolationPowerLaw::RegisterProcessSettings
         }},
 
         {"percolation:gr4j", {

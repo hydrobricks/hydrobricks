@@ -12,6 +12,7 @@ logger = logging.getLogger(__name__)
 
 SOIL_ET_PROCESSES = ("et:socont", "et:hbv", "et:power_law", "et:exponential")
 SOIL_INFILTRATION_PROCESSES = ("infiltration:socont", "infiltration:hbv")
+SOIL_PERCOLATION_PROCESSES = ("percolation:constant", "percolation:power_law")
 #: Options pinned by each preset. 'original' is the published model (Schaefli et
 #: al., 2005), whatever the defaults become; 'hydrobricks' keeps the defaults.
 PRESETS = {
@@ -87,8 +88,13 @@ class Socont(Model):
         given explicitly still apply, with a warning when they depart from the
         original. The rain/snow split is not pinned.
     soil_storage_nb : int
-        Number of slow soil reservoirs, 1 (default) or 2. With 2, a constant
-        percolation feeds a second linear soil layer.
+        Number of slow soil reservoirs, 1 (default) or 2. With 2, a percolation
+        feeds a second linear soil layer.
+    percolation_process : str
+        Percolation to the second soil layer (soil_storage_nb=2):
+        'percolation:constant' (default, ``percol`` [mm/d] whatever the wetness) or
+        'percolation:power_law' (``percol_max * (S/A)^percol_exp``, the recharge
+        following the wetness of the first layer).
     surface_runoff : str
         Quick-flow method: 'socont_runoff' (default, kinematic-wave overland flow)
         or 'linear_storage'.
@@ -130,6 +136,7 @@ class Socont(Model):
         self.options["surface_runoff"] = "socont_runoff"
         self.options["soil_et_process"] = "et:hbv"
         self.options["infiltration_process"] = "infiltration:socont"
+        self.options["percolation_process"] = "percolation:constant"
         self.options["snow_melt_process"] = "melt:degree_day"
         self.options["snow_rain_process"] = None
         self.options["snow_ice_transformation"] = None
@@ -271,8 +278,17 @@ class Socont(Model):
 
         if self.options["soil_storage_nb"] == 2:
             logger.debug("Using 2 soil storages.")
+            percolation = self.options["percolation_process"]
+            if percolation not in SOIL_PERCOLATION_PROCESSES:
+                raise ConfigurationError(
+                    f"Unknown percolation process: '{percolation}'. "
+                    f"Expected one of {', '.join(SOIL_PERCOLATION_PROCESSES)}.",
+                    item_name="percolation_process",
+                    item_value=percolation,
+                    reason="Unknown process type",
+                )
             self.structure["slow_reservoir"]["processes"]["percolation"] = {
-                "kind": "percolation:constant",
+                "kind": percolation,
                 "target": "slow_reservoir_2",
             }
             self.structure["slow_reservoir_2"] = {

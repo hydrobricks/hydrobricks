@@ -1022,7 +1022,8 @@ PROCESS_PARAM_SPECS: dict[str, list[ParamSpec]] = {
             aliases=["snow_slide_min_snow_depth"],
             min=0,
             max=1000,
-            default=50,
+            # 5 cm SWE (Bernhardt & Schulz, 2010) as a snow depth (250 kg/m3).
+            default=200,
             mandatory=False,
         ),
         ParamSpec(

@@ -22,11 +22,13 @@ bool ProcessLateralSnowSlide::IsValid() const {
 }
 
 void ProcessLateralSnowSlide::RegisterProcessSettings(SettingsModel* modelSettings) {
+    // Holding-depth law of CHM's SnowSlide (Marsh et al., 2020), slope clamped to 10 degrees.
     modelSettings->AddProcessParameter("coeff", 3178.4f);
     modelSettings->AddProcessParameter("exp", -1.998f);
     modelSettings->AddProcessParameter("min_slope", 10.0f);
     modelSettings->AddProcessParameter("max_slope", 75.0f);
-    modelSettings->AddProcessParameter("min_snow_holding_depth", 50.0f);
+    // 5 cm SWE (Bernhardt & Schulz, 2010) as a snow depth: 50 mm x 1000 / 250 kg/m3.
+    modelSettings->AddProcessParameter("min_snow_holding_depth", 200.0f);
     modelSettings->AddProcessParameter("max_snow_depth", 20000.0f);  // 20 m of snow depth = 5 m of SWE
 }
 

@@ -569,8 +569,10 @@ PROCESS_PARAM_SPECS: dict[str, list[ParamSpec]] = {
             name="radiation_coefficient",
             unit="m2/W*mm/d/°C",
             aliases=["hock_radiation_coefficient"],
+            # Hock (1999) found 0.6-0.9e-3 on an hourly step (mm/h per W/m2 and
+            # degree), i.e. ~0.015-0.02 at the daily step.
             min=0,
-            max=1,
+            max=0.05,
             mandatory=True,
         ),
         ParamSpec(

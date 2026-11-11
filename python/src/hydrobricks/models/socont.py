@@ -418,6 +418,7 @@ class Socont(Model):
         self.parameter_ranges = {
             "slow_reservoir:capacity": (10.0, 1000.0),
             "slow_reservoir:lp": (0.1, 1.0),
+            "r_snow": (0.001, 0.03),
         }
         self.parameter_defaults = {
             "slow_reservoir:lp": 0.5,

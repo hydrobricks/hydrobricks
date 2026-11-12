@@ -355,6 +355,17 @@ def test_project_calibrate_smoke(tmp_path):
     assert np.isfinite(scores["nse"]).all()
 
 
+def test_project_zero_repetitions_declares_no_calibration(tmp_path):
+    """0 repetitions is valid (a study job run uncalibrated), but calibrate()
+    refuses it instead of reading it as a missing budget."""
+    config = calibration_config(tmp_path)
+    config["calibration"]["repetitions"] = 0
+    project = hb.load_project(config, base_dir=SITTER_DIR)
+    with pytest.raises(hb.ConfigurationError) as excinfo:
+        project.calibrate()
+    assert "no calibration" in str(excinfo.value)
+
+
 def test_project_calibrate_overrides_and_errors(tmp_path):
     config = calibration_config(tmp_path)
     del config["calibration"]
@@ -837,7 +848,6 @@ def test_potential_radiation_from_the_dem_drives_the_prevah_melt(tmp_path):
         "cperc": 2.0,
         "k_gw1": 0.05,
         "k_gw2": 0.01,
-        "k_gw3": 0.005,
     }
     project = hb.load_project(config, base_dir=GLETSCH_DIR)
 
@@ -905,7 +915,6 @@ def test_land_covers_glacier_split_at_ela(tmp_path):
         "k1": 0.2,
         "k_gw1": 0.05,
         "k_gw2": 0.01,
-        "k_gw3": 0.005,
         "lp": 0.9,
         "sgrluz": 10,
         "cperc": 0.1,
@@ -1411,6 +1420,37 @@ def test_parameter_range_needs_both_bounds(tmp_path):
     assert "both 'min' and 'max'" in str(excinfo.value)
 
 
+def test_parameter_can_follow_a_hydro_unit_property(tmp_path):
+    """{value, property}: each unit takes its value from a hydro units column."""
+    units = pd.read_csv(SITTER_DIR / "hydro_units_elevation.csv", header=[0, 1])
+    units[("capacity", "mm")] = np.linspace(100, 300, len(units))
+    units_file = tmp_path / "hydro_units.csv"
+    units.to_csv(units_file, index=False)
+
+    config = minimal_config(tmp_path)
+    config["hydro_units"] = {
+        "file": str(units_file),
+        "columns": {"elevation": "elevation", "area": "area", "capacity": "capacity"},
+    }
+    config["parameters"]["A"] = {"value": 200, "property": "capacity"}
+    project = hb.load_project(config, base_dir=SITTER_DIR)
+
+    assert ("slow_reservoir", "capacity", "capacity") in [
+        tuple(entry) for entry in project.parameters.get_spatial_parameters()
+    ]
+    assert np.isfinite(project.run()).all()
+
+
+def test_parameter_property_must_be_declared(tmp_path):
+    config = minimal_config(tmp_path)
+    config["parameters"]["A"] = {"value": 200, "property": "capacity"}
+    with pytest.raises(hb.ConfigurationError) as excinfo:
+        hb.load_project(config, base_dir=SITTER_DIR)
+    assert "parameters.A.property: 'capacity' is not a hydro unit property" in str(
+        excinfo.value
+    )
+
+
 # ---- River network: subbasins and gauges ---------------------------------------
 
 
@@ -1577,18 +1617,31 @@ def test_calibration_link_shares_one_value(tmp_path):
     assert 0.8 <= snow <= 1.3
 
 
+def _calibrate_with_rejected_runs(config):
+    """Calibrate k_quick from a low range: k_slow < k_quick rejects many sets."""
+    config["parameters"]["k_quick"] = {"value": 0.015, "min": 0.001, "max": 0.02}
+    config["calibration"]["parameters"] = [
+        "a_snow",
+        "A",
+        "k_slow_1",
+        "k_slow_2",
+        "k_quick",
+    ]
+
+
 @pytest.mark.parametrize("algorithm", ["rope", "dream"])
 def test_calibration_algorithms_with_rejected_runs(tmp_path, algorithm):
     """ROPE and DREAM run through parameter sets rejected by a constraint.
 
-    k_slow_2 < k_slow_1 rejects about half of the random sets: SPOTPY's ROPE then
-    fails on tied scores and DREAM on the missing simulation, unless patched.
+    With k_quick drawn from a low range, k_slow_1 < k_quick and k_slow_2 < k_quick
+    reject about half of the random sets: SPOTPY's ROPE then fails on tied scores
+    and DREAM on the missing simulation, unless patched.
     """
     config = calibration_config(tmp_path)
     config["calibration"]["algorithm"] = algorithm
     config["calibration"]["repetitions"] = 100
     config["calibration"]["seed"] = 1
-    config["calibration"]["parameters"] = ["a_snow", "A", "k_slow_1", "k_slow_2"]
+    _calibrate_with_rejected_runs(config)
     project = hb.load_project(config, base_dir=SITTER_DIR)
     result = project.calibrate()
 
@@ -1608,7 +1661,7 @@ def test_calibration_bee_colonies_maximise_the_skill(tmp_path, algorithm):
     config["calibration"]["repetitions"] = 120
     config["calibration"]["seed"] = 1
     config["calibration"]["options"] = {"eb": 10}
-    config["calibration"]["parameters"] = ["a_snow", "A", "k_slow_1", "k_slow_2"]
+    _calibrate_with_rejected_runs(config)
     project = hb.load_project(config, base_dir=SITTER_DIR)
     result = project.calibrate()
 
@@ -1620,3 +1673,124 @@ def test_calibration_bee_colonies_maximise_the_skill(tmp_path, algorithm):
     # One loop costs at most 30 runs; the budget is spent to the last run.
     assert result["model_runs"] > 60
     assert len(result["sampler"].getdata()) == result["model_runs"]
+
+
+# --------------------------------------------------------------------------- #
+# PREVAH cover tables (the 'prevah' section)
+# --------------------------------------------------------------------------- #
+TICINO_DIR = TEST_FILES_DIR / "ch_ticino_bellinzona"
+
+
+def prevah_config(tmp_path, share_soil=False):
+    """PREVAH-UniBE on 30 hydro units of the Ticino test data, with three covers."""
+    units = tmp_path / "hydro_units_30.csv"
+    lines = (TICINO_DIR / "hydro_units.csv").read_text(encoding="utf-8").splitlines()
+    units.write_text("\n".join(lines[:32]) + "\n", encoding="utf-8")
+    return {
+        "model": {
+            "name": "prevah_unibe",
+            "options": {
+                "land_cover_names": ["open", "forest", "wetland"],
+                "land_cover_types": ["open", "forest", "wetland"],
+                "interception_covers": ["open", "forest", "wetland"],
+                "share_soil": share_soil,
+            },
+        },
+        "hydro_units": {
+            "file": str(units),
+            "columns": {"elevation": "elevation", "awc": "awc", "depth": "soil_depth"},
+            "columns_areas": {
+                "open": "area_open",
+                "forest": "area_forest",
+                "wetland": "area_wetland",
+            },
+        },
+        "forcing": {
+            "spatialized": {
+                "precipitation": {
+                    "file": "precipitation.csv",
+                    "time": {"column": "date", "format": "%Y-%m-%d"},
+                    "columns_are": "mez",
+                },
+                "temperature": {
+                    "file": "temperature.csv",
+                    "time": {"column": "date", "format": "%Y-%m-%d"},
+                    "columns_are": "mez",
+                },
+                "solar_radiation": {
+                    "file": "potential_radiation.csv",
+                    "day_of_year": "day_of_year",
+                },
+            },
+            "pet": {"method": "Hamon_vapor_density", "lat": 46.4},
+        },
+        "periods": ["1985-01-01", "1985-12-31"],
+        "output": str(tmp_path),
+        "prevah": {
+            "cover_classes": {"open": "alpine_meadow", "forest": "coniferous_forest"},
+            "available_water_content": "awc",
+            "soil_depth": "depth",
+        },
+    }
+
+
+def test_project_prevah_section_applies_the_cover_tables(tmp_path):
+    from hydrobricks.land_covers import PREVAH_COVER_VEG_COV
+
+    config = prevah_config(tmp_path)
+    config["hydro_units"]["columns"]["mez"] = "mez"
+    project = hb.load_project(config, base_dir=TICINO_DIR, setup=False)
+    parameters = project.parameters
+
+    # The field capacity of every cover is bound per hydro unit and per month.
+    spatial = {
+        (component, name)
+        for component, name, _ in parameters.get_spatial_monthly_parameters()
+    }
+    assert spatial == {
+        (f"{cover}_soil_moisture", "capacity")
+        for cover in ("open", "forest", "wetland")
+    }
+    # Each cover's canopy and soil take the tables of the class it stands for.
+    monthly = {
+        (component, name): values
+        for component, name, values in parameters.get_monthly_parameters()
+    }
+    assert list(monthly[("forest_canopy", "et_factor")]) == pytest.approx(
+        PREVAH_COVER_VEG_COV["coniferous_forest"]
+    )
+    assert list(monthly[("open_canopy", "et_factor")]) == pytest.approx(
+        PREVAH_COVER_VEG_COV["alpine_meadow"]
+    )
+    for cover in ("open", "forest", "wetland"):
+        assert (f"{cover}_soil_moisture", "albedo_land") in monthly
+        # The fallback of the units lacking the properties is defined.
+        assert parameters.get(f"fc_{cover}") > 0
+
+
+def test_project_prevah_section_needs_a_soil_per_cover(tmp_path):
+    config = prevah_config(tmp_path, share_soil=True)
+    config["hydro_units"]["columns"]["mez"] = "mez"
+    with pytest.raises(hb.ConfigurationError) as excinfo:
+        hb.load_project(config, base_dir=TICINO_DIR, setup=False)
+    assert "share_soil: false" in str(excinfo.value)
+
+
+def test_project_prevah_section_checks_its_inputs(tmp_path):
+    config = prevah_config(tmp_path)
+    config["hydro_units"]["columns"]["mez"] = "mez"
+    config["prevah"]["cover_classes"]["open"] = "alpine_meado"
+    config["prevah"]["soil_depth"] = "not_a_column"
+    with pytest.raises(hb.ConfigurationError) as excinfo:
+        hb.load_project(config, base_dir=TICINO_DIR, setup=False)
+    message = str(excinfo.value)
+    assert "unknown PREVAH cover class 'alpine_meado'" in message
+    assert "prevah.soil_depth: 'not_a_column' is not a hydro unit property" in message
+
+
+def test_project_prevah_section_is_for_prevah_only(tmp_path):
+    config = minimal_config(tmp_path)
+    config["prevah"] = {"cover_classes": {}}
+    with pytest.raises(hb.ConfigurationError) as excinfo:
+        hb.load_project(config, base_dir=SITTER_DIR)
+    assert "'prevah_unibe' model only" in str(excinfo.value)

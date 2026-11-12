@@ -345,9 +345,27 @@ class Subbasin {
     [[nodiscard]] int GetHydroUnitCount() const;
 
     /**
-     * Reset all dynamic forcing overrides in all hydro units.
+     * Reset all dynamic forcing overrides in all hydro units and in the subbasin.
      */
     void ResetForcingUpdates();
+
+    /**
+     * Check if the subbasin has a forcing of the given type (for its own components).
+     *
+     * @param type The type of the forcing.
+     * @return True if the subbasin has the forcing, false otherwise.
+     */
+    [[nodiscard]] bool HasForcing(VariableType type) const;
+
+    /**
+     * Get the forcing of the given type read by the subbasin-level components, creating it
+     * on first use as the area-weighted mean of the same forcing in the hydro units (which
+     * are given that forcing if they lack it, so that its data is attached to them).
+     *
+     * @param type The type of the forcing.
+     * @return The forcing (owned by the subbasin).
+     */
+    Forcing* GetOrCreateForcing(VariableType type);
 
     /**
      * Get a hydro unit by its index.
@@ -533,6 +551,7 @@ class Subbasin {
     std::vector<std::unique_ptr<Splitter>> _splitters;            // owning: Subbasin-level splitters
     std::unordered_map<string, Splitter*> _splitterMap;           // non-owning views into _splitters
     std::vector<std::unique_ptr<HydroUnit>> _hydroUnits;          // owning
+    std::vector<std::unique_ptr<Forcing>> _forcing;               // owning: read by the subbasin-level components
     std::unordered_map<int, HydroUnit*> _hydroUnitMap;            // non-owning views into _hydroUnits
     std::vector<Connector*> _inConnectors;                        // non-owning: lifetime managed externally
     std::vector<Connector*> _outConnectors;                       // non-owning: lifetime managed externally

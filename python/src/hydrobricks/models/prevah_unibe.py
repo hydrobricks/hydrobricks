@@ -122,7 +122,8 @@ class PrevahUniBE(Model):
         Capacity of the fast baseflow store SLZ1 [mm] (PREVAH SLZ1MAX).
     k_gw1, k_gw2, k_gw3 : float
         Response factors of the three groundwater stores [1/d] (= 24 / CG1H,
-        24 / K2H and 24 / CG3H; PREVAH convention: CG3H = 9 × CG1H).
+        24 / K2H and 24 / CG3H). As in PREVAH (CG3H = 9 × CG1H), k_gw3 is tied
+        to k_gw1 / 9 and not calibrated; ``unlink_parameter('k_gw3')`` frees it.
     k_snow, k_ice, k_firn : float
         Response factors of the glacier snowmelt, ice melt and firn melt
         reservoirs [1/d] (= 24 / KICSH, 24 / KICEH, 24 / KICFH).
@@ -813,6 +814,12 @@ class PrevahUniBE(Model):
         for month, name in enumerate(names):
             hydro_units.add_property((name, "mm"), table[:, month])
         parameters.set_spatial_monthly(f"fc{suffix}", names)
+        # The scalar value is the fallback of the units lacking the properties, and
+        # must be defined: without one given, the mean of the table.
+        if parameters.get(f"fc{suffix}") is None:
+            parameters.set_values(
+                {f"fc{suffix}": float(np.mean(table))}, check_range=False
+            )
 
         return names
 
@@ -1307,19 +1314,40 @@ class PrevahUniBE(Model):
             )
 
     def _define_parameter_constraints(self) -> None:
-        """Define parameter constraints for the PREVAH model.
+        """Define parameter constraints, ranges and links for the PREVAH model.
 
         The response cascade must slow down with depth: surface runoff faster
-        than interflow, interflow faster than the fast baseflow, and the three
-        groundwater stores in decreasing order (PREVAH convention:
-        CG3H = 9 × CG1H, i.e. k_gw3 ≈ k_gw1 / 9).
+        than interflow, interflow faster than the fast baseflow store SLZ1, and
+        SLZ1 faster than the slow store SLZ2.
+
+        The very slow store SLZ3 is not calibrated: as in PREVAH (CG3H = 9 × CG1H),
+        k_gw3 is tied to k_gw1 / 9. It is not ordered against k_gw2 - PREVAH
+        calibrations put it on either side (k2h often reaches its 10000 h bound,
+        which makes SLZ2 the slower one). Use ``unlink_parameter('k_gw3')`` on the
+        parameter set to calibrate it freely.
+
+        The ranges follow the PEST calibrations of the 89 catchments of the
+        Swiss national PREVAH set (Hydro-CH2018), whose own bounds (K0H 10-30 h,
+        K1H 50-150 h, CG1H 200-1000 h, K2H 1000-10000 h) do not overlap, widened
+        to cover the optima that later runs found beyond them. With these ranges,
+        about 90 % of random draws satisfy the ordering constraints, against 3 %
+        with the generic outflow ranges.
         """
         self.parameter_constraints = [
             ["k1", "<", "k0"],
             ["k_gw1", "<", "k1"],
             ["k_gw2", "<", "k_gw1"],
-            ["k_gw3", "<", "k_gw2"],
         ]
+        self.parameter_ranges.update(
+            {
+                "k0": (0.4, 3.0),  # 8-60 h
+                "k1": (0.08, 0.5),  # 2-12 d
+                "k_gw1": (0.01, 0.15),  # 7-100 d
+                "k_gw2": (0.001, 0.03),  # 33 d - 2.7 yr
+                "k_gw3": (0.001, 0.02),  # holds k_gw1 / 9
+            }
+        )
+        self.parameter_links = {"k_gw3": ("k_gw1", 1.0 / 9.0)}
 
     def _set_specific_options(self, kwargs: dict[str, Any]) -> None:
         """Validate PREVAH-specific option combinations."""

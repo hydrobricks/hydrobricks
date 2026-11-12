@@ -241,6 +241,42 @@ def test_load_study_requires_calibration(tmp_path):
     )
 
 
+def test_study_job_without_calibration(tmp_path):
+    """A job with 0 repetitions runs with the parameter values of its configuration
+    and is assessed next to the calibrated ones."""
+    config = demo_study(tmp_path)
+    config["variants"]["setup"] = {
+        "calibrated": {},
+        "default": {"calibration": {"repetitions": 0}},
+    }
+    config["base"]["calibration"]["objective"] = "nse"
+    config["matrix"] = {"catchment": ["appenzell"], "setup": ["calibrated", "default"]}
+    study = hb.load_study(config, base_dir=TEST_FILES_DIR)
+    scores = study.run_all()
+
+    default = json.loads(
+        (study.results_dir / "appenzell__default.json").read_text(encoding="utf-8")
+    )
+    assert default["algorithm"] is None
+    assert default["repetitions"] == 0
+    assert default["model_runs"] == 1
+    assert default["best_parameters"] == {
+        "a_snow": PARAMETERS["a_snow"],
+        "A": PARAMETERS["A"],
+    }
+    assert np.isfinite(default["calibration_score"])
+    assert set(scores["setup"]) == {"calibrated", "default"}
+    assert np.isfinite(scores["score"]).all()
+
+    # Its calibration score is its objective on the calibration period.
+    row = scores[
+        (scores.setup == "default")
+        & (scores.period == "calibration")
+        & (scores.eval_transform == "none")
+    ]
+    assert row["score"].iloc[0] == pytest.approx(default["calibration_score"])
+
+
 def test_study_run_all_and_assess(tmp_path):
     """End-to-end: 2 catchments x 2 objectives, calibrated and assessed."""
     study = hb.load_study(demo_study(tmp_path), base_dir=TEST_FILES_DIR)

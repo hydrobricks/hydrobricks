@@ -2,8 +2,12 @@
  * \file
  * This class implements the SnowSlide method as described in the following paper.
  * Reference: Bernhardt, M., & Schulz, K. (2010). SnowSlide: A simple routine for calculating gravitational snow
- * transport. Geophysical Research Letters, 37(11), 1–6. https://doi.org/10.1029/2010GL043086 Based on the following
- * code:
+ * transport. Geophysical Research Letters, 37(11), 1–6. https://doi.org/10.1029/2010GL043086
+ * The holding-depth law (coeff = 3178.4, exp = -1.998, slope clamped to 10 degrees, 20 m cap) is not printed in the
+ * paper: it comes from the SnowSlide module of the Canadian Hydrological Model (Marsh, C. B., Pomeroy, J. W., &
+ * Wheater, H. S. (2020). The Canadian Hydrological Model (CHM) v1.0. Geoscientific Model Development, 13, 225–247.
+ * https://doi.org/10.5194/gmd-13-225-2020), without its cos(slope) factor (the depth is taken as vertical).
+ * The minimum holding depth is the paper's 5 cm SWE, as a snow depth. Based on the following code:
  * - https://github.com/Chrismarsh/CHM/blob/develop/src/modules/snow_slide.cpp
  * - https://github.com/bergjus94/RavenHydro/blob/Snow_redistribution/src/SnowRedistribution.cpp
  */
@@ -16,7 +20,7 @@
 class FluxToBrick;
 
 /**
- * Gravitational snow redistribution (SnowSlide; Bernhardt & Schulz, 2010).
+ * Gravitational snow redistribution (SnowSlide; Bernhardt & Schulz, 2010; Marsh et al., 2020).
  *
  * Moves snow exceeding a slope-dependent holding capacity to downslope hydro
  * units. The holding threshold (as a snow depth) decreases with the slope:

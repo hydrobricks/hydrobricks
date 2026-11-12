@@ -327,8 +327,10 @@ class CatchmentDiscretization:
                 for i in range(len(elevations) - 1):
                     criteria_dict["elevation"].append(elevations[i : i + 2])
             elif elevation_method == "quantiles":
+                # 'number' bands need number + 1 edges.
                 elevations = np.nanquantile(
-                    self.catchment.dem_data, np.linspace(0, 1, num=elevation_number)
+                    self.catchment.dem_data,
+                    np.linspace(0, 1, num=elevation_number + 1),
                 )
                 for i in range(len(elevations) - 1):
                     criteria_dict["elevation"].append(elevations[i : i + 2])
@@ -355,7 +357,8 @@ class CatchmentDiscretization:
                     criteria_dict["slope"].append(slopes[i : i + 2])
             elif slope_method == "quantiles":
                 slopes = np.nanquantile(
-                    self.catchment.topography.slope, np.linspace(0, 1, num=slope_number)
+                    self.catchment.topography.slope,
+                    np.linspace(0, 1, num=slope_number + 1),
                 )
                 for i in range(len(slopes) - 1):
                     criteria_dict["slope"].append(slopes[i : i + 2])
@@ -399,7 +402,7 @@ class CatchmentDiscretization:
             elif radiation_method == "quantiles":
                 radiations = np.nanquantile(
                     self.catchment.solar_radiation.mean_annual_radiation,
-                    np.linspace(0, 1, num=radiation_number),
+                    np.linspace(0, 1, num=radiation_number + 1),
                 )
                 for i in range(len(radiations) - 1):
                     criteria_dict["radiation"].append(radiations[i : i + 2])

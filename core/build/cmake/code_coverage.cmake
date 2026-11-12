@@ -280,7 +280,7 @@ function(setup_target_for_coverage_lcov)
     # Create baseline to make sure untouched files show up in the report
     set(LCOV_BASELINE_CMD
             ${LCOV_PATH} ${Coverage_LCOV_ARGS} --gcov-tool ${GCOV_PATH} -c -i -d . -b
-            ${BASEDIR} -o ${Coverage_NAME}.base --ignore-errors mismatch,mismatch
+            ${BASEDIR} -o ${Coverage_NAME}.base --ignore-errors mismatch,inconsistent
     )
     # Run tests
     set(LCOV_EXEC_TESTS_CMD
@@ -289,22 +289,23 @@ function(setup_target_for_coverage_lcov)
     # Capturing lcov counters and generating report
     set(LCOV_CAPTURE_CMD
             ${LCOV_PATH} ${Coverage_LCOV_ARGS} --gcov-tool ${GCOV_PATH} --directory . -b
-            ${BASEDIR} --capture --output-file ${Coverage_NAME}.capture --ignore-errors mismatch,mismatch
+            ${BASEDIR} --capture --output-file ${Coverage_NAME}.capture --ignore-errors mismatch,inconsistent
     )
     # add baseline counters
     set(LCOV_BASELINE_COUNT_CMD
             ${LCOV_PATH} ${Coverage_LCOV_ARGS} --gcov-tool ${GCOV_PATH} -a ${Coverage_NAME}.base
-            -a ${Coverage_NAME}.capture --output-file ${Coverage_NAME}.total --ignore-errors mismatch,mismatch
+            -a ${Coverage_NAME}.capture --output-file ${Coverage_NAME}.total --ignore-errors mismatch,inconsistent
     )
     # filter collected data to final coverage report
     set(LCOV_FILTER_CMD
             ${LCOV_PATH} ${Coverage_LCOV_ARGS} --gcov-tool ${GCOV_PATH} --remove
             ${Coverage_NAME}.total ${LCOV_EXCLUDES} --output-file ${Coverage_NAME}.info
+            --ignore-errors inconsistent
     )
     # Generate HTML output
     set(LCOV_GEN_HTML_CMD
             ${GENHTML_PATH} ${GENHTML_EXTRA_ARGS} ${Coverage_GENHTML_ARGS} -o
-            ${Coverage_NAME} ${Coverage_NAME}.info
+            ${Coverage_NAME} ${Coverage_NAME}.info --ignore-errors inconsistent
     )
     if (${Coverage_SONARQUBE})
         # Generate SonarQube output

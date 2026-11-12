@@ -372,7 +372,8 @@ class TimeSeries2D(TimeSeries):
                 unit_ids = unit_ids.rio.reproject(f"epsg:{data_crs}")
 
         # Get list of hydro unit ids
-        unit_ids_list = hydro_units["id"].values.squeeze()
+        # atleast_1d: a single hydro unit would squeeze to a scalar.
+        unit_ids_list = np.atleast_1d(hydro_units["id"].values.squeeze())
         unit_id_count = len(unit_ids_list)
         logger.debug(f"Processing {unit_id_count} hydro units")
 
@@ -568,7 +569,7 @@ class TimeSeries2D(TimeSeries):
                 apply_data_gradient = False
 
             # Extract the elevation for each hydro unit
-            hu_elevation = hydro_units["elevation"].to_numpy().squeeze()
+            hu_elevation = np.atleast_1d(hydro_units["elevation"].to_numpy().squeeze())
 
         # Create a xarray variable containing the data cell indices
         data_idx = data_var[0].copy()
@@ -681,7 +682,7 @@ class TimeSeries2D(TimeSeries):
         if time_method == "day_of_year":
             logger.info("Converting to the full time series...")
             # Get the indices of jd_unique that match the values of jd
-            jd = self.time.dt.strftime("%j").to_numpy().astype(int)
+            jd = pd.DatetimeIndex(self.time).strftime("%j").to_numpy().astype(int)
             indices = np.searchsorted(day_of_year, jd)
             whole_daily_pot_radiation = self.data[-1][indices, :]
             self.data[-1] = whole_daily_pot_radiation
@@ -763,7 +764,7 @@ class TimeSeries2D(TimeSeries):
                     reason="Missing preceding forcing data",
                 )
             day_of_year = df[time_col].to_numpy(dtype=int)
-            jd = self.time.dt.strftime("%j").to_numpy().astype(int)
+            jd = pd.DatetimeIndex(self.time).strftime("%j").to_numpy().astype(int)
             indices = np.searchsorted(day_of_year, jd)
             self.data.append(values[indices, :])
         else:
@@ -822,7 +823,9 @@ class TimeSeries2D(TimeSeries):
             df = pd.DataFrame(self.data[-1], columns=unit_cols)
             df.insert(0, "time", np.asarray(self.time))
         cache_path.parent.mkdir(parents=True, exist_ok=True)
-        tmp_path = cache_path.with_name(cache_path.name + ".tmp")
+        # A temporary file of its own: concurrent writers of the same entry (jobs
+        # of other studies sharing the cache) would otherwise replace each other's.
+        tmp_path = cache_path.with_name(f"{cache_path.name}.{os.getpid()}.tmp")
         df.to_csv(tmp_path, index=False)
         os.replace(tmp_path, cache_path)
         logger.info(f"Saved regridded forcing cache to {cache_path}")

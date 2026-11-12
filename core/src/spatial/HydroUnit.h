@@ -171,6 +171,13 @@ class HydroUnit {
     [[nodiscard]] Forcing* GetForcing(VariableType type) const;
 
     /**
+     * Get the types of the forcings of the hydro unit that received no data.
+     *
+     * @return The forcing types without data (empty when all have data).
+     */
+    [[nodiscard]] std::vector<VariableType> GetForcingTypesWithoutData() const;
+
+    /**
      * Reset all dynamic forcing overrides set during the current timestep.
      */
     void ResetForcingUpdates();

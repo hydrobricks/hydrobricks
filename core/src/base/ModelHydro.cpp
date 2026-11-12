@@ -635,6 +635,19 @@ bool ModelHydro::AttachTimeSeriesToHydroUnits() {
         }
     }
 
+    // Every forcing a component reads must have received data: reading one without would
+    // dereference a null time series.
+    for (HydroUnit* unit : units) {
+        for (VariableType type : unit->GetForcingTypesWithoutData()) {
+            static const char* names[] = {"precipitation",   "temperature",     "temperature_min",
+                                          "temperature_max", "solar_radiation", "pet",
+                                          "custom_1",        "custom_2",        "custom_3"};
+            LogError("No '{}' forcing data was given for hydro unit {}, but the model needs it.",
+                     names[static_cast<int>(type)], unit->GetId());
+            return false;
+        }
+    }
+
     return true;
 }
 

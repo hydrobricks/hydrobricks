@@ -12,6 +12,7 @@ logger = logging.getLogger(__name__)
 
 SOIL_ET_PROCESSES = ("et:socont", "et:hbv", "et:power_law", "et:exponential")
 SOIL_INFILTRATION_PROCESSES = ("infiltration:socont", "infiltration:hbv")
+SOIL_PERCOLATION_PROCESSES = ("percolation:constant", "percolation:power_law")
 #: Options pinned by each preset. 'original' is the published model (Schaefli et
 #: al., 2005), whatever the defaults become; 'hydrobricks' keeps the defaults.
 PRESETS = {
@@ -65,10 +66,10 @@ class Socont(Model):
         Slow reservoir baseflow response factor [1/d].
     k_slow_2 : float
         Second soil-layer response factor [1/d] (only with soil_storage_nb=2;
-        must be < k_slow_1 and < k_quick).
+        must be < k_quick, but is not ordered against k_slow_1).
     beta : float
         Quick-flow (surface runoff) coefficient [m^(4/3)/s] of the kinematic-wave
-        overland flow (surface_runoff='socont_runoff').
+        overland flow (surface_runoff='socont_runoff'). Calibrated in log space.
     k_quick : float
         Surface runoff response factor [1/d] when a linear storage is used instead
         (surface_runoff='linear_storage'); must be > k_slow_1.
@@ -87,8 +88,13 @@ class Socont(Model):
         given explicitly still apply, with a warning when they depart from the
         original. The rain/snow split is not pinned.
     soil_storage_nb : int
-        Number of slow soil reservoirs, 1 (default) or 2. With 2, a constant
-        percolation feeds a second linear soil layer.
+        Number of slow soil reservoirs, 1 (default) or 2. With 2, a percolation
+        feeds a second linear soil layer.
+    percolation_process : str
+        Percolation to the second soil layer (soil_storage_nb=2):
+        'percolation:constant' (default, ``percol`` [mm/d] whatever the wetness) or
+        'percolation:power_law' (``percol_max * (S/A)^percol_exp``, the recharge
+        following the wetness of the first layer).
     surface_runoff : str
         Quick-flow method: 'socont_runoff' (default, kinematic-wave overland flow)
         or 'linear_storage'.
@@ -130,6 +136,7 @@ class Socont(Model):
         self.options["surface_runoff"] = "socont_runoff"
         self.options["soil_et_process"] = "et:hbv"
         self.options["infiltration_process"] = "infiltration:socont"
+        self.options["percolation_process"] = "percolation:constant"
         self.options["snow_melt_process"] = "melt:degree_day"
         self.options["snow_rain_process"] = None
         self.options["snow_ice_transformation"] = None
@@ -271,8 +278,17 @@ class Socont(Model):
 
         if self.options["soil_storage_nb"] == 2:
             logger.debug("Using 2 soil storages.")
+            percolation = self.options["percolation_process"]
+            if percolation not in SOIL_PERCOLATION_PROCESSES:
+                raise ConfigurationError(
+                    f"Unknown percolation process: '{percolation}'. "
+                    f"Expected one of {', '.join(SOIL_PERCOLATION_PROCESSES)}.",
+                    item_name="percolation_process",
+                    item_value=percolation,
+                    reason="Unknown process type",
+                )
             self.structure["slow_reservoir"]["processes"]["percolation"] = {
-                "kind": "percolation:constant",
+                "kind": percolation,
                 "target": "slow_reservoir_2",
             }
             self.structure["slow_reservoir_2"] = {
@@ -360,18 +376,18 @@ class Socont(Model):
         - a_snow < a_ice: Snow melt degree-day < glacier ice melt degree-day
         - k_slow_1 < k_quick: Slow flow slower than quick flow
         - k_slow_2 < k_quick: Second soil layer slower than quick flow
-        - k_slow_2 < k_slow_1: Second soil layer slower than first layer
 
-        The snow/rain correction factor constraint (rain <= snow) is defined
-        generically for every snow-bearing model in ParameterSet.
-
-        These constraints ensure the model behaves physically.
+        The two soil layers are not ordered (k_slow_2 < k_slow_1 was dropped): the
+        layers are in series with different inputs, so the lower one need not be
+        the slower, and in 713 HydroMIP calibrations the constraint truncated the
+        optima where the second layer was active (12 % sat on k_slow_2 = k_slow_1)
+        and was meaningless where it was not (percol ~ 0 in 41 %). It also
+        rejected half of all random parameter sets.
         """
         self.parameter_constraints = [
             ["a_snow", "<", "a_ice"],
             ["k_slow_1", "<", "k_quick"],
             ["k_slow_2", "<", "k_quick"],
-            ["k_slow_2", "<", "k_slow_1"],
         ]
 
     def _define_parameter_transforms(self) -> None:
@@ -402,6 +418,7 @@ class Socont(Model):
         self.parameter_ranges = {
             "slow_reservoir:capacity": (10.0, 1000.0),
             "slow_reservoir:lp": (0.1, 1.0),
+            "r_snow": (0.001, 0.03),
         }
         self.parameter_defaults = {
             "slow_reservoir:lp": 0.5,
@@ -415,6 +432,12 @@ class Socont(Model):
                 lambda rf: math.log(rf / 24.0),
                 lambda lk: 24.0 * math.exp(lk),
             ),
+            # The quickflow reservoir's time constant scales with area / beta, so
+            # beta acts on a log scale: below ~3000 it shapes the hydrograph, above
+            # a threshold that grows with unit area (and flatness) the reservoir
+            # empties within the day and beta no longer matters. Searching it
+            # linearly over [100, 1e5] would spend nearly all draws on that plateau.
+            "surface_runoff:beta": (math.log, math.exp),
         }
 
     def _set_specific_options(self, kwargs: dict[str, Any]) -> None:

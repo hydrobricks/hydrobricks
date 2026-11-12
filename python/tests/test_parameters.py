@@ -870,3 +870,83 @@ def test_get_for_spotpy_with_and_without_prior():
     spotpy_params = parameter_set.get_for_spotpy()
     assert isinstance(spotpy_params[0], spotpy.parameter.Normal)
     assert isinstance(spotpy_params[1], spotpy.parameter.Uniform)
+
+
+def _two_parameter_set(dep_range=(0.0, 1.0), drv_range=(0.0, 1.0)):
+    parameter_set = hb.ParameterSet()
+    parameter_set.define_parameter(
+        component="slz1",
+        name="response_factor",
+        aliases=["k_a"],
+        min_val=drv_range[0],
+        max_val=drv_range[1],
+    )
+    parameter_set.define_parameter(
+        component="slz3",
+        name="response_factor",
+        aliases=["k_b"],
+        min_val=dep_range[0],
+        max_val=dep_range[1],
+    )
+    return parameter_set
+
+
+def test_link_parameter_with_factor():
+    parameter_set = _two_parameter_set()
+    parameter_set.link_parameter("k_b", "k_a", factor=0.25)
+    parameter_set.set_values({"k_a": 0.8})
+    assert parameter_set.get("k_b") == pytest.approx(0.2)
+    assert parameter_set.get_link("k_b") == ("k_a", 0.25)
+    assert parameter_set.get_link("slz3:response_factor") == ("k_a", 0.25)
+    assert parameter_set.get_link("k_a") is None
+
+
+def test_link_parameter_factor_checks_scaled_range():
+    # k_a in [0, 1] times 2 reaches 2, outside k_b's [0, 1].
+    parameter_set = _two_parameter_set()
+    with pytest.raises(hb.ConfigurationError):
+        parameter_set.link_parameter("k_b", "k_a", factor=2.0)
+    # Times 0.5 fits within [0, 0.5].
+    parameter_set = _two_parameter_set(dep_range=(0.0, 0.5))
+    parameter_set.link_parameter("k_b", "k_a", factor=0.5)
+
+
+@pytest.mark.parametrize("factor", [0.0, -1.0, float("nan")])
+def test_link_parameter_rejects_non_positive_factor(factor):
+    parameter_set = _two_parameter_set()
+    with pytest.raises(hb.ConfigurationError):
+        parameter_set.link_parameter("k_b", "k_a", factor=factor)
+
+
+def test_linked_parameter_given_value_is_overridden_with_warning(caplog):
+    parameter_set = _two_parameter_set()
+    parameter_set.link_parameter("k_b", "k_a", factor=0.5)
+    with caplog.at_level("WARNING", logger="hydrobricks.parameters"):
+        parameter_set.set_values({"k_a": 0.4, "k_b": 0.9})
+    assert parameter_set.get("k_b") == pytest.approx(0.2)
+    assert "ignored" in caplog.text
+    caplog.clear()
+    # A value consistent with the link is accepted silently.
+    with caplog.at_level("WARNING", logger="hydrobricks.parameters"):
+        parameter_set.set_values({"k_a": 0.4, "k_b": 0.2})
+    assert caplog.text == ""
+
+
+def test_unlink_parameter_frees_it():
+    parameter_set = _two_parameter_set()
+    parameter_set.link_parameter("k_b", "k_a", factor=0.5)
+    with pytest.raises(hb.ConfigurationError):
+        parameter_set.allow_changing = ["k_b"]
+    parameter_set.unlink_parameter("slz3:response_factor")  # by another name
+    assert parameter_set.get_link("k_b") is None
+    parameter_set.set_values({"k_a": 0.4, "k_b": 0.9})
+    assert parameter_set.get("k_b") == pytest.approx(0.9)
+    parameter_set.allow_changing = ["k_a", "k_b"]
+
+
+def test_relinking_replaces_previous_link():
+    parameter_set = _two_parameter_set()
+    parameter_set.link_parameter("k_b", "k_a", factor=0.5)
+    parameter_set.link_parameter("slz3:response_factor", "k_a", factor=0.25)
+    parameter_set.set_values({"k_a": 0.8})
+    assert parameter_set.get("k_b") == pytest.approx(0.2)

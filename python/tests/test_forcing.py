@@ -476,6 +476,43 @@ def test_regrid_from_netcdf_single_file(hydro_units: hb.HydroUnits):
     assert forcing.data2D.data[0].shape[1] == 35
 
 
+def test_regrid_from_netcdf_single_hydro_unit(tmp_path):
+    """A lumped catchment: a single hydro unit covering the whole raster."""
+    if not has_gridded_data_packages():
+        return
+    import rasterio
+
+    with rasterio.open(CATCHMENT_DIR / "unit_ids.tif") as src:
+        ids = src.read(1)
+        profile = src.profile
+    ids[ids > 0] = 1
+    with rasterio.open(tmp_path / "unit_ids.tif", "w", **profile) as dst:
+        dst.write(ids, 1)
+    (tmp_path / "hydro_units.csv").write_text(
+        "id,elevation,area\n-,m,m2\n1,1250,74440000\n", encoding="utf-8"
+    )
+    hydro_units = hb.HydroUnits()
+    hydro_units.load_from_csv(
+        tmp_path / "hydro_units.csv", column_elevation="elevation", column_area="area"
+    )
+
+    forcing = hb.Forcing(hydro_units)
+    forcing.spatialize_from_gridded_data(
+        variable="precipitation",
+        path=CATCHMENT_DIR / "gridded_precip.nc",
+        data_crs=2056,
+        var_name="RhiresD",
+        dim_x="E",
+        dim_y="N",
+        raster_hydro_units=tmp_path / "unit_ids.tif",
+        apply_data_gradient=False,
+    )
+    forcing.apply_operations()
+
+    assert forcing.data2D.data[0].shape[1] == 1
+    assert np.isfinite(forcing.data2D.data[0]).all()
+
+
 def test_regrid_from_netcdf_multiple_files(hydro_units: hb.HydroUnits):
     if not has_gridded_data_packages():
         return

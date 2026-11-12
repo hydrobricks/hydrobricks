@@ -128,4 +128,4 @@ parameters:
   slz1max: 112.903
   k_gw1: 0.024  # 24 / 1000
   k_gw2: 0.0079741  # 24 / 3009.72
-  k_gw3: 0.0026667  # 24 / 9000
+  # k_gw3 is tied to k_gw1 / 9 (PREVAH: CG3H = 9 * CG1H), here 24 / 9000.

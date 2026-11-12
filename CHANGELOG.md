@@ -5,6 +5,37 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## 0.9.6 - 2026-11-12
+
+### Added
+
+- `ParameterSet.link_parameter()` takes a `factor` (dependent = driver × factor); new `unlink_parameter()` and `get_link()`. A value given to a linked parameter is now overridden with a warning instead of silently.
+- GR4J and GR6J option `lumped_runoff`: interception, production store and routing run once for the subbasin on the area-weighted water and PET of the hydro units, which keep only the snow. With CemaNeige on elevation bands, this is the GR-CemaNeige set-up of airGR (Valéry et al., 2014).
+- Subbasin-level bricks and processes can read forcing (the area-weighted mean of their hydro units, `AggregatedForcing`) and be computed directly (`computed_directly`), after the hydro units.
+- Project files: a `prevah` section applies PREVAH's cover class tables (canopy, albedo, monthly field capacity from `available_water_content` and `soil_depth`) to PREVAH-UniBE's covers; `cover_classes` maps covers not named after a class.
+- Project files: a parameter can follow a hydro unit property, one value per unit: `{value: 200, property: mean_annual_snow}`.
+- Studies: a job with `calibration.repetitions: 0` is not calibrated; it runs with its configured parameter values and is assessed like the others.
+- `percolation:power_law`: percolation at `percolation_rate * (S / S_max)^exponent`, following the wetness of the draining store. Socont's `percolation_process` selects it for the second soil layer (`percol_max`, `percol_exp`); constant percolation stays the default.
+
+### Changed
+
+- PREVAH-UniBE: `k_gw3` is tied to `k_gw1 / 9` (PREVAH's CG3H = 9 × CG1H) and no longer calibrated; `unlink_parameter('k_gw3')` frees it. The constraint `k_gw3 < k_gw2` is removed.
+- PREVAH-UniBE: storage coefficient ranges from the PEST calibrations of 89 Swiss catchments: `k0` [0.4, 3], `k1` [0.08, 0.5], `k_gw1` [0.01, 0.15], `k_gw2` [0.001, 0.03] /d (were [0.0001, 1] or [0.0001, 3]). About 90 % of random parameter sets now meet the ordering constraints (was 3 %).
+- Socont: removed the constraint `k_slow_2 < k_slow_1`. The two layers are in series with different inputs, and the constraint rejected half of the random parameter sets.
+- Socont: `beta` range widened to [100, 100000] (was [100, 30000]) and calibrated in log space, as large or flat hydro units need a higher `beta`.
+- `melt:temperature_index`: `melt_factor` minimum raised to 0.5 mm/d/°C (was 0), so calibrations can no longer switch melt off and let snow pile up. `radiation_coefficient` maximum lowered to 0.05 (was 1), and Socont's `r_snow` range set to [0.001, 0.03], in line with Hock (1999) at the daily step.
+- `transport:snow_slide`: default `snow_slide_min_snow_depth` raised to 200 mm of snow depth (was 50 mm), the 5 cm SWE of Bernhardt & Schulz (2010). Runs with the snow slide change. The slope law defaults are now credited to the SnowSlide module of the Canadian Hydrological Model (Marsh et al., 2020).
+
+### Fixed
+
+- The `'quantiles'` method of `create_elevation_bands()` and `discretize_by()` created one class fewer than `number` and failed with `number=1`. Hydro units built with it now get one class more.
+- GR4J/GR6J with CemaNeige failed at setup: the snow/rain split read an `elevation` property that the hydro units never passed.
+- A forcing a model needs but given no data (e.g. CemaNeige's daily min/max temperature below 1500 m) crashed the run; it is now reported.
+- Regridding gridded forcing onto a single hydro unit (lumped catchment) failed with `len() of unsized object`.
+- Concurrent writes of the same regridded forcing cache entry (studies sharing a cache) failed with `FileNotFoundError`, and the study reported only the error number, not the file.
+- Loading a day-of-year forcing cache (e.g. potential radiation) after spatialized CSV forcing failed, as its time has no `.dt` accessor.
+
+
 ## 0.9.5 - 2026-11-05
 
 ### Added

@@ -140,6 +140,34 @@ A model that declares no glacier cover ignores the glacier source (the
 glacierized area stays in the soil cover), so one catchment section serves every
 model of a comparison.
 
+PREVAH-UniBE parameterizes its covers from PREVAH's cover class tables (monthly
+interception, vegetation cover, albedo and rooting depth) and from a soil map. The
+optional ``prevah`` section applies them: each cover stands for the PREVAH class it
+is named after (``pasture``, ``coniferous_forest``, ...) or the one given in
+``cover_classes``, and the hydro unit columns holding the soil give each cover's
+monthly field capacity per unit (which needs a soil store per cover, the
+``share_soil: false`` option, when there are several soil covers)::
+
+    model:
+      name: prevah_unibe
+      options:
+        land_cover_names: [coniferous_forest, pasture, open]
+        land_cover_types: [forest, open, open]
+        share_soil: false
+
+    hydro_units:
+      file: hydro_units.csv
+      columns: {awc: awc, soil_depth: soil_depth}
+      columns_areas:
+        coniferous_forest: area_coniferous_forest
+        pasture: area_pasture
+        open: area_open
+
+    prevah:
+      cover_classes: {open: alpine_meadow}   # covers not named after a class
+      available_water_content: awc           # [Vol-%], a hydro unit property
+      soil_depth: soil_depth                 # [m], optional
+
 The lateral processes (e.g. the snow redistribution) need to know how the hydro
 units drain into each other, and the per-unit slope. Both come from the
 preprocessing: the connectivity table produced by
@@ -211,6 +239,7 @@ _TOP_LEVEL_KEYS = {
     "data_parameters",
     "actions",
     "calibration",
+    "prevah",
     "output",
     "cache",
 }
@@ -459,6 +488,13 @@ class Project:
         defaults = self.calibration or {}
         algorithm = algorithm or defaults.get("algorithm") or "dds"
         repetitions = repetitions or defaults.get("repetitions")
+        if repetitions == 0:
+            raise ConfigurationError(
+                "calibration.repetitions is 0: the project declares no calibration "
+                "(run() simulates it with the parameter values of the file).",
+                item_name="calibration.repetitions",
+                reason="No calibration",
+            )
         if not repetitions:
             raise ConfigurationError(
                 "The number of repetitions is required: pass repetitions= or "
@@ -1669,6 +1705,9 @@ def _validate_parameters(config: dict, errors: list[str]) -> tuple[dict, dict]:
 
     A published parameter set does not always fall inside the default range of the
     model, so a parameter can widen its own with ``{value: -1, min: -3, max: 5}``.
+    A parameter can also follow a hydro unit property, one value per unit, with
+    ``{value: 200, property: mean_annual_snow}`` (the value is the fallback of the
+    units lacking it); see :func:`_validate_parameter_properties`.
 
     Parameters
     ----------
@@ -1704,7 +1743,7 @@ def _validate_parameters(config: dict, errors: list[str]) -> tuple[dict, dict]:
                 f"{spec!r}."
             )
             continue
-        _check_keys(spec, {"value", "min", "max"}, where, errors)
+        _check_keys(spec, {"value", "min", "max", "property"}, where, errors)
         value = _get_number(spec, "value", where, errors)
         if value is None:
             if "value" not in spec:
@@ -1727,6 +1766,33 @@ def _validate_parameters(config: dict, errors: list[str]) -> tuple[dict, dict]:
         values[str(name)] = float(value)
 
     return values, ranges
+
+
+def _validate_parameter_properties(
+    config: dict, cfg: dict, errors: list[str]
+) -> dict[str, str]:
+    """The parameters following a hydro unit property: name -> property.
+
+    The property is a column of the hydro units CSV, declared in
+    ``hydro_units.columns``.
+    """
+    section = config.get("parameters")
+    if not isinstance(section, dict):
+        return {}
+    properties = set((cfg["hydro_units"] or {}).get("other_columns") or {})
+    out = {}
+    for name, spec in section.items():
+        if not isinstance(spec, dict) or "property" not in spec:
+            continue
+        prop = spec["property"]
+        if not isinstance(prop, str) or prop not in properties:
+            errors.append(
+                f"parameters.{name}.property: {prop!r} is not a hydro unit property; "
+                f"declare it in hydro_units.columns."
+            )
+            continue
+        out[str(name)] = prop
+    return out
 
 
 def _validate_data_parameters(config: dict, errors: list[str]) -> dict:
@@ -1914,11 +1980,13 @@ def _validate_calibration(config: dict, errors: list[str]) -> dict | None:
             f"got {out['algorithm']!r}."
         )
     reps = out["repetitions"]
+    # 0 is a study job run with the parameter values of the file (no calibration).
     if reps is not None and (
-        isinstance(reps, bool) or not isinstance(reps, int) or reps < 1
+        isinstance(reps, bool) or not isinstance(reps, int) or reps < 0
     ):
         errors.append(
-            f"calibration.repetitions: expected a positive integer, got {reps!r}."
+            f"calibration.repetitions: expected a positive integer (or 0 for no "
+            f"calibration), got {reps!r}."
         )
     if out["objective"] is not None and not isinstance(out["objective"], str):
         errors.append(
@@ -2209,6 +2277,134 @@ def _validate_glacier_evolution(spec: Any, base: Path, errors: list[str]) -> dic
     return out
 
 
+def _validate_prevah(config: dict, cfg: dict, errors: list[str]) -> dict | None:
+    """Validate the PREVAH cover tables section (PREVAH-UniBE only)."""
+    section = _get_mapping(config, "prevah", errors, required=False)
+    if section is None:
+        return None
+    _check_keys(
+        section,
+        {"cover_classes", "available_water_content", "soil_depth"},
+        "prevah",
+        errors,
+    )
+    model_class = (cfg["model"] or {}).get("class")
+    from hydrobricks.models import PrevahUniBE
+
+    if model_class is not None and not (
+        isinstance(model_class, type) and issubclass(model_class, PrevahUniBE)
+    ):
+        errors.append("prevah: this section applies to the 'prevah_unibe' model only.")
+
+    from hydrobricks.land_covers import PREVAH_COVER_TYPES
+
+    classes = section.get("cover_classes") or {}
+    if not isinstance(classes, dict):
+        errors.append("prevah.cover_classes: expected a mapping of cover to class.")
+        classes = {}
+    for cover, cover_class in classes.items():
+        if cover_class not in PREVAH_COVER_TYPES:
+            errors.append(
+                f"prevah.cover_classes.{cover}: unknown PREVAH cover class "
+                f"'{cover_class}'{_suggest(str(cover_class), set(PREVAH_COVER_TYPES))}."
+            )
+
+    # The soil comes from hydro unit properties, i.e. columns of the hydro units CSV.
+    properties = set((cfg["hydro_units"] or {}).get("other_columns") or {})
+    out = {"cover_classes": dict(classes)}
+    for key in ("available_water_content", "soil_depth"):
+        name = section.get(key)
+        if name is not None and name not in properties:
+            errors.append(
+                f"prevah.{key}: '{name}' is not a hydro unit property; declare it in "
+                f"hydro_units.columns."
+            )
+        out[key] = name
+    if out["soil_depth"] is not None and out["available_water_content"] is None:
+        errors.append(
+            "prevah.soil_depth: the soil depth caps the rooting depth of the field "
+            "capacity, which needs 'available_water_content' too."
+        )
+    return out
+
+
+def _apply_prevah_tables(
+    model: Any, parameters: Any, hydro_units: Any, spec: dict, errors: list[str]
+) -> None:
+    """Apply PREVAH's cover tables to the soil-bearing and canopy covers.
+
+    Every cover stands for a PREVAH cover class: its own name, or the one given in
+    ``cover_classes``. Each then gets the monthly canopy tables of its class (the
+    covers named after a class already have them from generate_parameters), the
+    monthly albedo of its soil store, and, from the soil of each hydro unit, the
+    monthly field capacity of its soil store. The covers are taken one by one, so
+    the soil stores must be per cover (``share_soil: false``) as soon as there are
+    several soil-bearing covers. PREVAH's percolation tables are left out: they are
+    set per hydrotope (one cover class per unit) and depend on ``cu_perc``.
+    """
+    from hydrobricks.land_covers import PREVAH_COVER_TYPES
+
+    classes = spec["cover_classes"]
+    unknown = sorted(set(classes) - set(model.land_cover_names))
+    if unknown:
+        errors.append(
+            f"prevah.cover_classes: {', '.join(unknown)} is not a land cover of the "
+            f"model (declared: {', '.join(model.land_cover_names)})."
+        )
+        return
+
+    awc = depth = None
+    if spec["available_water_content"] is not None:
+        awc = hydro_units.hydro_units[spec["available_water_content"]].to_numpy()
+        awc = awc.astype(float).ravel()
+    if spec["soil_depth"] is not None:
+        depth = hydro_units.hydro_units[spec["soil_depth"]].to_numpy()
+        depth = depth.astype(float).ravel()
+
+    soil_covers = []
+    for name, cover_type in zip(model.land_cover_names, model.land_cover_types):
+        if cover_type in ("glacier", "water"):
+            continue
+        cover_class = classes.get(name, name)
+        if cover_class not in PREVAH_COVER_TYPES:
+            errors.append(
+                f"prevah: the land cover '{name}' is not named after a PREVAH cover "
+                f"class; give its class in prevah.cover_classes."
+            )
+            continue
+        soil_covers.append((name, cover_class))
+
+    if (
+        awc is not None
+        and len(soil_covers) > 1
+        and not parameters.has(f"fc_{soil_covers[0][0]}")
+    ):
+        errors.append(
+            "prevah.available_water_content: the field capacity is set per cover, "
+            "which needs a soil store per cover (model option 'share_soil: false')."
+        )
+        return
+
+    for name, cover_class in soil_covers:
+        if name != cover_class and (
+            parameters.has(f"ic_{name}") or parameters.has("ic")
+        ):
+            model.apply_cover_parameters(parameters, cover_class, cover_name=name)
+        if parameters.has(f"albedo_land_{name}") or parameters.has("albedo_land"):
+            model.apply_cover_albedo(
+                parameters, hydro_units, cover_class, cover_name=name
+            )
+        if awc is not None:
+            model.apply_cover_field_capacity(
+                parameters,
+                hydro_units,
+                cover_class,
+                available_water_content=awc,
+                soil_depth=depth,
+                cover_name=name,
+            )
+
+
 def _validate_config(config: dict, base: Path, errors: list[str]) -> dict:
     _check_keys(config, _TOP_LEVEL_KEYS, "project", errors)
     for key in _REQUIRED_TOP_LEVEL_KEYS:
@@ -2228,7 +2424,9 @@ def _validate_config(config: dict, base: Path, errors: list[str]) -> dict:
         "actions": _validate_actions(config, base, errors),
         "calibration": _validate_calibration(config, errors),
     }
+    cfg["prevah"] = _validate_prevah(config, cfg, errors)
     cfg["parameters"], cfg["parameter_ranges"] = _validate_parameters(config, errors)
+    cfg["parameter_properties"] = _validate_parameter_properties(config, cfg, errors)
     _validate_cross_checks(cfg, errors)
     _validate_network_checks(cfg, errors)
 
@@ -2728,12 +2926,19 @@ def _build_project(
         for name, (minimum, maximum) in cfg["parameter_ranges"].items():
             parameter_set.change_range(name, minimum, maximum)
         parameter_set.set_values(cfg["parameters"])
+    for name, prop in cfg["parameter_properties"].items():
+        parameter_set.set_spatial(name, prop)
     if link:
         # Applied on the parameter set itself, so the fresh build that
         # Project.calibrate() makes from the same config inherits it too; and after
         # the range overrides, which the link checks the two ranges against.
         for dependent, driver in link.items():
             parameter_set.link_parameter(dependent, driver)
+    if cfg["prevah"] is not None:
+        # After the values of the file: the tables bind the capacities and albedos
+        # to monthly (and per unit) values, replacing a constant given there.
+        _apply_prevah_tables(model, parameter_set, hydro_units, cfg["prevah"], errors)
+        _raise_if_errors(errors, path)
 
     if setup:
         model.setup(

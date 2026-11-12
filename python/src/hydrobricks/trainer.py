@@ -1657,13 +1657,15 @@ if spotpy is not None:
             self.bestsim[cur_chain] = None if sim is None else list(sim)
 
         def sample(self, *args, **kwargs):
-            # Two harmless numpy warnings are silenced. A chain standing on a
+            # Three harmless numpy warnings are silenced. A chain standing on a
             # rejected run carries its penalty score, so the acceptance ratio
             # exp(-0.5 (best - like)) of the next run overflows to infinity - which
-            # accepts it, as it should. And when the crossover selects no parameter
+            # accepts it, as it should. When the crossover selects no parameter
             # to move, the jump rate 2.38 / sqrt(2 n d*) divides by d* = 0, but it
-            # then multiplies no parameter.
-            with np.errstate(over="ignore", divide="ignore"):
+            # then multiplies no parameter. And a chain that has not moved yet has
+            # no within-chain variance, so the Gelman-Rubin R-hat is NaN (sqrt of
+            # 0 / 0): it is only reported, and convergence is then not declared.
+            with np.errstate(over="ignore", divide="ignore", invalid="ignore"):
                 return super().sample(*args, **kwargs)
 
     class _BeeColony:

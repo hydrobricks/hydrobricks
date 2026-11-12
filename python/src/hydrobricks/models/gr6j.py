@@ -50,6 +50,14 @@ class GR6J(GR4J):
         sequential solvers route the whole store-routing cascade within a single step
         and would shift the hydrograph too early. Pass ``solver=`` explicitly to
         override.
+    lumped_runoff : bool
+        Run the production store and the routing once for the whole subbasin
+        (default: False, one per hydro unit). The hydro units then only carry the
+        snow: each passes its rain and melt to the subbasin, whose interception,
+        production store and routing work on the area-weighted mean of the unit
+        water and PET. This is the GR-CemaNeige set-up on elevation bands (Valery
+        et al., 2014), the bands being the hydro units. With a single hydro unit it
+        changes nothing.
     snow_melt_process : str or None
         Snowmelt method: None (no snow), 'melt:degree_day',
         'melt:degree_day_aspect', 'melt:temperature_index', or 'melt:cemaneige'.
@@ -69,6 +77,7 @@ class GR6J(GR4J):
 
         # Default options
         self.options["discrete"] = True
+        self.options["lumped_runoff"] = False
         self.options["snow_melt_process"] = None
         self.options["snow_rain_process"] = None
         self.options["snow_redistribution"] = None

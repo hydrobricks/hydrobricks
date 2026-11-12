@@ -682,7 +682,7 @@ class TimeSeries2D(TimeSeries):
         if time_method == "day_of_year":
             logger.info("Converting to the full time series...")
             # Get the indices of jd_unique that match the values of jd
-            jd = self.time.dt.strftime("%j").to_numpy().astype(int)
+            jd = pd.DatetimeIndex(self.time).strftime("%j").to_numpy().astype(int)
             indices = np.searchsorted(day_of_year, jd)
             whole_daily_pot_radiation = self.data[-1][indices, :]
             self.data[-1] = whole_daily_pot_radiation
@@ -764,7 +764,7 @@ class TimeSeries2D(TimeSeries):
                     reason="Missing preceding forcing data",
                 )
             day_of_year = df[time_col].to_numpy(dtype=int)
-            jd = self.time.dt.strftime("%j").to_numpy().astype(int)
+            jd = pd.DatetimeIndex(self.time).strftime("%j").to_numpy().astype(int)
             indices = np.searchsorted(day_of_year, jd)
             self.data.append(values[indices, :])
         else:
